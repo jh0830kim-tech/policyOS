@@ -1,4 +1,4 @@
-# Agent Catalog
+﻿# Agent Catalog
 
 ## Chief Secretary AI
 Routes work, resolves dependencies, consolidates outputs, and manages review state.
@@ -32,3 +32,5 @@ Prepares agendas, captures decisions, assigns follow-ups, and preserves meeting 
 
 ## Citizen Communication AI
 Classifies constituent requests, drafts respectful replies, and routes cases to staff.
+## Sprint 4 implementation notes
+Budget separates cost categories, estimates, assumptions, scenarios, and fiscal risk. Statistics preserves dataset, method, limitation, and reproducibility boundaries. Speech, Press/PR, and SNS generate drafts only and cannot publish. PPT Designer generates an outline only, not a `.pptx` file.

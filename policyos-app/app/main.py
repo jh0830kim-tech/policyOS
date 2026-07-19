@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.routes.ai_tasks import router as ai_tasks_router
+from app.api.routes.artifacts import router as artifacts_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.health import router as health_router
 from app.api.routes.policy_candidates import router as policy_candidates_router
@@ -26,5 +27,6 @@ app = FastAPI(
 )
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(artifacts_router, prefix="/api/v1")
 app.include_router(ai_tasks_router, prefix="/api/v1")
 app.include_router(policy_candidates_router, prefix="/api/v1")

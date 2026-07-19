@@ -1,4 +1,4 @@
-# AI Architecture
+﻿# AI Architecture
 
 ```mermaid
 flowchart TD
@@ -23,3 +23,5 @@ flowchart TD
 - Every material claim should include source metadata or an uncertainty label.
 - Agent runs are versioned by prompt, model, tool set, and policy version.
 - External publication or official action requires human approval.
+## Sprint 4 operational workflow
+The deterministic Chief Secretary workflow supports policy, communication, presentation, and full-office packages. Full-office execution orders Policy Research, Legal Review, Budget Analysis, Statistics, Press/PR, SNS, Speech Writer, and PPT Designer. Operational outputs are typed artifacts and all public-facing drafts require human approval.
