@@ -18,3 +18,10 @@ Each source needs:
 - version
 - retention rule
 - ingestion status
+## Sprint 6 knowledge domain
+
+The persisted lineage is `KnowledgeSource -> KnowledgeDocument -> KnowledgeDocumentVersion -> KnowledgeChunk`. Every row carries organization scope, and child records use composite `(parent_id, organization_id)` foreign keys so a record cannot be attached to a parent from another organization.
+
+Document versions preserve title, language, classification, effective/retrieved dates, version number, content hash, status, metadata, creator, and timestamps. Version identity and content-bearing metadata are immutable after insertion; status may advance during ingestion. A changed document must create a new monotonically numbered version. Unique constraints reject duplicate version numbers and duplicate content hashes within a document.
+
+`KnowledgeIngestionJob` records safe lifecycle metadata, `KnowledgeAccessPolicy` represents source/classification permission boundaries, and `CitationReference` preserves document/version/chunk lineage plus source title/type, location, dates, version, and content hash. Retrieval, parsing, chunk generation, and embedding behavior are added by later Sprint 6 checkpoints.

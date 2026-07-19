@@ -50,3 +50,8 @@
 - Added a network-free release smoke suite covering login, mocked OpenAI and fake execution, orchestration, persistence, telemetry, audit, resilience, privacy, cancellation, and retention.
 - Added an explicit opt-in live OpenAI structured-output connectivity command that prints metadata only.
 - Added v0.3 release notes, deployment checklist, rollback guidance, known issues, and the AI provider runbook.
+## Sprint 6 — Knowledge domain and persistence
+
+- Added organization-scoped source, document, immutable version, chunk, ingestion job, access policy, and citation models.
+- Added content-hash/version duplicate constraints, classification/status checks, lineage indexes, and composite tenant foreign keys.
+- Added Alembic revision `20260720_0007` and knowledge model/migration tests.

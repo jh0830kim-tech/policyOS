@@ -10,6 +10,16 @@ from app.models.identity import (
     RolePermission,
     User,
 )
+from app.models.knowledge import (
+    CitationReference,
+    KnowledgeAccessPolicy,
+    KnowledgeChunk,
+    KnowledgeDocument,
+    KnowledgeDocumentVersion,
+    KnowledgeIngestionJob,
+    KnowledgeSource,
+    KnowledgeVersionImmutableError,
+)
 from app.models.policy_candidate import PolicyCandidate
 from app.models.provider_audit import ProviderAuditRecord
 
@@ -18,6 +28,14 @@ __all__ = [
     "AITaskRecord",
     "AgentRunRecord",
     "ArtifactRecord",
+    "CitationReference",
+    "KnowledgeAccessPolicy",
+    "KnowledgeChunk",
+    "KnowledgeDocument",
+    "KnowledgeDocumentVersion",
+    "KnowledgeIngestionJob",
+    "KnowledgeSource",
+    "KnowledgeVersionImmutableError",
     "Membership",
     "MembershipRole",
     "Organization",
