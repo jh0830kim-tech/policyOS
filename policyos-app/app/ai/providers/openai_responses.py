@@ -122,13 +122,17 @@ class OpenAIResponsesGateway:
         usage = getattr(response, "usage", None)
         input_tokens = getattr(usage, "input_tokens", None)
         output_tokens = getattr(usage, "output_tokens", None)
+        input_details = getattr(usage, "input_tokens_details", None)
         return ModelResponse(
             model_id=getattr(response, "model", request.model_id),
             structured_output=payload,
             usage=UsageMetadata(
+                provider="openai",
                 model=getattr(response, "model", request.model_id),
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
+                total_tokens=getattr(usage, "total_tokens", None),
+                cached_input_tokens=getattr(input_details, "cached_tokens", None),
                 duration_ms=int((perf_counter() - started) * 1000),
             ),
             provider_request_id=response_id,

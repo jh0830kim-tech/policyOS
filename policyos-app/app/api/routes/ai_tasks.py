@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import OrganizationContext, require_permission
 from app.db.session import get_db
-from app.models.ai_execution import AITaskRecord
-from app.schemas.ai_task import AITaskCreate, AITaskRead
+from app.models.ai_execution import AgentRunRecord, AITaskRecord
+from app.schemas.ai_task import AgentRunUsageRead, AITaskCreate, AITaskRead
 from app.services.ai_execution import AIExecutionRepository
 
 router = APIRouter(prefix="/ai/tasks", tags=["ai-office"])
@@ -50,3 +50,23 @@ async def get_ai_task(
     if record is None:
         raise HTTPException(status_code=404, detail="AI task not found")
     return record
+
+
+@router.get("/{task_id}/usage", response_model=list[AgentRunUsageRead])
+async def get_ai_task_usage(
+    task_id: uuid.UUID,
+    context: OrganizationContext = Depends(require_permission("agent.read")),
+    db: AsyncSession = Depends(get_db),
+) -> list[AgentRunRecord]:
+    repository = AIExecutionRepository(db)
+    if await repository.get_task(task_id, context.organization_id) is None:
+        raise HTTPException(status_code=404, detail="AI task not found")
+    result = await db.scalars(
+        select(AgentRunRecord)
+        .where(
+            AgentRunRecord.task_id == task_id,
+            AgentRunRecord.organization_id == context.organization_id,
+        )
+        .order_by(AgentRunRecord.started_at.asc())
+    )
+    return list(result.all())

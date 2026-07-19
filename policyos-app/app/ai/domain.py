@@ -1,6 +1,7 @@
 """Shared, provider-independent domain contracts for PolicyOS AI agents."""
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated
 from uuid import UUID
@@ -136,11 +137,16 @@ class StructuredError(DomainModel):
 
 
 class UsageMetadata(DomainModel):
+    provider: ShortText | None = None
     model: ShortText | None = None
     prompt_version: ShortText | None = None
     input_tokens: int | None = Field(default=None, ge=0)
     output_tokens: int | None = Field(default=None, ge=0)
+    total_tokens: int | None = Field(default=None, ge=0)
+    cached_input_tokens: int | None = Field(default=None, ge=0)
     duration_ms: int | None = Field(default=None, ge=0)
+    retry_count: int = Field(default=0, ge=0)
+    estimated_cost: Decimal | None = Field(default=None, ge=0)
 
 
 class AgentResult(DomainModel):

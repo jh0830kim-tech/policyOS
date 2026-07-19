@@ -44,12 +44,21 @@ async def test_openai_gateway_uses_strict_responses_structured_output():
         output_text='{"answer":"ok"}',
         output=[],
         model="test-model",
-        usage=SimpleNamespace(input_tokens=7, output_tokens=3),
+        usage=SimpleNamespace(
+            input_tokens=7,
+            output_tokens=3,
+            total_tokens=10,
+            input_tokens_details=SimpleNamespace(cached_tokens=2),
+        ),
     )
     client = Client(response)
     result = await OpenAIResponsesGateway(client, store=False).generate(request())
     assert result.structured_output == {"answer": "ok"}
     assert result.provider_request_id == "resp_123"
+    assert result.usage.provider == "openai"
+    assert result.usage.total_tokens == 10
+    assert result.usage.cached_input_tokens == 2
+    assert result.usage.estimated_cost is None
     assert client.responses.kwargs["text"]["format"]["strict"] is True
     assert client.responses.kwargs["store"] is False
 

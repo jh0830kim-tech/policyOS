@@ -118,9 +118,11 @@ class FakeModelGateway:
             structured_output=self._structured_output,
             summary=self._summary,
             usage=UsageMetadata(
+                provider="fake",
                 model=request.model_id,
                 input_tokens=10,
                 output_tokens=5,
+                total_tokens=15,
                 duration_ms=int(self._simulated_latency_seconds * 1_000),
             ),
             provider_request_id="fake-request-1",
