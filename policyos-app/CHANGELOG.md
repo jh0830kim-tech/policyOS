@@ -1,5 +1,13 @@
 ﻿# Changelog
 
+## Sprint 4 — Operational AI Agents
+
+- Added six governed operational agents and typed artifact contracts.
+- Added deterministic policy, communication, presentation, and full-office workflows.
+- Added organization-scoped work-package and artifact persistence with human review transitions.
+- Added RBAC-protected work-package and artifact APIs.
+- Added network-free full-office integration coverage.
+
 ## Unreleased ??Sprint 2 authentication and identity
 - Added Argon2 password hashing and constant-work credential verification.
 - Added short-lived signed JWT access tokens with minimal `sub`, `iat`, `exp`, and `jti` claims.

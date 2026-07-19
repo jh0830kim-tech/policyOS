@@ -66,3 +66,5 @@ No sprint is complete without:
 - security impact reviewed
 ### Sprint 3 implementation status
 Agent/model contracts, registries, Policy Research and Legal Review agents, rules-based orchestration, execution records, and organization-scoped task APIs are implemented. Live providers, RAG, queues, streaming, and automatic publication remain deferred.
+### Sprint 4 implementation status
+Six operational agents, four deterministic work-package workflows, governed artifact persistence/review, RBAC APIs, and network-free end-to-end coverage are implemented. Sprint 5 must add a production OpenAI adapter, operational timeout/retry policy, approved prompt deployment, and observability before live model use.
