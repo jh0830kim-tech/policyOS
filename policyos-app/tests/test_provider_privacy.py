@@ -247,6 +247,7 @@ async def test_audit_repository_persists_allowlisted_metadata_only() -> None:
         assert prohibited not in columns
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_retention_cleanup_is_organization_scoped_and_leaves_artifacts_untouched() -> None:
     db = AsyncMock(spec=AsyncSession)

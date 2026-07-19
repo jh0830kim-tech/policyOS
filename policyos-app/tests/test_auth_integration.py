@@ -52,6 +52,7 @@ def clear_overrides() -> AsyncIterator[None]:
     app.dependency_overrides.clear()
 
 
+@pytest.mark.smoke
 def test_login_to_organization_authorization_end_to_end() -> None:
     user = make_user()
     granted_organization_id = uuid.uuid4()

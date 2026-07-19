@@ -36,3 +36,6 @@ network operation, then redacts permitted text immediately before transmission. 
 record stores only provider/model identifiers, tenant and task lineage, classification, redaction
 counts, store policy, time, outcome, policy decision, and safe error code. Prompt text, credentials,
 raw provider responses, and hidden reasoning are excluded by schema.
+## Sprint 5 release verification
+
+The release smoke path starts with authentication and organization-scoped `agent.execute`, executes the configured provider through the Chief Secretary, and verifies terminal task/run/package states, reviewable artifacts, usage telemetry, and provider audit metadata. Run `pytest -m smoke` for the network-free suite. Live provider connectivity is a separate, explicit staging-only operation documented in `RUNBOOK.md`.

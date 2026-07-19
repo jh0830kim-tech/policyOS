@@ -39,3 +39,10 @@ Partial failures remain reviewable. Public-facing artifacts cannot advance beyon
 
 Supported routes are `policy_package`, `communication_package`, `presentation_package`, and
 `full_office_package`. A failed specialist can never be reported as a successful package.
+## Release smoke invariants
+
+- An all-agent provider failure is `failed`; a partial failure is `needs_review`; cancellation is `cancelled`.
+- Completed model calls still produce `needs_review` artifacts until authorized human review.
+- Every planned run reaches a terminal state and remains scoped to its task and organization.
+- OpenAI transmissions pass policy and redaction before the provider call; audit and usage metadata are recorded without prompt or raw response content.
+- The release smoke selection is `pytest -m smoke`; it never enables live OpenAI access.

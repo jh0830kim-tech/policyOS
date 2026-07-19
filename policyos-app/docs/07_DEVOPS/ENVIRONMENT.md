@@ -41,3 +41,6 @@ Local and test environments default to `AI_PROVIDER=fake`. Production deployment
 `disabled` to fail safely. The composition root applies the configured model, store, timeout,
 application retry, redaction, classification, confidential-data policy, and audit retention settings.
 No live provider call is made by the automated test suite.
+## Sprint 5 release gates
+
+Before enabling `AI_PROVIDER=openai`, complete the environment and migration checklist in `RELEASE_NOTES_v0.3.md`, run `ruff check .`, `pytest`, and `pytest -m smoke`, and verify the configured retention/privacy values. `RUN_OPENAI_LIVE_TESTS` is intentionally absent from `.env.example`; set it temporarily to `1` only for an approved staging invocation of `python -m scripts.openai_smoke_test`. Automated tests never make external provider calls.

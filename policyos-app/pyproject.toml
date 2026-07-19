@@ -37,6 +37,10 @@ exclude = ["alembic", "alembic.*", "tests", "tests.*"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = ["."]
+markers = [
+  "smoke: network-free Sprint 5 release smoke tests",
+  "live_openai: explicit opt-in test that may call the OpenAI API",
+]
 
 [tool.ruff]
 line-length = 100

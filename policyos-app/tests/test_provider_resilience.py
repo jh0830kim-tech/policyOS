@@ -96,6 +96,7 @@ async def test_overall_timeout_maps_to_safe_typed_error():
     assert responses.calls == 1
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_rate_limit_retries_then_records_success_retry_count():
     rate_limit = status_error(openai.RateLimitError, 429, retry_after="0")
@@ -136,6 +137,7 @@ async def test_non_retryable_provider_errors_are_attempted_once(error, code):
     assert "provider detail" not in caught.value.safe_message
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "error",
@@ -151,6 +153,7 @@ async def test_transient_server_and_connection_errors_retry(error):
     assert result.usage.retry_count == 1
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_cancellation_is_propagated_to_provider_coroutine():
     cancelled = asyncio.Event()

@@ -99,6 +99,7 @@ def records(session, record_type):
     return [item for item in session.objects if isinstance(item, record_type)]
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_fake_provider_executes_full_office_and_persists_consistent_state():
     session = FakeSession()
@@ -116,6 +117,7 @@ async def test_fake_provider_executes_full_office_and_persists_consistent_state(
     assert session.commits == 2
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_mocked_openai_persists_usage_audit_and_redacts_before_transmission():
     session = FakeSession()
@@ -142,6 +144,7 @@ async def test_mocked_openai_persists_usage_audit_and_redacts_before_transmissio
     assert all(run.total_tokens == 15 for run in records(session, AgentRunRecord))
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_restricted_openai_request_is_blocked_without_network_and_marked_failed():
     session = FakeSession()
@@ -170,6 +173,7 @@ async def test_restricted_openai_request_is_blocked_without_network_and_marked_f
     assert all(run.status == "failed" for run in records(session, AgentRunRecord))
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("error", "expected_code", "http_status"),
@@ -216,6 +220,7 @@ async def test_provider_failures_map_to_safe_application_errors(error, expected_
     assert caught.value.safe_message != str(error)
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_partial_agent_failure_is_needs_review_not_false_success():
     session = FakeSession()
@@ -254,6 +259,7 @@ async def test_idempotency_is_scoped_to_existing_organization_package():
     assert session.objects == []
 
 
+@pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_cancellation_marks_task_package_and_runs_cancelled():
     session = FakeSession()
@@ -276,6 +282,34 @@ async def test_cancellation_marks_task_package_and_runs_cancelled():
     assert records(session, AITaskRecord)[0].status == "cancelled"
     assert records(session, WorkPackageRecord)[0].status == "cancelled"
     assert all(run.status == "cancelled" for run in records(session, AgentRunRecord))
+
+
+@pytest.mark.smoke
+@pytest.mark.asyncio
+async def test_total_provider_unavailable_marks_package_task_and_runs_failed():
+    session = FakeSession()
+    settings = Settings(_env_file=None, ai_provider="fake")
+    composition = build_office_composition(settings)
+    unavailable = ModelGatewayError(
+        ModelErrorCode.PROVIDER_UNAVAILABLE,
+        "Provider unavailable",
+        retryable=True,
+    )
+    for agent_id in composition.workflow.plan(
+        OfficeApplicationService._task(payload(), uuid4(), uuid4(), uuid4())
+    ):
+        composition.registry.get(agent_id)._gateway = FakeModelGateway(error=unavailable)
+
+    with pytest.raises(OfficeExecutionError) as caught:
+        await OfficeApplicationService(
+            session, settings, composition=composition
+        ).execute_work_package(payload(), organization_id=uuid4(), user_id=uuid4())
+
+    assert caught.value.code == "provider_unavailable"
+    assert caught.value.http_status == 503
+    assert records(session, AITaskRecord)[0].status == "failed"
+    assert records(session, WorkPackageRecord)[0].status == "failed"
+    assert all(run.status == "failed" for run in records(session, AgentRunRecord))
 
 
 def test_persisted_models_have_no_raw_provider_or_secret_columns():

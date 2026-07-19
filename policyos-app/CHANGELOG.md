@@ -45,3 +45,8 @@
   organization-scoped idempotency keys.
 - Connected the existing RBAC-protected Work Package endpoint to a thin application service.
 - Added network-free fake and mocked OpenAI production integration tests.
+## Sprint 5 — Production smoke test and release readiness
+
+- Added a network-free release smoke suite covering login, mocked OpenAI and fake execution, orchestration, persistence, telemetry, audit, resilience, privacy, cancellation, and retention.
+- Added an explicit opt-in live OpenAI structured-output connectivity command that prints metadata only.
+- Added v0.3 release notes, deployment checklist, rollback guidance, known issues, and the AI provider runbook.
