@@ -48,5 +48,3 @@ def test_access_token_with_invalid_signature_is_rejected() -> None:
 def test_expired_access_token_is_rejected() -> None:
     token = create_access_token("user-123", expires_delta=timedelta(seconds=-1))
     assert decode_access_token(token) is None
-
-

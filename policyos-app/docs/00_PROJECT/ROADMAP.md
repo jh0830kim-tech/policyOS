@@ -64,4 +64,3 @@ No sprint is complete without:
 - lint passing
 - documentation updated
 - security impact reviewed
-

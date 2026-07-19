@@ -193,4 +193,3 @@ def test_unknown_user_and_wrong_password_are_publicly_indistinguishable() -> Non
     assert unknown_response.json() == wrong_password_response.json() == {
         "detail": "Invalid credentials"
     }
-
