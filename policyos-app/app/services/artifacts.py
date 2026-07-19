@@ -25,7 +25,13 @@ class ArtifactRepository:
         self.db = db
 
     async def create_package(
-        self, package: OfficeWorkPackage, created_by: uuid.UUID
+        self,
+        package: OfficeWorkPackage,
+        created_by: uuid.UUID,
+        *,
+        status: str = "pending",
+        client_request_id: str | None = None,
+        commit: bool = True,
     ) -> WorkPackageRecord:
         record = WorkPackageRecord(
             organization_id=package.organization_id,
@@ -33,12 +39,26 @@ class ArtifactRepository:
             package_type=package.package_type,
             title=package.title,
             summary=package.summary,
+            status=status,
+            client_request_id=client_request_id,
             review_status=package.review_status.value,
             created_by=created_by,
         )
         self.db.add(record)
-        await self.db.commit()
+        await self._persist(commit)
         return record
+
+    async def get_package_by_client_request(
+        self,
+        organization_id: uuid.UUID,
+        client_request_id: str,
+    ) -> WorkPackageRecord | None:
+        return await self.db.scalar(
+            select(WorkPackageRecord).where(
+                WorkPackageRecord.organization_id == organization_id,
+                WorkPackageRecord.client_request_id == client_request_id,
+            )
+        )
 
     async def create_artifact(
         self,
@@ -47,6 +67,8 @@ class ArtifactRepository:
         *,
         package_id: uuid.UUID | None = None,
         artifact_reference: str | None = None,
+        status: str = "needs_review",
+        commit: bool = True,
     ) -> ArtifactRecord:
         payload: dict[str, Any] = artifact.model_dump(mode="json")
         if (
@@ -62,6 +84,7 @@ class ArtifactRepository:
             title=artifact.title,
             authoring_agent=artifact.authoring_agent.value,
             version=artifact.version,
+            status=status,
             review_status=artifact.review_status.value,
             summary=artifact.summary,
             structured_payload=payload,
@@ -70,7 +93,7 @@ class ArtifactRepository:
             created_by=created_by,
         )
         self.db.add(record)
-        await self.db.commit()
+        await self._persist(commit)
         return record
 
     async def get_artifact(
@@ -78,7 +101,8 @@ class ArtifactRepository:
     ) -> ArtifactRecord | None:
         return await self.db.scalar(
             select(ArtifactRecord).where(
-                ArtifactRecord.id == artifact_id, ArtifactRecord.organization_id == organization_id
+                ArtifactRecord.id == artifact_id,
+                ArtifactRecord.organization_id == organization_id,
             )
         )
 
@@ -91,6 +115,7 @@ class ArtifactRepository:
                 f"Invalid artifact transition: {artifact.review_status} -> {status.value}"
             )
         artifact.review_status = status.value
+        artifact.status = status.value
         now = datetime.now(UTC)
         if status is ArtifactReviewStatus.APPROVED:
             artifact.approved_by, artifact.approved_at = reviewer_id, now
@@ -98,3 +123,9 @@ class ArtifactRepository:
             artifact.archived_at = now
         await self.db.commit()
         return artifact
+
+    async def _persist(self, commit: bool) -> None:
+        if commit:
+            await self.db.commit()
+        else:
+            await self.db.flush()

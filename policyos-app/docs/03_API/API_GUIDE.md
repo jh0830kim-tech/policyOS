@@ -1,4 +1,4 @@
-﻿# API Guide
+# API Guide
 
 ## Base path
 Use versioned routes such as `/api/v1`.
@@ -57,3 +57,15 @@ POST /api/v1/ai/tasks requires agent.execute. List and item GET endpoints requir
 - `GET /api/v1/ai/artifacts/{artifact_id}?organization_id={uuid}` requires `artifact.read`.
 - `POST /api/v1/ai/artifacts/{artifact_id}/review?organization_id={uuid}` requires `artifact.review`.
 No publish or send endpoint exists.
+
+## Work Package execution
+
+`POST /api/v1/ai/work-packages` now performs governed workflow execution synchronously. It requires
+active membership and `agent.execute`. Supported package types are policy, communication,
+presentation, and full-office packages. `Idempotency-Key` or `client_request_id` prevents duplicate
+creation within one organization. Provider policy denial returns `403`; timeout returns `504`;
+rate limit, unavailable provider, and configuration failures return safe `503` responses. Provider
+messages, stack traces, credentials, prompts, and raw responses are never returned.
+
+List/item Work Package and Artifact reads remain organization-scoped. Artifact review still requires
+`artifact.review`, and execution status is exposed separately from human review status.

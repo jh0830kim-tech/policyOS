@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.ai.artifacts import ArtifactReviewStatus
+from app.ai.privacy import DataClassification
 
 
 class WorkPackageCreate(BaseModel):
@@ -15,6 +16,8 @@ class WorkPackageCreate(BaseModel):
         "full_office_package",
     ]
     instruction: str = Field(min_length=1, max_length=10_000)
+    data_classification: DataClassification = DataClassification.INTERNAL
+    client_request_id: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 class WorkPackageRead(BaseModel):
@@ -24,6 +27,8 @@ class WorkPackageRead(BaseModel):
     package_type: str
     title: str
     summary: str
+    status: str
+    client_request_id: str | None
     review_status: str
     created_by: uuid.UUID
     created_at: datetime
@@ -41,6 +46,7 @@ class ArtifactRead(BaseModel):
     title: str
     authoring_agent: str
     version: str
+    status: str
     review_status: str
     summary: str
     structured_payload: dict[str, Any] | None

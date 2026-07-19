@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from pydantic import ValidationError
 
 from app.core.config import Settings
@@ -27,3 +27,18 @@ def test_development_default_avoids_short_hmac_key() -> None:
     settings = Settings(_env_file=None)
 
     assert len(settings.secret_key.encode()) >= 32
+
+
+def test_openai_resilience_settings_are_bounded() -> None:
+    settings = Settings(
+        _env_file=None,
+        openai_timeout_seconds=12,
+        openai_max_retries=3,
+        openai_retry_backoff_seconds=0.25,
+    )
+    assert settings.openai_timeout_seconds == 12
+    assert settings.openai_max_retries == 3
+    assert settings.openai_retry_backoff_seconds == 0.25
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, openai_max_retries=11)

@@ -14,6 +14,7 @@ from app.ai.domain import (
     StructuredError,
 )
 from app.ai.model_gateway import ModelGateway, ModelGatewayError, ModelRequest
+from app.ai.privacy import ProviderTransmissionContext
 from app.ai.prompts import PromptRegistry
 
 
@@ -63,6 +64,8 @@ class SpecialistAgentBase:
         self._prompts = prompts
         self._prompt_version = prompt_version
         self._model_id = model_id
+        self.last_provider_request_id: str | None = None
+        self.last_provider_error: ModelGatewayError | None = None
 
     async def execute(self, task: AgentTask) -> AgentResult:
         prompt = self._prompts.get(self.name, self._prompt_version, prompt_name=self.prompt_name)
@@ -72,9 +75,17 @@ class SpecialistAgentBase:
             structured_context=task.context.model_dump(mode="json"),
             output_schema=self.output_type.model_json_schema(),
             model_id=self._model_id,
+            transmission_context=ProviderTransmissionContext(
+                organization_id=task.organization_id,
+                authorized_organization_id=task.organization_id,
+                user_id=task.user_id,
+                task_id=task.task_id,
+                data_classification=task.context.data_classification,
+            ),
         )
         try:
             response = await self._gateway.generate(request)
+            self.last_provider_request_id = response.provider_request_id
             output = self.output_type.model_validate(response.structured_output)
         except ModelGatewayError as exc:
             return self._failure(task, exc.code.value, exc.safe_message, exc.retryable)

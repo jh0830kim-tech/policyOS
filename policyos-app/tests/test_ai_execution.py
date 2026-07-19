@@ -40,6 +40,7 @@ async def test_parent_run_and_error_transition() -> None:
         task_id=uuid4(),
         parent_run_id=parent_id,
         agent_name="legal_review",
+        provider="openai",
         prompt_version="1.0.0",
         prompt_hash="a" * 64,
     )
@@ -47,6 +48,7 @@ async def test_parent_run_and_error_transition() -> None:
         run, status="failed", review_status="pending", error_code="provider_unavailable"
     )
     assert run.parent_run_id == parent_id
+    assert run.provider == "openai"
     assert run.error_code == "provider_unavailable"
     assert run.finished_at is not None and run.finished_at.utcoffset() is not None
     assert db.commit.await_count == 2
