@@ -40,8 +40,12 @@ class ModelErrorCode(StrEnum):
     TIMEOUT = "timeout"
     RATE_LIMITED = "rate_limited"
     PROVIDER_UNAVAILABLE = "provider_unavailable"
+    CONNECTION = "connection_error"
+    SERVER_ERROR = "server_error"
     INVALID_RESPONSE = "invalid_response"
     AUTHENTICATION = "authentication_error"
+    PERMISSION_DENIED = "permission_denied"
+    INVALID_REQUEST = "invalid_request"
     REFUSED = "refused"
     INCOMPLETE = "incomplete"
     UNKNOWN = "unknown"
@@ -57,11 +61,17 @@ class ModelGatewayError(Exception):
         *,
         retryable: bool,
         provider_request_id: str | None = None,
+        retry_count: int = 0,
+        latency_ms: int | None = None,
+        retry_after_seconds: float | None = None,
     ) -> None:
         self.code = code
         self.safe_message = message
         self.retryable = retryable
         self.provider_request_id = provider_request_id
+        self.retry_count = retry_count
+        self.latency_ms = latency_ms
+        self.retry_after_seconds = retry_after_seconds
         super().__init__(message)
 
 
@@ -75,10 +85,10 @@ class ModelTimeoutError(ModelGatewayError):
 
 
 class ModelConfigurationError(ModelGatewayError):
-    def __init__(self) -> None:
+    def __init__(self, message: str = "No model provider is configured") -> None:
         super().__init__(
             ModelErrorCode.CONFIGURATION,
-            "No model provider is configured",
+            message,
             retryable=False,
         )
 

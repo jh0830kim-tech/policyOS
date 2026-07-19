@@ -57,6 +57,7 @@ class AgentStatus(StrEnum):
     RUNNING = "running"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
+    CANCELLED = "cancelled"
     NEEDS_REVIEW = "needs_review"
 
 

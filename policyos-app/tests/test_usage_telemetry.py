@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.domain import UsageMetadata
+from app.ai.model_gateway import ModelErrorCode, ModelGatewayError
 from app.models.ai_execution import AgentRunRecord, AITaskRecord
 from app.schemas.ai_task import AgentRunUsageRead
 from app.services.ai_execution import AIExecutionRepository
@@ -100,3 +101,48 @@ def test_usage_migration_is_reversible_and_contains_no_sensitive_payloads() -> N
         assert required in migration
     for prohibited in ("raw_provider_response", "api_key", "bearer_token", "reasoning"):
         assert prohibited not in migration
+
+
+@pytest.mark.asyncio
+async def test_provider_failure_and_cancellation_telemetry() -> None:
+    db = AsyncMock(spec=AsyncSession)
+    repository = AIExecutionRepository(db)
+    failed = AgentRunRecord(
+        organization_id=uuid4(),
+        task_id=uuid4(),
+        agent_name="legal_review",
+        prompt_version="1.0.0",
+        prompt_hash="b" * 64,
+        provider="openai",
+    )
+    error = ModelGatewayError(
+        ModelErrorCode.RATE_LIMITED,
+        "Model provider is rate limited",
+        retryable=True,
+        provider_request_id="resp_failed",
+        retry_count=2,
+        latency_ms=350,
+        retry_after_seconds=1.0,
+    )
+    await repository.finish_run(
+        failed,
+        status="failed",
+        review_status="pending",
+        provider_error=error,
+    )
+    assert failed.status == "failed"
+    assert failed.error_code == "rate_limited"
+    assert failed.provider_response_id == "resp_failed"
+    assert failed.retry_count == 2
+    assert failed.latency_ms == 350
+
+    cancelled = AgentRunRecord(
+        organization_id=uuid4(),
+        task_id=uuid4(),
+        agent_name="statistics",
+        prompt_version="1.0.0",
+        prompt_hash="c" * 64,
+    )
+    await repository.cancel_run(cancelled)
+    assert cancelled.status == "cancelled"
+    assert cancelled.error_code == "cancelled"

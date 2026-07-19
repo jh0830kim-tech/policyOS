@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.domain import UsageMetadata
+from app.ai.model_gateway import ModelGatewayError
 from app.models.ai_execution import AgentRunRecord, AITaskRecord
 
 
@@ -77,6 +78,7 @@ class AIExecutionRepository:
         error_code: str | None = None,
         provider_request_id: str | None = None,
         usage: UsageMetadata | None = None,
+        provider_error: ModelGatewayError | None = None,
     ) -> AgentRunRecord:
         run.status = status
         run.review_status = review_status
@@ -84,6 +86,11 @@ class AIExecutionRepository:
         run.artifact_reference = artifact_reference
         run.error_code = error_code
         run.provider_response_id = provider_request_id
+        if provider_error is not None:
+            run.error_code = provider_error.code.value
+            run.provider_response_id = provider_error.provider_request_id
+            run.retry_count = provider_error.retry_count
+            run.latency_ms = provider_error.latency_ms
         if usage is not None:
             run.provider = usage.provider
             run.model_id = usage.model or run.model_id
@@ -99,3 +106,12 @@ class AIExecutionRepository:
         run.finished_at = datetime.now(UTC)
         await self.db.commit()
         return run
+
+    async def cancel_run(self, run: AgentRunRecord) -> AgentRunRecord:
+        """Persist cancellation without swallowing the caller's CancelledError."""
+        return await self.finish_run(
+            run,
+            status="cancelled",
+            review_status="pending",
+            error_code="cancelled",
+        )

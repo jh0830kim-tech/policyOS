@@ -23,7 +23,13 @@ def create_model_gateway(settings: Settings, *, client: AsyncOpenAI | None = Non
         sdk_client = client or AsyncOpenAI(
             api_key=settings.openai_api_key,
             timeout=settings.openai_timeout_seconds,
-            max_retries=settings.openai_max_retries,
+            max_retries=0,
         )
-        return OpenAIResponsesGateway(sdk_client, store=settings.openai_store_responses)
+        return OpenAIResponsesGateway(
+            sdk_client,
+            store=settings.openai_store_responses,
+            timeout_seconds=settings.openai_timeout_seconds,
+            max_retries=settings.openai_max_retries,
+            retry_backoff_seconds=settings.openai_retry_backoff_seconds,
+        )
     raise ModelConfigurationError(f"Unsupported model provider: {settings.ai_provider}")

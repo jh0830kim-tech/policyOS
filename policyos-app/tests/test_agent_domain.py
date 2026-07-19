@@ -1,4 +1,4 @@
-﻿from datetime import UTC, datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -89,6 +89,7 @@ def test_status_and_review_values_are_enums() -> None:
         "running",
         "succeeded",
         "failed",
+        "cancelled",
         "needs_review",
     }
     assert ReviewStatus("approved") is ReviewStatus.APPROVED
