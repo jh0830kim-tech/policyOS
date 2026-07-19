@@ -38,3 +38,11 @@ the caller has `agent.execute`, the tenant context matches, and the provider is 
 denials use the safe `provider_policy_blocked` code and do not expose provider or policy internals.
 Provider audit APIs are not exposed to ordinary users. Any future audit read endpoint must require
 an audit/admin permission and enforce organization scoping.
+
+## Production workflow authorization
+
+The Work Package router delegates execution only after authentication, active-membership resolution,
+and exact `agent.execute` authorization. The application service receives the resolved organization
+and user identifiers and uses them for every task, run, package, artifact, audit, and provider
+transmission context. Read/review routes retain organization predicates. Provider failures are mapped
+to allowlisted codes and messages without exposing SDK exceptions or stack traces.

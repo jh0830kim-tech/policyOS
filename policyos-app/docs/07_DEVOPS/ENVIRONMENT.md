@@ -33,3 +33,11 @@ never written to telemetry.
 - `AI_REDACTION_CUSTOM_TERMS=`: comma-separated organization-specific terms to mask.
 
 Custom terms are policy configuration, not a secret store. Do not place credentials in this value.
+
+## Production workflow provider selection
+
+Local and test environments default to `AI_PROVIDER=fake`. Production deployments explicitly set
+`AI_PROVIDER=openai` and supply `OPENAI_API_KEY` through the approved secret mechanism, or select
+`disabled` to fail safely. The composition root applies the configured model, store, timeout,
+application retry, redaction, classification, confidential-data policy, and audit retention settings.
+No live provider call is made by the automated test suite.

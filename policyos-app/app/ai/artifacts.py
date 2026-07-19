@@ -129,3 +129,11 @@ class OfficeWorkPackage(ArtifactMetadata):
     completed_agents: list[AgentIdentifier] = Field(default_factory=list, max_length=20)
     failed_agents: list[AgentIdentifier] = Field(default_factory=list, max_length=20)
     result_summaries: list[ArtifactText] = Field(default_factory=list, max_length=100)
+
+
+class AgentResultArtifact(ArtifactMetadata):
+    """Reviewable persistence form for specialist results without provider internals."""
+
+    verified_findings: list[ArtifactText] = Field(default_factory=list, max_length=100)
+    analysis: list[ArtifactText] = Field(default_factory=list, max_length=100)
+    recommendations: list[ArtifactText] = Field(default_factory=list, max_length=100)

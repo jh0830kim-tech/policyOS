@@ -1,6 +1,6 @@
 # Changelog
 
-## Sprint 4 — Operational AI Agents
+## Sprint 4 ??Operational AI Agents
 
 - Added six governed operational agents and typed artifact contracts.
 - Added deterministic policy, communication, presentation, and full-office workflows.
@@ -29,10 +29,19 @@
 ## 0.1.0
 - Initial project documentation scaffold.
 
-## Sprint 5 — Provider privacy controls
+## Sprint 5 ??Provider privacy controls
 
 - Added four-level AI data classification and provider transmission policy enforcement.
 - Added pre-transmission redaction for credentials, identity/contact patterns, and custom terms.
 - Added conservative provider storage controls with test-environment storage disabled.
 - Added privacy-safe provider audit metadata and organization-scoped retention cleanup.
 - Added network-free privacy, cross-organization, redaction, audit, and retention tests.
+
+## Sprint 5 — Production Office workflow integration
+
+- Connected configured fake/OpenAI providers to all four governed Office Work Package routes.
+- Added task, run, usage, provider-audit, package, and artifact persistence in one application flow.
+- Added execution status lifecycle, cancellation persistence, partial/total failure handling, and
+  organization-scoped idempotency keys.
+- Connected the existing RBAC-protected Work Package endpoint to a thin application service.
+- Added network-free fake and mocked OpenAI production integration tests.

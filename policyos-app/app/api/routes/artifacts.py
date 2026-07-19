@@ -1,12 +1,11 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.artifacts import ArtifactReviewStatus, OfficeWorkPackage
-from app.ai.domain import AgentIdentifier
 from app.api.deps import OrganizationContext, require_permission
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.artifact import WorkPackageRecord
 from app.schemas.artifact import (
@@ -15,8 +14,8 @@ from app.schemas.artifact import (
     WorkPackageCreate,
     WorkPackageRead,
 )
-from app.services.ai_execution import AIExecutionRepository
 from app.services.artifacts import ArtifactRepository, InvalidArtifactTransitionError
+from app.services.office_application import OfficeApplicationService, OfficeExecutionError
 
 router = APIRouter(prefix="/ai", tags=["ai-artifacts"])
 
@@ -26,23 +25,20 @@ async def create_work_package(
     payload: WorkPackageCreate,
     context: OrganizationContext = Depends(require_permission("agent.execute")),
     db: AsyncSession = Depends(get_db),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key", max_length=100),
 ) -> WorkPackageRecord:
-    task = await AIExecutionRepository(db).create_task(
-        organization_id=context.organization_id,
-        requesting_user_id=context.user.id,
-        task_type=payload.package_type,
-    )
-    package = OfficeWorkPackage(
-        title=payload.package_type.replace("_", " ").title(),
-        summary="Work package accepted for governed execution.",
-        organization_id=context.organization_id,
-        task_id=task.id,
-        authoring_agent=AgentIdentifier.CHIEF_SECRETARY,
-        version="1.0.0",
-        review_status=ArtifactReviewStatus.NEEDS_REVIEW,
-        package_type=payload.package_type,
-    )
-    return await ArtifactRepository(db).create_package(package, context.user.id)
+    try:
+        return await OfficeApplicationService(db, get_settings()).execute_work_package(
+            payload,
+            organization_id=context.organization_id,
+            user_id=context.user.id,
+            client_request_id=idempotency_key,
+        )
+    except OfficeExecutionError as exc:
+        raise HTTPException(
+            status_code=exc.http_status,
+            detail={"code": exc.code, "message": exc.safe_message},
+        ) from exc
 
 
 @router.get("/work-packages", response_model=list[WorkPackageRead])

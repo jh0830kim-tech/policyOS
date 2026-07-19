@@ -64,6 +64,8 @@ class SpecialistAgentBase:
         self._prompts = prompts
         self._prompt_version = prompt_version
         self._model_id = model_id
+        self.last_provider_request_id: str | None = None
+        self.last_provider_error: ModelGatewayError | None = None
 
     async def execute(self, task: AgentTask) -> AgentResult:
         prompt = self._prompts.get(self.name, self._prompt_version, prompt_name=self.prompt_name)
@@ -83,6 +85,7 @@ class SpecialistAgentBase:
         )
         try:
             response = await self._gateway.generate(request)
+            self.last_provider_request_id = response.provider_request_id
             output = self.output_type.model_validate(response.structured_output)
         except ModelGatewayError as exc:
             return self._failure(task, exc.code.value, exc.safe_message, exc.retryable)

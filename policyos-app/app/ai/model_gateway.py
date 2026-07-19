@@ -115,7 +115,7 @@ class FakeModelGateway:
         simulated_latency_seconds: float = 0,
         error: ModelGatewayError | None = None,
     ) -> None:
-        self._structured_output = structured_output or {"result": "fake"}
+        self._structured_output = structured_output
         self._summary = summary
         self._simulated_latency_seconds = simulated_latency_seconds
         self._error = error
@@ -129,7 +129,11 @@ class FakeModelGateway:
             raise self._error
         return ModelResponse(
             model_id=request.model_id,
-            structured_output=self._structured_output,
+            structured_output=(
+                self._structured_output
+                if self._structured_output is not None
+                else _fake_structured_output(request.output_schema)
+            ),
             summary=self._summary,
             usage=UsageMetadata(
                 provider="fake",
@@ -148,3 +152,50 @@ class DisabledModelGateway:
 
     async def generate(self, request: ModelRequest) -> ModelResponse:
         raise ModelConfigurationError
+
+
+def _fake_structured_output(schema: dict[str, Any] | None) -> dict[str, Any]:
+    """Build deterministic schema-shaped data for network-free application tests."""
+    if schema is None:
+        return {"result": "fake"}
+
+    def value(node: dict[str, Any]) -> Any:
+        if "$ref" in node:
+            target: Any = schema
+            for part in node["$ref"].removeprefix("#/").split("/"):
+                target = target[part]
+            return value(target)
+        if "const" in node:
+            return node["const"]
+        if "enum" in node:
+            return node["enum"][0]
+        if "anyOf" in node:
+            option = next(
+                (item for item in node["anyOf"] if item.get("type") != "null"),
+                node["anyOf"][0],
+            )
+            return value(option)
+        node_type = node.get("type")
+        if node_type == "object" or "properties" in node:
+            properties = node.get("properties", {})
+            required = node.get("required", properties.keys())
+            return {
+                name: value(properties[name]) if name in properties else "fake" for name in required
+            }
+        if node_type == "array":
+            minimum = node.get("minItems", 0)
+            return [value(node.get("items", {})) for _ in range(minimum)]
+        if node_type == "integer":
+            return max(1, int(node.get("minimum", 0)))
+        if node_type == "number":
+            return max(1.0, float(node.get("minimum", 0)))
+        if node_type == "boolean":
+            return False
+        if node.get("format") == "uuid":
+            return "00000000-0000-0000-0000-000000000001"
+        if node.get("format") == "date-time":
+            return "2026-01-01T00:00:00Z"
+        return "fake"
+
+    result = value(schema)
+    return result if isinstance(result, dict) else {"result": result}

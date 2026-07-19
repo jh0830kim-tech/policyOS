@@ -11,7 +11,7 @@ from app.models.ai_execution import AgentRunRecord, AITaskRecord
 
 
 class AIExecutionRepository:
-    """Organization-scoped execution persistence with explicit commits."""
+    """Organization-scoped execution persistence with explicit commit control."""
 
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
@@ -23,6 +23,7 @@ class AIExecutionRepository:
         requesting_user_id: uuid.UUID,
         task_type: str,
         parent_task_id: uuid.UUID | None = None,
+        commit: bool = True,
     ) -> AITaskRecord:
         record = AITaskRecord(
             organization_id=organization_id,
@@ -31,7 +32,7 @@ class AIExecutionRepository:
             parent_task_id=parent_task_id,
         )
         self.db.add(record)
-        await self.db.commit()
+        await self._persist(commit)
         return record
 
     async def get_task(self, task_id: uuid.UUID, organization_id: uuid.UUID) -> AITaskRecord | None:
@@ -52,6 +53,7 @@ class AIExecutionRepository:
         parent_run_id: uuid.UUID | None = None,
         model_id: str | None = None,
         provider: str | None = None,
+        commit: bool = True,
     ) -> AgentRunRecord:
         record = AgentRunRecord(
             organization_id=organization_id,
@@ -64,7 +66,7 @@ class AIExecutionRepository:
             provider=provider,
         )
         self.db.add(record)
-        await self.db.commit()
+        await self._persist(commit)
         return record
 
     async def finish_run(
@@ -79,6 +81,7 @@ class AIExecutionRepository:
         provider_request_id: str | None = None,
         usage: UsageMetadata | None = None,
         provider_error: ModelGatewayError | None = None,
+        commit: bool = True,
     ) -> AgentRunRecord:
         run.status = status
         run.review_status = review_status
@@ -104,14 +107,20 @@ class AIExecutionRepository:
                 Decimal(str(usage.estimated_cost)) if usage.estimated_cost is not None else None
             )
         run.finished_at = datetime.now(UTC)
-        await self.db.commit()
+        await self._persist(commit)
         return run
 
-    async def cancel_run(self, run: AgentRunRecord) -> AgentRunRecord:
-        """Persist cancellation without swallowing the caller's CancelledError."""
+    async def cancel_run(self, run: AgentRunRecord, *, commit: bool = True) -> AgentRunRecord:
         return await self.finish_run(
             run,
             status="cancelled",
             review_status="pending",
             error_code="cancelled",
+            commit=commit,
         )
+
+    async def _persist(self, commit: bool) -> None:
+        if commit:
+            await self.db.commit()
+        else:
+            await self.db.flush()

@@ -35,6 +35,8 @@ class OperationalAgent:
         self._prompts = prompts
         self._prompt_version = prompt_version
         self._model_id = model_id
+        self.last_provider_request_id: str | None = None
+        self.last_provider_error: ModelGatewayError | None = None
         self.last_artifact: ArtifactMetadata | None = None
 
     async def execute(self, task: AgentTask) -> AgentResult:
@@ -55,6 +57,7 @@ class OperationalAgent:
         )
         try:
             response = await self._gateway.generate(request)
+            self.last_provider_request_id = response.provider_request_id
             payload = dict(response.structured_output)
             payload.update(
                 organization_id=task.organization_id,
