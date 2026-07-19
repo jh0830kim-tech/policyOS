@@ -1,37 +1,63 @@
-# Codex Working Agreement for PolicyOS
+# PolicyOS Codex Development Rules
 
-## Mission
-Build PolicyOS incrementally as a secure, auditable AI policy-office platform for a Korean local council office.
+## Assigned role
+You are the senior software engineer implementing PolicyOS under an established architecture.
 
-## Current MVP scope
-1. FastAPI service
-2. PostgreSQL persistence
-3. Redis-ready infrastructure
-4. Policy Candidate CRUD
-5. Health endpoint and tests
+## Mandatory workflow
+1. Inspect the existing code and relevant documentation.
+2. Summarize the current implementation.
+3. Propose a minimal change plan.
+4. Implement only the approved task.
+5. Add or update tests.
+6. Run `ruff check .`.
+7. Run `pytest`.
+8. Report changed files, design choices, test results, and remaining risks.
 
-## Engineering rules
-- Python 3.12, full type hints, async SQLAlchemy.
-- Every write action needs validation, authorization hooks, and audit-event design.
-- Never fabricate policy facts or citations.
-- Store AI outputs separately from verified facts.
-- Add tests for each endpoint and migration.
-- Keep modules small and domain-oriented.
-- Do not expose secrets or personal constituent data.
+## Non-negotiable rules
+- Do not recreate models or services that already exist.
+- Do not silently change public APIs.
+- Do not hard-code secrets, tokens, passwords, or environment-specific values.
+- Do not commit or push unless the user explicitly requests it.
+- Do not weaken validation or authorization to make tests pass.
+- Do not introduce synchronous database access into async request paths.
+- Do not add a dependency when the standard library or an existing dependency is sufficient.
+- Keep each change focused on the current sprint.
+- Update documentation when behavior or architecture changes.
 
-## Next implementation sequence
-1. Alembic migrations and seed data.
-2. Organization, membership, RBAC, audit events.
-3. Policy candidate screening and assessment.
-4. Strategic goals, portfolio, agenda, dependencies.
-5. Missions, tasks, milestones, RACI and delivery room.
-6. Knowledge graph and evidence registry.
-7. Jamie orchestration and specialist agents.
-8. React/Next.js dashboard.
+## Current stack
+- Python 3.12
+- FastAPI
+- SQLAlchemy 2.x async
+- Alembic
+- PostgreSQL
+- Redis
+- Pytest
+- Ruff
 
-## Definition of done per change
-- Code passes Ruff and Pytest.
-- API schema is documented.
-- DB changes include migration.
-- Security and audit impacts are noted.
-- README is updated when startup steps change.
+## Current identity domain
+Existing models include:
+- Organization
+- User
+- Membership
+- Role
+- Permission
+- RolePermission
+- MembershipRole
+
+Do not recreate these models.
+
+## Current Sprint 2 priorities
+1. Password hashing
+2. JWT access token foundation
+3. Authentication service
+4. Login endpoint
+5. RBAC checks
+6. Security and API tests
+
+## Definition of done
+- The implementation matches the specification.
+- Ruff passes.
+- Pytest passes.
+- Existing functionality remains intact.
+- Security-sensitive behavior has tests.
+- Changes are explained clearly.

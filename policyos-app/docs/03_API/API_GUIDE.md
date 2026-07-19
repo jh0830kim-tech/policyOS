@@ -1,0 +1,51 @@
+﻿# API Guide
+
+## Base path
+Use versioned routes such as `/api/v1`.
+
+## Resource naming
+Use plural nouns such as `/organizations`, `/users`, and `/policy-candidates`.
+
+## Authentication
+Protected endpoints require an `Authorization: Bearer <access_token>` header. Access tokens are short-lived signed JWTs; membership and permissions are always resolved from the database rather than trusted from token claims.
+
+### Login
+`POST /api/v1/auth/login`
+
+Request:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "user-supplied-password"
+}
+```
+
+A successful response contains `access_token`, the literal token type `bearer`, and `expires_in` in seconds. Passwords and password hashes are never returned. Unknown users, wrong passwords, and inactive users receive the same `401` public response and `WWW-Authenticate: Bearer` header.
+
+Login success and failure are audited without storing passwords, bearer tokens, submitted email addresses for unknown accounts, or full request bodies. Rate limiting is an explicit gateway or dependency integration point and is not implemented in Sprint 2.
+
+### Current user
+`GET /api/v1/auth/me`
+
+This endpoint requires a valid bearer token and returns only `id`, `email`, and `display_name`. Missing, malformed, expired, incorrectly signed, or otherwise invalid tokens return the same generic `401` response. Inactive and nonexistent token subjects are also rejected.
+
+## Organization context
+Organization-scoped routes use an `organization_id` path parameter. The `get_active_organization_context` dependency resolves an active organization and active membership belonging to the authenticated user. Nonexistent, inactive, and inaccessible organization contexts all return the same `404` response to avoid tenant disclosure.
+
+## Authorization
+Routes declare atomic permissions with dependencies such as `Depends(require_permission("policy.read"))`. Missing exact permissions return `403`; authentication failures remain `401`. See `docs/04_SECURITY/RBAC.md` for organization isolation rules.
+
+## Response behavior
+- `200`: successful read or update
+- `201`: successful creation
+- `204`: successful deletion without body
+- `400`: malformed or invalid request
+- `401`: missing or invalid authentication
+- `403`: authenticated but not authorized
+- `404`: resource not found within accessible scope
+- `409`: state or uniqueness conflict
+- `422`: schema validation error
+
+## Current error shape
+Sprint 2 endpoints currently use FastAPI's standard error body, for example `{"detail": "Invalid credentials"}`. The structured error envelope and stable codes in `ERROR_CODES.md` remain a future API-wide migration; clients must not infer account or tenant existence from authentication errors.
