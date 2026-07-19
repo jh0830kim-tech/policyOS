@@ -1,4 +1,4 @@
-"""Provider-independent model request/response contracts and gateways."""
+﻿"""Provider-independent model request/response contracts and gateways."""
 
 from enum import StrEnum
 from typing import Any, Protocol, runtime_checkable
@@ -129,4 +129,3 @@ class DisabledModelGateway:
 
     async def generate(self, request: ModelRequest) -> ModelResponse:
         raise ModelConfigurationError
-

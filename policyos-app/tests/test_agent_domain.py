@@ -97,4 +97,3 @@ def test_status_and_review_values_are_enums() -> None:
 def test_instruction_length_is_bounded() -> None:
     with pytest.raises(ValidationError):
         make_task(instruction="x" * 10_001)
-

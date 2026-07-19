@@ -64,3 +64,5 @@ No sprint is complete without:
 - lint passing
 - documentation updated
 - security impact reviewed
+### Sprint 3 implementation status
+Agent/model contracts, registries, Policy Research and Legal Review agents, rules-based orchestration, execution records, and organization-scoped task APIs are implemented. Live providers, RAG, queues, streaming, and automatic publication remain deferred.

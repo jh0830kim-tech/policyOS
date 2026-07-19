@@ -1,4 +1,4 @@
-"""Versioned, path-safe registry for approved agent system prompts."""
+﻿"""Versioned, path-safe registry for approved agent system prompts."""
 
 import hashlib
 import re
@@ -174,4 +174,3 @@ class PromptRegistry:
             user_input=user_input,
             prompt=prompt,
         )
-

@@ -29,3 +29,5 @@ A role from another organization cannot grant access. Prefixes and wildcards are
 - Permission denials produce an `authorization.denied` audit event containing actor, membership, organization, and permission identifiers, but no token or request body.
 
 UI visibility is never an authorization control. Enforcement belongs in FastAPI dependencies or the service layer.
+## AI Office permissions
+AI Office uses exact atomic permissions agent.execute, agent.read, and agent.review after active organization membership resolution.

@@ -1,2 +1,1 @@
-"""Provider-independent AI Office contracts."""
-
+﻿"""Provider-independent AI Office contracts."""

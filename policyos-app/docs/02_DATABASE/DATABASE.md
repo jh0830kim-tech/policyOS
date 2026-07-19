@@ -1,4 +1,4 @@
-# Database Strategy
+﻿# Database Strategy
 
 ## Primary database
 PostgreSQL is the system of record.
@@ -18,3 +18,5 @@ Alembic migrations are required for schema changes.
 
 ## Transaction rule
 A business operation that must succeed or fail as a unit must run within one explicit transaction boundary.
+## AI execution records
+ai_tasks and agent_runs store ownership, status, review state, lineage, prompt/model metadata, timestamps, safe errors, and concise result or artifact references. Raw instructions, secrets, provider payloads, and hidden reasoning are excluded.

@@ -1,4 +1,4 @@
-# AI Office Blueprint
+﻿# AI Office Blueprint
 
 ## Purpose
 The AI Office coordinates specialist agents around public-policy workflows while preserving human authority and evidence traceability.
@@ -23,3 +23,5 @@ The AI Office coordinates specialist agents around public-policy workflows while
 7. Chief Secretary consolidates results.
 8. Human reviewer approves, revises, or rejects.
 9. Final output and lineage are stored.
+## Sprint 3 MVP implementation
+Provider-independent contracts, registries, path-safe prompt versioning, network-free model fakes, two specialist agents, deterministic routing, evidence preservation, review state, and safe errors are implemented. Hidden reasoning is neither requested nor stored.
