@@ -1,4 +1,5 @@
 from app.models.ai_execution import AgentRunRecord, AITaskRecord
+from app.models.artifact import ArtifactRecord, WorkPackageRecord
 from app.models.audit import AuditEvent
 from app.models.identity import (
     Membership,
@@ -15,6 +16,7 @@ __all__ = [
     "AuditEvent",
     "AITaskRecord",
     "AgentRunRecord",
+    "ArtifactRecord",
     "Membership",
     "MembershipRole",
     "Organization",
@@ -23,4 +25,5 @@ __all__ = [
     "Role",
     "RolePermission",
     "User",
+    "WorkPackageRecord",
 ]

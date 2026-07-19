@@ -2,12 +2,14 @@ from app.db.base import Base
 from app.models import (
     AgentRunRecord,
     AITaskRecord,
+    ArtifactRecord,
     AuditEvent,
     Membership,
     Organization,
     Permission,
     Role,
     User,
+    WorkPackageRecord,
 )
 
 
@@ -24,6 +26,8 @@ def test_foundation_tables_are_registered() -> None:
         "policy_candidates",
         "ai_tasks",
         "agent_runs",
+        "ai_work_packages",
+        "ai_artifacts",
     }
     assert expected.issubset(Base.metadata.tables)
 
@@ -37,6 +41,8 @@ def test_identity_model_table_names() -> None:
     assert AuditEvent.__tablename__ == "audit_events"
     assert AITaskRecord.__tablename__ == "ai_tasks"
     assert AgentRunRecord.__tablename__ == "agent_runs"
+    assert WorkPackageRecord.__tablename__ == "ai_work_packages"
+    assert ArtifactRecord.__tablename__ == "ai_artifacts"
 
 
 def test_membership_has_unique_org_user_constraint() -> None:
