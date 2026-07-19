@@ -49,3 +49,5 @@ Routes declare atomic permissions with dependencies such as `Depends(require_per
 
 ## Current error shape
 Sprint 2 endpoints currently use FastAPI's standard error body, for example `{"detail": "Invalid credentials"}`. The structured error envelope and stable codes in `ERROR_CODES.md` remain a future API-wide migration; clients must not infer account or tenant existence from authentication errors.
+## AI Office tasks
+POST /api/v1/ai/tasks requires agent.execute. List and item GET endpoints require agent.read. All require organization_id, authentication, active membership, and organization-scoped RBAC. Responses exclude instructions, prompts, provider payloads, secrets, and hidden reasoning.

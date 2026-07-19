@@ -7,13 +7,13 @@ from alembic.script import ScriptDirectory
 def test_alembic_has_single_head() -> None:
     config = Config("alembic.ini")
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["20260718_0001"]
+    assert scripts.get_heads() == ["20260719_0002"]
 
 
 def test_initial_migration_contains_foundation_tables() -> None:
-    migration = Path(
-        "alembic/versions/20260718_0001_foundation_identity_rbac_audit.py"
-    ).read_text(encoding="utf-8")
+    migration = Path("alembic/versions/20260718_0001_foundation_identity_rbac_audit.py").read_text(
+        encoding="utf-8"
+    )
     for table_name in (
         "organizations",
         "users",
