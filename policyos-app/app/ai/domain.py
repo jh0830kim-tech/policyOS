@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.ai.privacy import DataClassification
+
 ShortText = Annotated[str, Field(min_length=1, max_length=500)]
 Instruction = Annotated[str, Field(min_length=1, max_length=10_000)]
 ResultText = Annotated[str, Field(min_length=1, max_length=10_000)]
@@ -78,6 +80,7 @@ class AgentContext(DomainModel):
     references: list[ContextReference] = Field(default_factory=list, max_length=100)
     locale: ShortText | None = None
     policy_version: ShortText | None = None
+    data_classification: DataClassification = DataClassification.INTERNAL
 
 
 class AgentTask(DomainModel):

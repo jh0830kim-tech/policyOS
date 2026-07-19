@@ -11,6 +11,7 @@ from app.models.identity import (
     User,
 )
 from app.models.policy_candidate import PolicyCandidate
+from app.models.provider_audit import ProviderAuditRecord
 
 __all__ = [
     "AuditEvent",
@@ -22,6 +23,7 @@ __all__ = [
     "Organization",
     "Permission",
     "PolicyCandidate",
+    "ProviderAuditRecord",
     "Role",
     "RolePermission",
     "User",

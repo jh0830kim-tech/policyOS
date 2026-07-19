@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 ## Sprint 4 — Operational AI Agents
 
@@ -28,3 +28,11 @@
 
 ## 0.1.0
 - Initial project documentation scaffold.
+
+## Sprint 5 — Provider privacy controls
+
+- Added four-level AI data classification and provider transmission policy enforcement.
+- Added pre-transmission redaction for credentials, identity/contact patterns, and custom terms.
+- Added conservative provider storage controls with test-environment storage disabled.
+- Added privacy-safe provider audit metadata and organization-scoped retention cleanup.
+- Added network-free privacy, cross-organization, redaction, audit, and retention tests.

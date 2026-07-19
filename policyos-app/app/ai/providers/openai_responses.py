@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from datetime import UTC, datetime
 from time import perf_counter
 from typing import Any
 
@@ -14,6 +15,14 @@ from app.ai.model_gateway import (
     ModelGatewayError,
     ModelRequest,
     ModelResponse,
+)
+from app.ai.privacy import (
+    NoOpRedactor,
+    PolicyDecision,
+    ProviderAuditMetadata,
+    ProviderAuditSink,
+    ProviderTransmissionPolicy,
+    Redactor,
 )
 
 
@@ -28,14 +37,56 @@ class OpenAIResponsesGateway:
         timeout_seconds: float = 30.0,
         max_retries: int = 0,
         retry_backoff_seconds: float = 0.5,
+        transmission_policy: ProviderTransmissionPolicy | None = None,
+        redactor: Redactor | None = None,
+        audit_sink: ProviderAuditSink | None = None,
     ) -> None:
         self._client = client
         self._store = store
         self._timeout_seconds = timeout_seconds
         self._max_retries = max_retries
         self._retry_backoff_seconds = retry_backoff_seconds
+        self._transmission_policy = transmission_policy or ProviderTransmissionPolicy()
+        self._redactor = redactor or NoOpRedactor()
+        self._audit_sink = audit_sink
 
     async def generate(self, request: ModelRequest) -> ModelResponse:
+        context = request.transmission_context
+        decision = (
+            self._transmission_policy.evaluate("openai", context) if context is not None else None
+        )
+        if decision is not None and not decision.allowed:
+            error = ModelGatewayError(
+                ModelErrorCode.POLICY_BLOCKED,
+                "Provider transmission blocked by policy",
+                retryable=False,
+            )
+            await self._record_audit(request, decision.decision, False, 0, error.code.value)
+            raise error
+
+        redacted_request, redacted_count = self._redact_request(request)
+        try:
+            response = await self._generate_with_resilience(redacted_request)
+        except asyncio.CancelledError:
+            await self._record_audit(
+                request, PolicyDecision.ALLOW, redacted_count > 0, redacted_count, "cancelled"
+            )
+            raise
+        except ModelGatewayError as error:
+            await self._record_audit(
+                request,
+                PolicyDecision.ALLOW,
+                redacted_count > 0,
+                redacted_count,
+                error.code.value,
+            )
+            raise
+        await self._record_audit(
+            request, PolicyDecision.ALLOW, redacted_count > 0, redacted_count, None
+        )
+        return response
+
+    async def _generate_with_resilience(self, request: ModelRequest) -> ModelResponse:
         started = perf_counter()
         retry_count = 0
         timeout_seconds = min(request.timeout_seconds, self._timeout_seconds)
@@ -296,4 +347,62 @@ class OpenAIResponsesGateway:
             provider_request_id=response_id,
             retry_count=retry_count,
             latency_ms=int((perf_counter() - started) * 1000),
+        )
+
+    def _redact_request(self, request: ModelRequest) -> tuple[ModelRequest, int]:
+        count = 0
+        system = self._redactor.redact(request.system_prompt)
+        instruction = self._redactor.redact(request.user_instruction)
+        count += system.redacted_item_count + instruction.redacted_item_count
+
+        def redact_value(value: Any) -> Any:
+            nonlocal count
+            if isinstance(value, str):
+                result = self._redactor.redact(value)
+                count += result.redacted_item_count
+                return result.text
+            if isinstance(value, dict):
+                return {key: redact_value(item) for key, item in value.items()}
+            if isinstance(value, list):
+                return [redact_value(item) for item in value]
+            return value
+
+        return (
+            request.model_copy(
+                update={
+                    "system_prompt": system.text,
+                    "user_instruction": instruction.text,
+                    "structured_context": redact_value(request.structured_context),
+                }
+            ),
+            count,
+        )
+
+    async def _record_audit(
+        self,
+        request: ModelRequest,
+        decision: PolicyDecision,
+        redaction_applied: bool,
+        redacted_item_count: int,
+        error_code: str | None,
+    ) -> None:
+        context = request.transmission_context
+        if self._audit_sink is None or context is None:
+            return
+        await self._audit_sink.record(
+            ProviderAuditMetadata(
+                provider="openai",
+                model=request.model_id,
+                organization_id=context.organization_id,
+                user_id=context.user_id,
+                task_id=context.task_id,
+                data_classification=context.data_classification,
+                redaction_applied=redaction_applied,
+                redacted_item_count=redacted_item_count,
+                store_enabled=self._store,
+                transmitted_at=datetime.now(UTC),
+                success=error_code is None,
+                policy_decision=decision,
+                error_code=error_code,
+            )
         )

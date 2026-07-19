@@ -4,6 +4,8 @@ from typing import Self
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.ai.privacy import DataClassification
+
 _DEVELOPMENT_SECRET = "development-only-change-before-production"
 _EXAMPLE_SECRET = "replace-with-a-cryptographically-random-secret-of-at-least-32-bytes"
 _MINIMUM_SECRET_LENGTH = 32
@@ -24,6 +26,12 @@ class Settings(BaseSettings):
     openai_max_retries: int = Field(default=2, ge=0, le=10)
     openai_retry_backoff_seconds: float = Field(default=0.5, ge=0, le=30)
     openai_store_responses: bool = False
+    ai_default_data_classification: DataClassification = DataClassification.INTERNAL
+    ai_allow_confidential_external_provider: bool = False
+    ai_provider_audit_retention_days: int = Field(default=365, ge=1)
+    ai_usage_retention_days: int = Field(default=365, ge=1)
+    ai_redaction_enabled: bool = True
+    ai_redaction_custom_terms: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

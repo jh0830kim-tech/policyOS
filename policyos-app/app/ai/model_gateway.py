@@ -6,6 +6,7 @@ from typing import Any, Protocol, runtime_checkable
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.ai.domain import UsageMetadata
+from app.ai.privacy import ProviderTransmissionContext
 
 
 class ModelContract(BaseModel):
@@ -25,10 +26,12 @@ class ModelRequest(ModelContract):
     output_schema: dict[str, Any] | None = None
     timeout_seconds: float = Field(default=30.0, gt=0, le=300)
     model_id: str = Field(min_length=1, max_length=200)
+    transmission_context: ProviderTransmissionContext | None = None
 
 
 class ModelResponse(ModelContract):
     model_id: str = Field(min_length=1, max_length=200)
+    transmission_context: ProviderTransmissionContext | None = None
     structured_output: dict[str, Any]
     summary: str | None = Field(default=None, max_length=2_000)
     usage: UsageMetadata = Field(default_factory=UsageMetadata)
@@ -48,6 +51,7 @@ class ModelErrorCode(StrEnum):
     INVALID_REQUEST = "invalid_request"
     REFUSED = "refused"
     INCOMPLETE = "incomplete"
+    POLICY_BLOCKED = "provider_policy_blocked"
     UNKNOWN = "unknown"
 
 

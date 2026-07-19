@@ -13,6 +13,7 @@ from app.ai.domain import (
     StructuredError,
 )
 from app.ai.model_gateway import ModelGateway, ModelGatewayError, ModelRequest
+from app.ai.privacy import ProviderTransmissionContext
 from app.ai.prompts import PromptRegistry
 
 
@@ -44,6 +45,13 @@ class OperationalAgent:
             structured_context=task.context.model_dump(mode="json"),
             output_schema=self.output_type.model_json_schema(),
             model_id=self._model_id,
+            transmission_context=ProviderTransmissionContext(
+                organization_id=task.organization_id,
+                authorized_organization_id=task.organization_id,
+                user_id=task.user_id,
+                task_id=task.task_id,
+                data_classification=task.context.data_classification,
+            ),
         )
         try:
             response = await self._gateway.generate(request)

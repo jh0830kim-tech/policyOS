@@ -21,3 +21,15 @@ Rate limits, server failures, and connection failures are retryable. Authenticat
 permission, invalid request, schema/output validation, incomplete output, and refusal are not.
 Provider errors expose only PolicyOS-safe codes; raw responses, credentials, and prompts are
 never written to telemetry.
+
+## AI privacy configuration
+
+- `OPENAI_STORE_RESPONSES=false`: provider response storage; always false in test environments.
+- `AI_DEFAULT_DATA_CLASSIFICATION=internal`: default classification for new AI contexts.
+- `AI_ALLOW_CONFIDENTIAL_EXTERNAL_PROVIDER=false`: organization-level confidential-data opt-in.
+- `AI_PROVIDER_AUDIT_RETENTION_DAYS=365`: provider audit metadata retention.
+- `AI_USAGE_RETENTION_DAYS=365`: usage telemetry retention before fields are cleared.
+- `AI_REDACTION_ENABLED=true`: enable the transmission redaction hook.
+- `AI_REDACTION_CUSTOM_TERMS=`: comma-separated organization-specific terms to mask.
+
+Custom terms are policy configuration, not a secret store. Do not place credentials in this value.
