@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.routes.auth import router as auth_router
 from app.api.routes.health import router as health_router
 from app.api.routes.policy_candidates import router as policy_candidates_router
 from app.core.config import get_settings
@@ -23,4 +24,5 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.include_router(health_router)
+app.include_router(auth_router, prefix="/api/v1")
 app.include_router(policy_candidates_router, prefix="/api/v1")

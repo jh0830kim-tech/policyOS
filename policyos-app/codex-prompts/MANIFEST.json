@@ -1,0 +1,13 @@
+{
+  "name": "PolicyOS Sprint 2 Complete Pack",
+  "steps": [
+    "Step 3 current authenticated user",
+    "Step 4 organization membership context",
+    "Step 5 RBAC",
+    "Step 6 authentication hardening",
+    "Step 7 integration tests",
+    "Step 8 documentation and review",
+    "Step 9 commit and push",
+    "Step 10 pull request"
+  ]
+}

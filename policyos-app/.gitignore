@@ -27,6 +27,7 @@ htmlcov/
 # Environment
 .env
 .env.*
+!.env.example
 
 # Local backup files
 *.backup
