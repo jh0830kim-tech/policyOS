@@ -1,4 +1,4 @@
-﻿"""Provider-independent model request/response contracts and gateways."""
+"""Provider-independent model request/response contracts and gateways."""
 
 from enum import StrEnum
 from typing import Any, Protocol, runtime_checkable
@@ -41,6 +41,9 @@ class ModelErrorCode(StrEnum):
     RATE_LIMITED = "rate_limited"
     PROVIDER_UNAVAILABLE = "provider_unavailable"
     INVALID_RESPONSE = "invalid_response"
+    AUTHENTICATION = "authentication_error"
+    REFUSED = "refused"
+    INCOMPLETE = "incomplete"
     UNKNOWN = "unknown"
 
 
