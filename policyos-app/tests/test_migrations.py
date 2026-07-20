@@ -7,7 +7,7 @@ from alembic.script import ScriptDirectory
 def test_alembic_has_single_head() -> None:
     config = Config("alembic.ini")
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["20260720_0009"]
+    assert scripts.get_heads() == ["20260720_0010"]
 
 
 def test_initial_migration_contains_foundation_tables() -> None:

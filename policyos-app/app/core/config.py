@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     knowledge_chunk_preserve_tables: bool = True
     knowledge_chunk_preserve_lists: bool = True
     knowledge_chunking_strategy_version: str = "1.0.0"
+    embedding_provider: str = "fake"
+    openai_embedding_model: str = "text-embedding-3-small"
+    openai_embedding_dimensions: int | None = Field(default=1536, ge=1, le=65536)
+    embedding_batch_size: int = Field(default=64, ge=1, le=2048)
+    embedding_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
+    embedding_max_retries: int = Field(default=2, ge=0, le=10)
+    embedding_policy_version: str = "1.0.0"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -71,6 +78,12 @@ class Settings(BaseSettings):
             raise ValueError("Knowledge chunk minimum cannot exceed target")
         if self.knowledge_chunk_overlap_characters >= self.knowledge_chunk_max_characters:
             raise ValueError("Knowledge chunk overlap must be smaller than maximum")
+        if self.embedding_provider not in {"fake", "disabled", "openai"}:
+            raise ValueError(f"Unsupported EMBEDDING_PROVIDER: {self.embedding_provider}")
+        if is_production and self.embedding_provider == "fake":
+            self.embedding_provider = "disabled"
+        if self.embedding_provider == "openai" and not self.openai_api_key:
+            raise ValueError("OPENAI_API_KEY is required when EMBEDDING_PROVIDER=openai")
         return self
 
 

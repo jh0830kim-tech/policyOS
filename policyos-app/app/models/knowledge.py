@@ -34,6 +34,9 @@ _JOB_STATUS_CHECK = (
 )
 _POLICY_STATUS_CHECK = "status IN ('active', 'disabled', 'archived')"
 _CITATION_STATUS_CHECK = "status IN ('active', 'invalidated', 'archived')"
+_EMBEDDING_STATUS_CHECK = (
+    "status IN ('pending', 'running', 'succeeded', 'failed', 'skipped', 'blocked', 'inactive')"
+)
 
 
 class KnowledgeVersionImmutableError(ValueError):
@@ -295,6 +298,71 @@ class KnowledgeChunk(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     @property
     def chunk_index(self) -> int:
         return self.ordinal
+
+
+class KnowledgeChunkEmbedding(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Versioned embedding metadata; text is owned only by KnowledgeChunk."""
+
+    __tablename__ = "knowledge_chunk_embeddings"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["chunk_id", "organization_id"],
+            ["knowledge_chunks.id", "knowledge_chunks.organization_id"],
+            name="fk_chunk_embeddings_chunk_org",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["document_version_id", "organization_id"],
+            ["knowledge_document_versions.id", "knowledge_document_versions.organization_id"],
+            name="fk_chunk_embeddings_version_org",
+            ondelete="CASCADE",
+        ),
+        UniqueConstraint(
+            "organization_id",
+            "chunk_id",
+            "provider",
+            "model",
+            "dimensions",
+            "embedding_content_hash",
+            "policy_version",
+            name="uq_chunk_embeddings_revision",
+        ),
+        CheckConstraint(_CLASSIFICATION_CHECK, name="ck_chunk_embeddings_classification"),
+        CheckConstraint(_EMBEDDING_STATUS_CHECK, name="ck_chunk_embeddings_status"),
+        CheckConstraint("dimensions > 0", name="ck_chunk_embeddings_dimensions"),
+        CheckConstraint(
+            "usage_tokens >= 0 AND latency_ms >= 0 AND retry_count >= 0",
+            name="ck_chunk_embeddings_usage",
+        ),
+        Index("ix_chunk_embeddings_retrieval", "organization_id", "model", "dimensions", "status"),
+        Index("ix_chunk_embeddings_version", "organization_id", "document_version_id"),
+    )
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
+    chunk_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
+    document_version_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String(50), nullable=False)
+    model: Mapped[str] = mapped_column(String(200), nullable=False)
+    dimensions: Mapped[int] = mapped_column(Integer, nullable=False)
+    vector_json: Mapped[list[float] | None] = mapped_column("vector", JSONB, nullable=True)
+    embedding_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    chunk_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    chunking_config_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    classification: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="pending")
+    embedded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    usage_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    input_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    batch_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    provider_request_id: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    estimated_cost: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    metadata_json: Mapped[dict[str, object]] = mapped_column(
+        "metadata", JSONB, nullable=False, default=dict
+    )
 
 
 class KnowledgeIngestionJob(UUIDPrimaryKeyMixin, TimestampMixin, Base):

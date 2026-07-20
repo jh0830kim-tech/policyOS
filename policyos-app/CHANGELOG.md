@@ -65,3 +65,5 @@
 - Added versioned deterministic paragraph/page/section/table/list chunking with bounded overlap and SHA-256 identifiers.
 - Added stable token-estimator contracts, source block ranges, structured locators, source-type citation labels, and completeness assessment.
 - Added organization-scoped chunk/citation persistence, config-hash idempotency, retained chunk-set revisions, migration `20260720_0009`, and network-free tests.
+
+- Added provider-independent deterministic embeddings, revisioned vector persistence, privacy enforcement, cosine retrieval, citation propagation, and migration 0010.

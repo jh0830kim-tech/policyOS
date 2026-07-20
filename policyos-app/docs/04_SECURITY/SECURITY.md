@@ -52,3 +52,14 @@ Uploads are checked for allowed extension and MIME pairing, configured byte limi
 ## Chunk and citation isolation
 
 Chunk organization and classification are inherited only from the persisted document version; callers cannot downgrade them. Version, document, source, chunk, and citation queries include organization predicates and composite tenant foreign keys. Restricted chunks remain local and are not transmitted to providers. Chunk hashes, strategy/config hashes, and source block ranges make overlap and repeated processing auditable without inventing source pages, sections, or dates.
+
+## Sprint 6 Checkpoint 4: Embedding and vector retrieval
+
+- Embeddings use a provider-independent gateway (`fake`, `disabled`, or explicitly configured `openai`).
+- Model, dimension, chunking configuration, normalization strategy, provider, and policy version participate in immutable embedding revisions.
+- The default fake provider is SHA-256 deterministic and performs no network I/O. OpenAI uses bounded application retries while SDK retries are disabled.
+- External embedding follows provider transmission policy: restricted content is blocked and confidential content requires organization policy. Embedding records never duplicate source text or secrets.
+- Current persistence stores validated vectors as JSON for PostgreSQL/SQLite compatibility. `VectorStore` isolates this detail; production pgvector indexing is planned and must fail clearly if the extension is unavailable.
+- Retrieval enforces organization, model, dimension, classification, document/source, effective-date, top-k, and minimum-score filters. Cosine scores remain in the native [-1, 1] range.
+- Usage records capture input count/tokens, batch/retry count, latency, provider request ID and nullable estimated cost; pricing is not hard-coded.
+- Public embedding/search HTTP endpoints are deferred; application services are the authorization-ready boundary.
