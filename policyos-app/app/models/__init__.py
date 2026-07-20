@@ -21,6 +21,7 @@ from app.models.knowledge import (
     KnowledgeSource,
     KnowledgeVersionImmutableError,
 )
+from app.models.mcp import MCPAuditRecord, MCPServerConfig, MCPServerHealthRecord
 from app.models.policy_candidate import PolicyCandidate
 from app.models.provider_audit import ProviderAuditRecord
 
@@ -40,6 +41,9 @@ __all__ = [
     "KnowledgeVersionImmutableError",
     "Membership",
     "MembershipRole",
+    "MCPAuditRecord",
+    "MCPServerConfig",
+    "MCPServerHealthRecord",
     "Organization",
     "Permission",
     "PolicyCandidate",

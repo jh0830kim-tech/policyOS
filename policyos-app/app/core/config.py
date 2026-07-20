@@ -52,6 +52,25 @@ class Settings(BaseSettings):
     embedding_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
     embedding_max_retries: int = Field(default=2, ge=0, le=10)
     embedding_policy_version: str = "1.0.0"
+    hybrid_lexical_weight: float = Field(default=0.5, ge=0, le=1)
+    hybrid_vector_weight: float = Field(default=0.5, ge=0, le=1)
+    hybrid_rrf_k: int = Field(default=60, ge=1, le=1000)
+    hybrid_candidate_limit: int = Field(default=50, ge=1, le=500)
+    hybrid_default_top_k: int = Field(default=10, ge=1, le=100)
+    hybrid_min_score: float = Field(default=0.0, ge=0, le=1)
+    mcp_enabled: bool = False
+    mcp_default_timeout_seconds: float = Field(default=30, gt=0, le=300)
+    mcp_max_retries: int = Field(default=2, ge=0, le=10)
+    mcp_max_result_bytes: int = Field(default=1_000_000, ge=1, le=50_000_000)
+    mcp_allow_remote_servers: bool = False
+    mcp_allow_local_process_servers: bool = False
+    mcp_require_human_approval_for_writes: bool = True
+    mcp_cache_enabled: bool = True
+    mcp_cache_ttl_seconds: int = Field(default=300, ge=1)
+    mcp_allow_stale_cache: bool = True
+    mcp_server_allowlist: str = "law-mcp,minutes-mcp,finance-mcp,internal-docs-mcp,public-data-mcp"
+    mcp_tool_allowlist: str = ""
+    mcp_audit_retention_days: int = Field(default=365, ge=1)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -78,6 +97,10 @@ class Settings(BaseSettings):
             raise ValueError("Knowledge chunk minimum cannot exceed target")
         if self.knowledge_chunk_overlap_characters >= self.knowledge_chunk_max_characters:
             raise ValueError("Knowledge chunk overlap must be smaller than maximum")
+        if self.hybrid_lexical_weight + self.hybrid_vector_weight <= 0:
+            raise ValueError("At least one hybrid retrieval weight must be positive")
+        if self.hybrid_default_top_k > self.hybrid_candidate_limit:
+            raise ValueError("Hybrid top_k cannot exceed candidate limit")
         if self.embedding_provider not in {"fake", "disabled", "openai"}:
             raise ValueError(f"Unsupported EMBEDDING_PROVIDER: {self.embedding_provider}")
         if is_production and self.embedding_provider == "fake":

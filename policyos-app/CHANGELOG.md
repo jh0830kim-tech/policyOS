@@ -67,3 +67,7 @@
 - Added organization-scoped chunk/citation persistence, config-hash idempotency, retained chunk-set revisions, migration `20260720_0009`, and network-free tests.
 
 - Added provider-independent deterministic embeddings, revisioned vector persistence, privacy enforcement, cosine retrieval, citation propagation, and migration 0010.
+
+- Added deterministic lexical/vector hybrid fusion, explainable reranking, duplicate controls, evidence sufficiency, and privacy-safe retrieval telemetry.
+
+- Added governed MCP registry, policy, validation, audit, health, cache, connector evidence mapping, and migration 0011.
