@@ -73,3 +73,5 @@
 - Added governed MCP registry, policy, validation, audit, health, cache, connector evidence mapping, and migration 0011.
 
 - Added governed rules-based knowledge routing, evidence merge/ranking, conflict and gap detection, confidence evaluation, and privacy-safe route audit.
+
+- Integrated governed RAG/MCP evidence packages into Office Agent context, citation propagation, review policy, Work Package metadata, and migration 0012.

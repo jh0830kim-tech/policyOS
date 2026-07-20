@@ -34,3 +34,11 @@ Prepares agendas, captures decisions, assigns follow-ups, and preserves meeting 
 Classifies constituent requests, drafts respectful replies, and routes cases to staff.
 ## Sprint 4 implementation notes
 Budget separates cost categories, estimates, assumptions, scenarios, and fiscal risk. Statistics preserves dataset, method, limitation, and reproducibility boundaries. Speech, Press/PR, and SNS generate drafts only and cannot publish. PPT Designer generates an outline only, not a `.pptx` file.
+
+## Sprint 6 Checkpoint 8: Evidence-aware AI Office
+
+The production Office application service can receive an injected governed Knowledge Router before specialist execution. It builds one organization-scoped query, rejects wholly unavailable evidence, converts the router result to a minimized `OfficeEvidencePackage`, and stores only query/route identifiers plus counts, confidence, sufficiency, failures, and fallback status on the Work Package.
+
+`AgentContext` carries the optional package. The Chief Secretary workflow deterministically selects legal evidence for Legal Review, budget evidence for Budget Analysis, statistical evidence for Statistics, and approved cited facts for public-facing agents. Safe excerpts, classifications, stable evidence IDs and existing citation IDs propagate through AgentResult and artifact structured payloads; agents cannot create substitute citations. All approved prompt files instruct agents to use supplied evidence only and expose conflicts, gaps, stale sources and unsupported claims.
+
+Partial/insufficient evidence, material gaps, unresolved conflicts, incomplete or stale citations, public-facing artifacts, unsupported claims, or partial Agent failures require review. Approval is never automatic. Evidence-unavailable execution stops before provider calls. Existing timeout, cancellation, privacy, provider telemetry and artifact review controls remain authoritative. API request schemas accept legal/budget/minutes workflows and source/date/fiscal context; production router/executor composition in the HTTP dependency container remains follow-up work.
