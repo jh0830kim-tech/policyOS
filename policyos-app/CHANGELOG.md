@@ -71,3 +71,5 @@
 - Added deterministic lexical/vector hybrid fusion, explainable reranking, duplicate controls, evidence sufficiency, and privacy-safe retrieval telemetry.
 
 - Added governed MCP registry, policy, validation, audit, health, cache, connector evidence mapping, and migration 0011.
+
+- Added governed rules-based knowledge routing, evidence merge/ranking, conflict and gap detection, confidence evaluation, and privacy-safe route audit.
