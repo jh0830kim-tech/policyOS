@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from app.ai.artifacts import ArtifactMetadata, ArtifactReviewStatus, OfficeWorkPackage
 from app.ai.domain import AgentCapability, AgentIdentifier, AgentResult, AgentStatus, AgentTask
+from app.ai.evidence_selection import AgentEvidenceSelector
 from app.ai.orchestrator import TaskScopeError, UnknownTaskTypeError
 from app.ai.registry import AgentRegistry
 
@@ -19,6 +20,9 @@ AGENT_CAPABILITIES = {
 }
 
 WORKFLOW_ROUTES = {
+    "legal_package": (AgentIdentifier.LEGAL_REVIEW, AgentIdentifier.POLICY_RESEARCH),
+    "budget_package": (AgentIdentifier.BUDGET_ANALYSIS, AgentIdentifier.STATISTICS),
+    "minutes_analysis_package": (AgentIdentifier.POLICY_RESEARCH, AgentIdentifier.LEGAL_REVIEW),
     "policy_package": (
         AgentIdentifier.POLICY_RESEARCH,
         AgentIdentifier.LEGAL_REVIEW,
@@ -48,8 +52,11 @@ class WorkflowOutcome:
 
 
 class OfficeWorkflowService:
-    def __init__(self, registry: AgentRegistry) -> None:
+    def __init__(
+        self, registry: AgentRegistry, evidence_selector: AgentEvidenceSelector | None = None
+    ) -> None:
         self._registry = registry
+        self._evidence_selector = evidence_selector or AgentEvidenceSelector()
 
     def plan(self, task: AgentTask) -> tuple[AgentIdentifier, ...]:
         try:
@@ -68,7 +75,15 @@ class OfficeWorkflowService:
         artifacts: list[ArtifactMetadata] = []
         for agent_id in route:
             agent = self._registry.get(agent_id)
-            result = await agent.execute(task)
+            agent_task = task
+            if task.context.knowledge_evidence is not None:
+                selected = self._evidence_selector.select(task.context.knowledge_evidence, agent_id)
+                agent_task = task.model_copy(
+                    update={
+                        "context": task.context.model_copy(update={"knowledge_evidence": selected})
+                    }
+                )
+            result = await agent.execute(agent_task)
             results.append(result)
             artifact = getattr(agent, "last_artifact", None)
             if isinstance(artifact, ArtifactMetadata):

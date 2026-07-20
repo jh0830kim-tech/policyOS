@@ -96,7 +96,38 @@ class SpecialistAgentBase:
                 "Model output did not match the required schema",
                 False,
             )
-        return self._to_result(task, output, response.usage)
+        result = self._to_result(task, output, response.usage)
+        evidence_package = task.context.knowledge_evidence
+        if evidence_package is None:
+            return result
+        references = [
+            EvidenceReference(
+                evidence_id=item.evidence_id,
+                title=item.source_title,
+                source_type=item.source_type,
+                locator=item.citation or "citation unavailable",
+                excerpt=item.excerpt,
+                retrieved_at=item.retrieved_at,
+            )
+            for item in evidence_package.evidence_items
+        ]
+        return result.model_copy(
+            update={
+                "evidence": references,
+                "evidence_ids_used": [item.evidence_id for item in evidence_package.evidence_items],
+                "citation_ids_used": list(evidence_package.citations),
+                "evidence_conflicts": [str(item) for item in evidence_package.conflicts],
+                "evidence_gaps": [str(item) for item in evidence_package.gaps],
+                "effective_date_used": (
+                    evidence_package.effective_date_context.isoformat()
+                    if evidence_package.effective_date_context
+                    else None
+                ),
+                "fiscal_year_used": evidence_package.fiscal_year_context,
+                "review_notes": list(evidence_package.warnings),
+                "requires_human_review": evidence_package.requires_human_review,
+            }
+        )
 
     def _failure(self, task: AgentTask, code: str, message: str, retryable: bool) -> AgentResult:
         return AgentResult(

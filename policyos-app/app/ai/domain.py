@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.ai.knowledge_evidence import OfficeEvidencePackage
 from app.ai.privacy import DataClassification
 
 ShortText = Annotated[str, Field(min_length=1, max_length=500)]
@@ -81,6 +82,7 @@ class AgentContext(DomainModel):
     locale: ShortText | None = None
     policy_version: ShortText | None = None
     data_classification: DataClassification = DataClassification.INTERNAL
+    knowledge_evidence: OfficeEvidencePackage | None = None
 
 
 class AgentTask(DomainModel):
@@ -166,6 +168,16 @@ class AgentResult(DomainModel):
     warnings: list[ResultText] = Field(default_factory=list, max_length=100)
     error: StructuredError | None = None
     usage: UsageMetadata = Field(default_factory=UsageMetadata)
+    evidence_ids_used: list[UUID] = Field(default_factory=list, max_length=100)
+    citation_ids_used: list[str] = Field(default_factory=list, max_length=100)
+    unsupported_claims: list[ResultText] = Field(default_factory=list, max_length=100)
+    evidence_conflicts: list[ResultText] = Field(default_factory=list, max_length=100)
+    evidence_gaps: list[ResultText] = Field(default_factory=list, max_length=100)
+    stale_source_warnings: list[ResultText] = Field(default_factory=list, max_length=100)
+    effective_date_used: str | None = None
+    fiscal_year_used: int | None = None
+    review_notes: list[ResultText] = Field(default_factory=list, max_length=100)
+    requires_human_review: bool = False
     completed_at: datetime = Field(default_factory=utc_now)
 
     @field_validator("completed_at")

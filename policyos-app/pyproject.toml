@@ -19,6 +19,9 @@ dependencies = [
   "pwdlib[argon2]>=0.2,<1",
   "PyJWT>=2.10,<3",
   "openai>=1.66,<2",
+  "pypdf>=5.4,<6",
+  "python-docx>=1.1,<2",
+  "openpyxl>=3.1,<4",
 ]
 
 [project.optional-dependencies]
@@ -38,7 +41,9 @@ exclude = ["alembic", "alembic.*", "tests", "tests.*"]
 asyncio_mode = "auto"
 pythonpath = ["."]
 markers = [
-  "smoke: network-free Sprint 5 release smoke tests",
+  "smoke: network-free release smoke tests",
+  "e2e: deterministic network-free end-to-end tests",
+  "integration: deterministic component integration tests",
   "live_openai: explicit opt-in test that may call the OpenAI API",
 ]
 

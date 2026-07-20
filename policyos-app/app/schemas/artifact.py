@@ -11,6 +11,9 @@ from app.ai.privacy import DataClassification
 class WorkPackageCreate(BaseModel):
     package_type: Literal[
         "policy_package",
+        "legal_package",
+        "budget_package",
+        "minutes_analysis_package",
         "communication_package",
         "presentation_package",
         "full_office_package",
@@ -18,6 +21,11 @@ class WorkPackageCreate(BaseModel):
     instruction: str = Field(min_length=1, max_length=10_000)
     data_classification: DataClassification = DataClassification.INTERNAL
     client_request_id: str | None = Field(default=None, min_length=1, max_length=100)
+    requested_source_types: list[str] = Field(default_factory=list, max_length=20)
+    effective_date: datetime | None = None
+    fiscal_year: int | None = Field(default=None, ge=1900, le=2200)
+    committee: str | None = Field(default=None, max_length=300)
+    allow_stale: bool = False
 
 
 class WorkPackageRead(BaseModel):
@@ -30,6 +38,9 @@ class WorkPackageRead(BaseModel):
     status: str
     client_request_id: str | None
     review_status: str
+    knowledge_query_id: uuid.UUID | None = None
+    knowledge_route_id: uuid.UUID | None = None
+    knowledge_summary: dict[str, Any] | None = None
     created_by: uuid.UUID
     created_at: datetime
     updated_at: datetime

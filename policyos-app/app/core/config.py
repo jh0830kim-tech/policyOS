@@ -32,6 +32,76 @@ class Settings(BaseSettings):
     ai_usage_retention_days: int = Field(default=365, ge=1)
     ai_redaction_enabled: bool = True
     ai_redaction_custom_terms: str = ""
+    knowledge_max_upload_bytes: int = Field(default=25_000_000, gt=0, le=250_000_000)
+    knowledge_allowed_extensions: str = ".txt,.md,.pdf,.docx,.csv,.xlsx,.hwp,.hwpx"
+    knowledge_temp_directory: str = ""
+    knowledge_ingestion_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
+    knowledge_chunk_max_characters: int = Field(default=4_000, ge=100, le=100_000)
+    knowledge_chunk_target_characters: int = Field(default=3_000, ge=50, le=100_000)
+    knowledge_chunk_overlap_characters: int = Field(default=300, ge=0, le=20_000)
+    knowledge_chunk_min_characters: int = Field(default=200, ge=1, le=20_000)
+    knowledge_chunk_preserve_page_boundaries: bool = True
+    knowledge_chunk_preserve_section_boundaries: bool = True
+    knowledge_chunk_preserve_tables: bool = True
+    knowledge_chunk_preserve_lists: bool = True
+    knowledge_chunking_strategy_version: str = "1.0.0"
+    embedding_provider: str = "fake"
+    openai_embedding_model: str = "text-embedding-3-small"
+    openai_embedding_dimensions: int | None = Field(default=1536, ge=1, le=65536)
+    embedding_batch_size: int = Field(default=64, ge=1, le=2048)
+    embedding_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
+    embedding_max_retries: int = Field(default=2, ge=0, le=10)
+    embedding_policy_version: str = "1.0.0"
+    hybrid_lexical_weight: float = Field(default=0.5, ge=0, le=1)
+    hybrid_vector_weight: float = Field(default=0.5, ge=0, le=1)
+    hybrid_rrf_k: int = Field(default=60, ge=1, le=1000)
+    hybrid_candidate_limit: int = Field(default=50, ge=1, le=500)
+    hybrid_default_top_k: int = Field(default=10, ge=1, le=100)
+    hybrid_min_score: float = Field(default=0.0, ge=0, le=1)
+    mcp_enabled: bool = False
+    mcp_default_timeout_seconds: float = Field(default=30, gt=0, le=300)
+    mcp_max_retries: int = Field(default=2, ge=0, le=10)
+    mcp_max_result_bytes: int = Field(default=1_000_000, ge=1, le=50_000_000)
+    mcp_allow_remote_servers: bool = False
+    mcp_allow_local_process_servers: bool = False
+    mcp_require_human_approval_for_writes: bool = True
+    mcp_cache_enabled: bool = True
+    mcp_cache_ttl_seconds: int = Field(default=300, ge=1)
+    mcp_allow_stale_cache: bool = True
+    mcp_server_allowlist: str = "law-mcp,minutes-mcp,finance-mcp,internal-docs-mcp,public-data-mcp"
+    mcp_tool_allowlist: str = ""
+    mcp_audit_retention_days: int = Field(default=365, ge=1)
+    knowledge_document_retention_days: int = Field(default=2555, ge=1)
+    knowledge_chunk_retention_days: int = Field(default=365, ge=1)
+    knowledge_embedding_retention_days: int = Field(default=365, ge=1)
+    knowledge_audit_retention_days: int = Field(default=730, ge=1)
+    knowledge_legal_hold_enabled: bool = True
+    knowledge_retention_dry_run: bool = True
+    knowledge_suspicious_content_detection_enabled: bool = True
+    knowledge_dlp_enabled: bool = True
+    knowledge_rate_limit_per_minute: int = Field(default=60, ge=1, le=10000)
+    knowledge_rate_limit_burst: int = Field(default=20, ge=1, le=10000)
+    knowledge_prompt_injection_detection_enabled: bool = True
+    knowledge_custom_secret_terms: str = ""
+    knowledge_restricted_excerpt_max_chars: int = Field(default=500, ge=0, le=5000)
+    knowledge_retention_dry_run_default: bool = True
+    knowledge_require_approval_for_purge: bool = True
+    knowledge_require_approval_for_reclassification_downgrade: bool = True
+    audit_retention_days: int = Field(default=730, ge=1)
+    audit_query_max_results: int = Field(default=500, ge=1, le=5000)
+    mcp_rate_limit_per_minute: int = Field(default=30, ge=1, le=10000)
+    agent_rate_limit_per_minute: int = Field(default=20, ge=1, le=10000)
+    security_incident_hook_enabled: bool = False
+    knowledge_source_retention_days: int = Field(default=2555, ge=1)
+    document_version_retention_days: int = Field(default=2555, ge=1)
+    chunk_retention_days: int = Field(default=365, ge=1)
+    embedding_retention_days: int = Field(default=365, ge=1)
+    retrieval_audit_retention_days: int = Field(default=730, ge=1)
+    agent_audit_retention_days: int = Field(default=365, ge=1)
+    provider_audit_retention_days: int = Field(default=365, ge=1)
+    artifact_retention_days: int = Field(default=2555, ge=1)
+    failed_ingestion_retention_days: int = Field(default=30, ge=1)
+    temporary_file_retention_hours: int = Field(default=24, ge=1)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -52,6 +122,22 @@ class Settings(BaseSettings):
             self.ai_provider = "disabled"
         if self.ai_provider == "openai" and not self.openai_api_key:
             raise ValueError("OPENAI_API_KEY is required when AI_PROVIDER=openai")
+        if self.knowledge_chunk_target_characters > self.knowledge_chunk_max_characters:
+            raise ValueError("Knowledge chunk target cannot exceed maximum")
+        if self.knowledge_chunk_min_characters > self.knowledge_chunk_target_characters:
+            raise ValueError("Knowledge chunk minimum cannot exceed target")
+        if self.knowledge_chunk_overlap_characters >= self.knowledge_chunk_max_characters:
+            raise ValueError("Knowledge chunk overlap must be smaller than maximum")
+        if self.hybrid_lexical_weight + self.hybrid_vector_weight <= 0:
+            raise ValueError("At least one hybrid retrieval weight must be positive")
+        if self.hybrid_default_top_k > self.hybrid_candidate_limit:
+            raise ValueError("Hybrid top_k cannot exceed candidate limit")
+        if self.embedding_provider not in {"fake", "disabled", "openai"}:
+            raise ValueError(f"Unsupported EMBEDDING_PROVIDER: {self.embedding_provider}")
+        if is_production and self.embedding_provider == "fake":
+            self.embedding_provider = "disabled"
+        if self.embedding_provider == "openai" and not self.openai_api_key:
+            raise ValueError("OPENAI_API_KEY is required when EMBEDDING_PROVIDER=openai")
         return self
 
 

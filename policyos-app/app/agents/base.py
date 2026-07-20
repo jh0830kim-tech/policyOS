@@ -10,6 +10,7 @@ from app.ai.domain import (
     AgentResult,
     AgentStatus,
     AgentTask,
+    EvidenceReference,
     StructuredError,
 )
 from app.ai.model_gateway import ModelGateway, ModelGatewayError, ModelRequest
@@ -77,8 +78,59 @@ class OperationalAgent:
                 "Model output did not match the artifact schema",
                 False,
             )
+        evidence_package = task.context.knowledge_evidence
+        evidence_references = []
+        if evidence_package is not None:
+            evidence_references = [
+                EvidenceReference(
+                    evidence_id=item.evidence_id,
+                    title=item.source_title,
+                    source_type=item.source_type,
+                    locator=item.citation or "citation unavailable",
+                    excerpt=item.excerpt,
+                    retrieved_at=item.retrieved_at,
+                )
+                for item in evidence_package.evidence_items
+            ]
+            artifact = artifact.model_copy(
+                update={
+                    "evidence_references": evidence_references,
+                    "warnings": list(
+                        dict.fromkeys([*artifact.warnings, *evidence_package.warnings])
+                    ),
+                    "review_status": ArtifactReviewStatus.NEEDS_REVIEW,
+                    "approval_required": True,
+                }
+            )
         self.last_artifact = artifact
-        return self.to_result(task, artifact, response.usage)
+        result = self.to_result(task, artifact, response.usage)
+        if evidence_package is not None:
+            result = result.model_copy(
+                update={
+                    "evidence": evidence_references,
+                    "evidence_ids_used": [
+                        item.evidence_id for item in evidence_package.evidence_items
+                    ],
+                    "citation_ids_used": list(evidence_package.citations),
+                    "evidence_conflicts": [str(item) for item in evidence_package.conflicts],
+                    "evidence_gaps": [str(item) for item in evidence_package.gaps],
+                    "stale_source_warnings": [
+                        warning
+                        for item in evidence_package.evidence_items
+                        if item.freshness == "stale"
+                        for warning in item.warnings or ("stale source",)
+                    ],
+                    "effective_date_used": (
+                        evidence_package.effective_date_context.isoformat()
+                        if evidence_package.effective_date_context
+                        else None
+                    ),
+                    "fiscal_year_used": evidence_package.fiscal_year_context,
+                    "review_notes": list(evidence_package.warnings),
+                    "requires_human_review": evidence_package.requires_human_review,
+                }
+            )
+        return result
 
     def _failure(self, task: AgentTask, code: str, message: str, retryable: bool) -> AgentResult:
         return AgentResult(

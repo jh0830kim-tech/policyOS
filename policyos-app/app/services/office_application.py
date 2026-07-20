@@ -13,8 +13,10 @@ from app.ai.artifacts import (
 )
 from app.ai.composition import OfficeComposition, build_office_composition
 from app.ai.domain import AgentContext, AgentStatus, AgentTask
+from app.ai.knowledge_evidence import OfficeEvidencePackage
 from app.ai.workflows import AGENT_CAPABILITIES, WORKFLOW_ROUTES
 from app.core.config import Settings
+from app.knowledge.router.domain import KnowledgeQuery
 from app.models.artifact import WorkPackageRecord
 from app.schemas.artifact import WorkPackageCreate
 from app.services.ai_execution import AIExecutionRepository
@@ -37,6 +39,7 @@ class OfficeApplicationService:
         settings: Settings,
         *,
         composition: OfficeComposition | None = None,
+        knowledge_router: object | None = None,
     ) -> None:
         self.db = db
         self.settings = settings
@@ -46,6 +49,7 @@ class OfficeApplicationService:
         )
         self.executions = AIExecutionRepository(db)
         self.artifacts = ArtifactRepository(db)
+        self.knowledge_router = knowledge_router
 
     async def execute_work_package(
         self,
@@ -70,7 +74,40 @@ class OfficeApplicationService:
             commit=False,
         )
         task_record.status = "running"
-        task = self._task(payload, task_record.id, organization_id, user_id)
+        evidence_package = None
+        if self.knowledge_router is not None:
+            knowledge_query = KnowledgeQuery(
+                query_id=uuid.uuid4(),
+                user_id=user_id,
+                organization_id=organization_id,
+                task_id=task_record.id,
+                query_text=payload.instruction,
+                task_type=payload.package_type,
+                requested_source_types=frozenset(payload.requested_source_types),
+                effective_date=payload.effective_date.date() if payload.effective_date else None,
+                fiscal_year=payload.fiscal_year,
+                committee=payload.committee,
+                classifications=frozenset({payload.data_classification}),
+                max_results=20,
+                allow_stale=payload.allow_stale,
+                correlation_id=idempotency_key or str(task_record.id),
+            )
+            routed = await self.knowledge_router.route(
+                knowledge_query,
+                granted_permissions=frozenset({"knowledge.read", "mcp.read", "mcp.execute"}),
+            )
+            evidence_package = OfficeEvidencePackage.from_router(
+                routed,
+                task_record.id,
+                payload.data_classification,
+                organization_id,
+            )
+            if routed.sufficiency == "insufficient" and not routed.evidence:
+                await self.db.rollback()
+                raise OfficeExecutionError(
+                    "evidence_unavailable", "Required knowledge evidence is unavailable", 503
+                )
+        task = self._task(payload, task_record.id, organization_id, user_id, evidence_package)
         route = self.composition.workflow.plan(task)
         pending_package = OfficeWorkPackage(
             title=payload.package_type.replace("_", " ").title(),
@@ -89,6 +126,21 @@ class OfficeApplicationService:
             client_request_id=idempotency_key,
             commit=False,
         )
+        if evidence_package is not None:
+            package_record.knowledge_query_id = evidence_package.query_id
+            package_record.knowledge_route_id = evidence_package.route_id
+            package_record.knowledge_summary = {
+                "query_type": evidence_package.query_type,
+                "sources_consulted": list(evidence_package.sources_consulted),
+                "evidence_count": len(evidence_package.evidence_items),
+                "citation_count": len(evidence_package.citations),
+                "conflict_count": len(evidence_package.conflicts),
+                "gap_count": len(evidence_package.gaps),
+                "confidence": evidence_package.confidence,
+                "sufficiency": evidence_package.sufficiency,
+                "fallback_used": evidence_package.fallback_used,
+                "requires_human_review": evidence_package.requires_human_review,
+            }
         runs = {}
         for agent_id in route:
             prompt = self.composition.prompts.get(agent_id, "1.0.0")
@@ -204,6 +256,7 @@ class OfficeApplicationService:
         task_id: uuid.UUID,
         organization_id: uuid.UUID,
         user_id: uuid.UUID,
+        evidence_package: OfficeEvidencePackage | None = None,
     ) -> AgentTask:
         route = WORKFLOW_ROUTES[payload.package_type]
         return AgentTask(
@@ -214,7 +267,10 @@ class OfficeApplicationService:
             instruction=payload.instruction,
             allowed_agents=list(route),
             allowed_capabilities=[AGENT_CAPABILITIES[item] for item in route],
-            context=AgentContext(data_classification=payload.data_classification),
+            context=AgentContext(
+                data_classification=payload.data_classification,
+                knowledge_evidence=evidence_package,
+            ),
             status=AgentStatus.RUNNING,
         )
 

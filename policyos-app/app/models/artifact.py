@@ -34,6 +34,9 @@ class WorkPackageRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="pending")
     client_request_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     review_status: Mapped[str] = mapped_column(String(40), nullable=False, default="needs_review")
+    knowledge_query_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, index=True)
+    knowledge_route_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+    knowledge_summary: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     created_by: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )

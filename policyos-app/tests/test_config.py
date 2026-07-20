@@ -42,3 +42,33 @@ def test_openai_resilience_settings_are_bounded() -> None:
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None, openai_max_retries=11)
+
+
+def test_secure_ingestion_settings_are_bounded() -> None:
+    settings = Settings(
+        _env_file=None,
+        knowledge_max_upload_bytes=1024,
+        knowledge_allowed_extensions=".txt,.pdf",
+        knowledge_temp_directory="",
+        knowledge_ingestion_timeout_seconds=12,
+    )
+    assert settings.knowledge_max_upload_bytes == 1024
+    assert settings.knowledge_allowed_extensions == ".txt,.pdf"
+    assert settings.knowledge_ingestion_timeout_seconds == 12
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, knowledge_max_upload_bytes=0)
+
+
+def test_chunking_settings_reject_inconsistent_sizes() -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            knowledge_chunk_max_characters=100,
+            knowledge_chunk_target_characters=101,
+        )
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            knowledge_chunk_max_characters=100,
+            knowledge_chunk_overlap_characters=100,
+        )

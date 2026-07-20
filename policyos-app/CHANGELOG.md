@@ -50,3 +50,32 @@
 - Added a network-free release smoke suite covering login, mocked OpenAI and fake execution, orchestration, persistence, telemetry, audit, resilience, privacy, cancellation, and retention.
 - Added an explicit opt-in live OpenAI structured-output connectivity command that prints metadata only.
 - Added v0.3 release notes, deployment checklist, rollback guidance, known issues, and the AI provider runbook.
+## Sprint 6 — Knowledge domain and persistence
+
+- Added organization-scoped source, document, immutable version, chunk, ingestion job, access policy, and citation models.
+- Added content-hash/version duplicate constraints, classification/status checks, lineage indexes, and composite tenant foreign keys.
+- Added Alembic revision `20260720_0007` and knowledge model/migration tests.
+## Sprint 6 — Secure document ingestion
+
+- Added validated TXT, Markdown, PDF, DOCX, CSV, XLSX, and explicit unsupported HWP/HWPX parser adapters.
+- Added SHA-256 duplicate handling, conservative normalization, malware scanner boundary, temporary-file cleanup, and metadata extraction.
+- Added organization-scoped ingestion persistence, lifecycle states, parsed immutable version content, RBAC permission seeds, configuration, migration, and network-free tests.
+## Sprint 6 — Deterministic chunking and citations
+
+- Added versioned deterministic paragraph/page/section/table/list chunking with bounded overlap and SHA-256 identifiers.
+- Added stable token-estimator contracts, source block ranges, structured locators, source-type citation labels, and completeness assessment.
+- Added organization-scoped chunk/citation persistence, config-hash idempotency, retained chunk-set revisions, migration `20260720_0009`, and network-free tests.
+
+- Added provider-independent deterministic embeddings, revisioned vector persistence, privacy enforcement, cosine retrieval, citation propagation, and migration 0010.
+
+- Added deterministic lexical/vector hybrid fusion, explainable reranking, duplicate controls, evidence sufficiency, and privacy-safe retrieval telemetry.
+
+- Added governed MCP registry, policy, validation, audit, health, cache, connector evidence mapping, and migration 0011.
+
+- Added governed rules-based knowledge routing, evidence merge/ranking, conflict and gap detection, confidence evaluation, and privacy-safe route audit.
+
+- Integrated governed RAG/MCP evidence packages into Office Agent context, citation propagation, review policy, Work Package metadata, and migration 0012.
+
+- Added organization-scoped knowledge access/classification enforcement, query-time retrieval filtering, prompt-injection and DLP detection, append-only unified audit metadata, legal hold, retention dry-run, governed archive/delete/reclassification, rate limiting, cache invalidation, and incident hooks (Sprint 6 Checkpoint 9).
+
+- Added Sprint 6 v0.4 synthetic E2E fixtures, network-free smoke/e2e/integration release gates, performance baseline metadata, release checklist, rollback guidance, and known-issue documentation (Sprint 6 v0.4 release preparation).
