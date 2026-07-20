@@ -17,3 +17,6 @@
 - chunk identifier
 - confidence or evidence sufficiency
 - no cross-organization leakage
+## Ingestion input to RAG
+
+Checkpoint 2 supplies normalized version text and structured page/section/sheet metadata. It does not create retrieval chunks or embeddings; deterministic chunk IDs, overlap, and citation locators remain Checkpoint 3. Normalization collapses incidental spacing and repeated blank lines while preserving source text, headings, page/sheet boundaries, formulas as visible text, and evidence-bearing content. Header/footer removal is an explicit hook and is disabled by default.

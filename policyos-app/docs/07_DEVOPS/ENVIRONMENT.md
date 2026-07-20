@@ -44,3 +44,11 @@ No live provider call is made by the automated test suite.
 ## Sprint 5 release gates
 
 Before enabling `AI_PROVIDER=openai`, complete the environment and migration checklist in `RELEASE_NOTES_v0.3.md`, run `ruff check .`, `pytest`, and `pytest -m smoke`, and verify the configured retention/privacy values. `RUN_OPENAI_LIVE_TESTS` is intentionally absent from `.env.example`; set it temporarily to `1` only for an approved staging invocation of `python -m scripts.openai_smoke_test`. Automated tests never make external provider calls.
+## Knowledge ingestion configuration
+
+- `KNOWLEDGE_MAX_UPLOAD_BYTES=25000000`: hard pre-parse byte limit.
+- `KNOWLEDGE_ALLOWED_EXTENSIONS=.txt,.md,.pdf,.docx,.csv,.xlsx,.hwp,.hwpx`: allowlist; HWP/HWPX still return unsupported until an adapter exists.
+- `KNOWLEDGE_TEMP_DIRECTORY=`: private temporary root; empty uses the OS temporary directory.
+- `KNOWLEDGE_INGESTION_TIMEOUT_SECONDS=30`: total parser timeout.
+
+NoOp malware scanning is local/test only. Production currently fails closed through `DisabledMalwareScanner` until an approved real scanner is injected. The temporary root must be writable only by the application identity and monitored for cleanup failures.

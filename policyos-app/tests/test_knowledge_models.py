@@ -45,7 +45,7 @@ def test_knowledge_tables_are_registered_with_required_lineage_fields() -> None:
             "effective_date", "retrieved_at",
         },
         KnowledgeDocumentVersion: {
-            "organization_id", "document_id", "version", "content_hash", "status",
+            "organization_id", "document_id", "version", "content_hash", "parsed_content", "status",
             "metadata", "created_by", "created_at", "updated_at",
         },
         KnowledgeChunk: {

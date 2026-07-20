@@ -32,3 +32,6 @@ request-scoped provider audit sink before any OpenAI call. Only redacted instruc
 structured context cross the provider boundary. Database models have no API-key, bearer-token, raw
 provider-response, prompt, or hidden-reasoning columns. Generated artifacts contain validated final
 structured output only and remain `needs_review` until an authorized reviewer acts.
+## Knowledge ingestion privacy
+
+Original upload bytes are transient and are not persisted or logged. PolicyOS stores normalized parsed content because it is the governed retrieval source, plus minimum metadata such as filename, hash, size, parser/normalization versions, dates, classification, creator, and scan outcome. Restricted documents remain within the local parser/scanner boundary and are never sent to an AI provider or external parser. Job failures retain safe error codes only; malware signatures may be represented by scanner metadata but file content and secrets must never enter logs.

@@ -46,3 +46,6 @@ and exact `agent.execute` authorization. The application service receives the re
 and user identifiers and uses them for every task, run, package, artifact, audit, and provider
 transmission context. Read/review routes retain organization predicates. Provider failures are mapped
 to allowlisted codes and messages without exposing SDK exceptions or stack traces.
+## Secure document ingestion
+
+Uploads are checked for allowed extension and MIME pairing, configured byte limit, empty content, normalized filename, traversal, executable/script suffixes, executable signatures, and extension/content magic before parsing. SHA-256 duplicate detection is scoped to organization and source. Malware scanning is an injected protocol and always runs before parser execution; production ingestion fails closed until a real scanner adapter is configured. HWP/HWPX are explicitly unsupported, encrypted or textless PDFs fail safely, embedded DOCX objects are rejected, spreadsheet formulas are never executed, and row/column limits constrain tabular parsers. Temporary files use a configured private directory and are removed on success or failure.

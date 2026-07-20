@@ -69,3 +69,6 @@ messages, stack traces, credentials, prompts, and raw responses are never return
 
 List/item Work Package and Artifact reads remain organization-scoped. Artifact review still requires
 `artifact.review`, and execution status is exposed separately from human review status.
+## Knowledge ingestion boundary
+
+Sprint 6 Checkpoint 2 provides framework-neutral `IngestionRequest`, `IngestionResult`, parser contracts, and `KnowledgeIngestionService`. A multipart HTTP endpoint is intentionally deferred so upload transport limits and streaming can be designed without buffering untrusted files in a thin router. The future endpoint must derive organization and user IDs exclusively from authenticated active-membership context and require `knowledge.ingest`; job reads require `knowledge.read` and an organization predicate. Parser errors must map to allowlisted safe codes without stack traces.

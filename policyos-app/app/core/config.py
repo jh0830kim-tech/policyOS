@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     ai_usage_retention_days: int = Field(default=365, ge=1)
     ai_redaction_enabled: bool = True
     ai_redaction_custom_terms: str = ""
+    knowledge_max_upload_bytes: int = Field(default=25_000_000, gt=0, le=250_000_000)
+    knowledge_allowed_extensions: str = ".txt,.md,.pdf,.docx,.csv,.xlsx,.hwp,.hwpx"
+    knowledge_temp_directory: str = ""
+    knowledge_ingestion_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

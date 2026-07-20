@@ -55,3 +55,8 @@
 - Added organization-scoped source, document, immutable version, chunk, ingestion job, access policy, and citation models.
 - Added content-hash/version duplicate constraints, classification/status checks, lineage indexes, and composite tenant foreign keys.
 - Added Alembic revision `20260720_0007` and knowledge model/migration tests.
+## Sprint 6 — Secure document ingestion
+
+- Added validated TXT, Markdown, PDF, DOCX, CSV, XLSX, and explicit unsupported HWP/HWPX parser adapters.
+- Added SHA-256 duplicate handling, conservative normalization, malware scanner boundary, temporary-file cleanup, and metadata extraction.
+- Added organization-scoped ingestion persistence, lifecycle states, parsed immutable version content, RBAC permission seeds, configuration, migration, and network-free tests.

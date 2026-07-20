@@ -29,7 +29,9 @@ _SOURCE_STATUS_CHECK = "status IN ('active', 'disabled', 'archived')"
 _DOCUMENT_STATUS_CHECK = "status IN ('pending', 'active', 'superseded', 'failed', 'archived')"
 _VERSION_STATUS_CHECK = "status IN ('pending', 'active', 'superseded', 'failed', 'archived')"
 _CHUNK_STATUS_CHECK = "status IN ('pending', 'active', 'failed', 'archived')"
-_JOB_STATUS_CHECK = "status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')"
+_JOB_STATUS_CHECK = (
+    "status IN ('pending', 'scanning', 'parsing', 'succeeded', 'failed', 'duplicate', 'rejected')"
+)
 _POLICY_STATUS_CHECK = "status IN ('active', 'disabled', 'archived')"
 _CITATION_STATUS_CHECK = "status IN ('active', 'invalidated', 'archived')"
 
@@ -159,6 +161,7 @@ class KnowledgeDocumentVersion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     document_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    parsed_content: Mapped[str | None] = mapped_column(Text, nullable=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     language: Mapped[str] = mapped_column(String(20), nullable=False, default="ko")
     classification: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -178,6 +181,7 @@ _IMMUTABLE_VERSION_FIELDS = (
     "document_id",
     "version",
     "content_hash",
+    "parsed_content",
     "title",
     "language",
     "classification",
