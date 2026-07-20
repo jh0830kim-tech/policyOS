@@ -71,6 +71,20 @@ class Settings(BaseSettings):
     mcp_server_allowlist: str = "law-mcp,minutes-mcp,finance-mcp,internal-docs-mcp,public-data-mcp"
     mcp_tool_allowlist: str = ""
     mcp_audit_retention_days: int = Field(default=365, ge=1)
+    connectors_enabled: bool = False
+    connector_default_timeout_seconds: float = Field(default=30, gt=0, le=300)
+    connector_default_max_retries: int = Field(default=2, ge=0, le=10)
+    connector_max_response_bytes: int = Field(default=1_000_000, ge=1, le=50_000_000)
+    connector_max_pages: int = Field(default=10, ge=1, le=1_000)
+    connector_max_records: int = Field(default=10_000, ge=1, le=1_000_000)
+    connector_cache_enabled: bool = True
+    connector_cache_ttl_seconds: int = Field(default=300, ge=1)
+    connector_allow_stale_cache: bool = False
+    connector_remote_health_checks_enabled: bool = False
+    connector_endpoint_allowlist: str = ""
+    connector_block_private_networks: bool = True
+    connector_user_agent: str = "policyos-connector/1.0"
+    connector_sync_batch_size: int = Field(default=100, ge=1, le=10_000)
     knowledge_document_retention_days: int = Field(default=2555, ge=1)
     knowledge_chunk_retention_days: int = Field(default=365, ge=1)
     knowledge_embedding_retention_days: int = Field(default=365, ge=1)
