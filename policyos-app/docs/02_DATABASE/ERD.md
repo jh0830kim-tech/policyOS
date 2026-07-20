@@ -1,4 +1,4 @@
-﻿# Entity Relationship Overview
+# Entity Relationship Overview
 
 ```mermaid
 erDiagram
@@ -24,3 +24,15 @@ erDiagram
     USERS ||--o{ AI_ARTIFACTS : approves
 ```
 Artifact payloads are limited to 64 KiB and exclude raw provider responses, secrets, and hidden reasoning.
+## Knowledge chunk lineage
+
+```text
+KnowledgeSource (organization)
+  └─ KnowledgeDocument
+       └─ KnowledgeDocumentVersion
+            ├─ KnowledgeChunk [config_hash, index, locator, content_hash]
+            │    └─ CitationReference [source/document/version/chunk lineage]
+            └─ active_chunking_config_hash
+```
+
+Every edge includes `organization_id` in its foreign key. Citation-to-chunk deletion remains restrictive so citation lineage cannot be silently orphaned.

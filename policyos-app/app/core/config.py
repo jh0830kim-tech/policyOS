@@ -36,6 +36,15 @@ class Settings(BaseSettings):
     knowledge_allowed_extensions: str = ".txt,.md,.pdf,.docx,.csv,.xlsx,.hwp,.hwpx"
     knowledge_temp_directory: str = ""
     knowledge_ingestion_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
+    knowledge_chunk_max_characters: int = Field(default=4_000, ge=100, le=100_000)
+    knowledge_chunk_target_characters: int = Field(default=3_000, ge=50, le=100_000)
+    knowledge_chunk_overlap_characters: int = Field(default=300, ge=0, le=20_000)
+    knowledge_chunk_min_characters: int = Field(default=200, ge=1, le=20_000)
+    knowledge_chunk_preserve_page_boundaries: bool = True
+    knowledge_chunk_preserve_section_boundaries: bool = True
+    knowledge_chunk_preserve_tables: bool = True
+    knowledge_chunk_preserve_lists: bool = True
+    knowledge_chunking_strategy_version: str = "1.0.0"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -56,6 +65,12 @@ class Settings(BaseSettings):
             self.ai_provider = "disabled"
         if self.ai_provider == "openai" and not self.openai_api_key:
             raise ValueError("OPENAI_API_KEY is required when AI_PROVIDER=openai")
+        if self.knowledge_chunk_target_characters > self.knowledge_chunk_max_characters:
+            raise ValueError("Knowledge chunk target cannot exceed maximum")
+        if self.knowledge_chunk_min_characters > self.knowledge_chunk_target_characters:
+            raise ValueError("Knowledge chunk minimum cannot exceed target")
+        if self.knowledge_chunk_overlap_characters >= self.knowledge_chunk_max_characters:
+            raise ValueError("Knowledge chunk overlap must be smaller than maximum")
         return self
 
 

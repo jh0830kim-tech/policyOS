@@ -49,3 +49,6 @@ to allowlisted codes and messages without exposing SDK exceptions or stack trace
 ## Secure document ingestion
 
 Uploads are checked for allowed extension and MIME pairing, configured byte limit, empty content, normalized filename, traversal, executable/script suffixes, executable signatures, and extension/content magic before parsing. SHA-256 duplicate detection is scoped to organization and source. Malware scanning is an injected protocol and always runs before parser execution; production ingestion fails closed until a real scanner adapter is configured. HWP/HWPX are explicitly unsupported, encrypted or textless PDFs fail safely, embedded DOCX objects are rejected, spreadsheet formulas are never executed, and row/column limits constrain tabular parsers. Temporary files use a configured private directory and are removed on success or failure.
+## Chunk and citation isolation
+
+Chunk organization and classification are inherited only from the persisted document version; callers cannot downgrade them. Version, document, source, chunk, and citation queries include organization predicates and composite tenant foreign keys. Restricted chunks remain local and are not transmitted to providers. Chunk hashes, strategy/config hashes, and source block ranges make overlap and repeated processing auditable without inventing source pages, sections, or dates.

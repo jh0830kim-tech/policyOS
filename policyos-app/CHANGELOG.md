@@ -60,3 +60,8 @@
 - Added validated TXT, Markdown, PDF, DOCX, CSV, XLSX, and explicit unsupported HWP/HWPX parser adapters.
 - Added SHA-256 duplicate handling, conservative normalization, malware scanner boundary, temporary-file cleanup, and metadata extraction.
 - Added organization-scoped ingestion persistence, lifecycle states, parsed immutable version content, RBAC permission seeds, configuration, migration, and network-free tests.
+## Sprint 6 — Deterministic chunking and citations
+
+- Added versioned deterministic paragraph/page/section/table/list chunking with bounded overlap and SHA-256 identifiers.
+- Added stable token-estimator contracts, source block ranges, structured locators, source-type citation labels, and completeness assessment.
+- Added organization-scoped chunk/citation persistence, config-hash idempotency, retained chunk-set revisions, migration `20260720_0009`, and network-free tests.

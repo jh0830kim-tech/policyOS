@@ -148,6 +148,10 @@ class KnowledgeDocumentVersion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint(_VERSION_STATUS_CHECK, name="ck_knowledge_versions_status"),
         CheckConstraint("length(content_hash) = 64", name="ck_knowledge_versions_hash_length"),
         CheckConstraint("version >= 1", name="ck_knowledge_versions_version_positive"),
+        CheckConstraint(
+            "chunking_status IN ('pending', 'running', 'succeeded', 'failed')",
+            name="ck_knowledge_versions_chunking_status",
+        ),
         Index(
             "ix_knowledge_versions_org_classification_status",
             "organization_id",
@@ -162,6 +166,8 @@ class KnowledgeDocumentVersion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     parsed_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    chunking_status: Mapped[str] = mapped_column(String(40), nullable=False, default="pending")
+    active_chunking_config_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     language: Mapped[str] = mapped_column(String(20), nullable=False, default="ko")
     classification: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -213,14 +219,16 @@ class KnowledgeChunk(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         UniqueConstraint(
             "organization_id",
             "document_version_id",
+            "chunking_config_hash",
             "ordinal",
-            name="uq_knowledge_chunks_version_ordinal",
+            name="uq_knowledge_chunks_version_config_ordinal",
         ),
         UniqueConstraint(
             "organization_id",
             "document_version_id",
+            "chunking_config_hash",
             "content_hash",
-            name="uq_knowledge_chunks_version_hash",
+            name="uq_knowledge_chunks_version_config_hash",
         ),
         ForeignKeyConstraint(
             ["document_version_id", "organization_id"],
@@ -232,6 +240,24 @@ class KnowledgeChunk(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint(_CHUNK_STATUS_CHECK, name="ck_knowledge_chunks_status"),
         CheckConstraint("length(content_hash) = 64", name="ck_knowledge_chunks_hash_length"),
         CheckConstraint("ordinal >= 0", name="ck_knowledge_chunks_ordinal_nonnegative"),
+        CheckConstraint(
+            "length(chunking_config_hash) = 64",
+            name="ck_knowledge_chunks_config_hash_length",
+        ),
+        CheckConstraint(
+            "source_block_start >= 0 AND source_block_end >= source_block_start",
+            name="ck_knowledge_chunks_source_range",
+        ),
+        CheckConstraint(
+            "token_estimate >= 0 AND character_count >= 0",
+            name="ck_knowledge_chunks_counts",
+        ),
+        Index(
+            "ix_knowledge_chunks_version_config",
+            "organization_id",
+            "document_version_id",
+            "chunking_config_hash",
+        ),
         Index(
             "ix_knowledge_chunks_org_classification_status",
             "organization_id",
@@ -243,6 +269,18 @@ class KnowledgeChunk(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     organization_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
     document_version_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
     ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    chunking_config_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    chunking_strategy_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    normalization_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    page_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    page_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    section_path: Mapped[str | None] = mapped_column(String(1_000), nullable=True)
+    heading: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_locator: Mapped[str | None] = mapped_column(String(1_000), nullable=True)
+    source_block_start: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_block_end: Mapped[int] = mapped_column(Integer, nullable=False)
+    token_estimate: Mapped[int] = mapped_column(Integer, nullable=False)
+    character_count: Mapped[int] = mapped_column(Integer, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     classification: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -253,6 +291,10 @@ class KnowledgeChunk(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     created_by: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True
     )
+
+    @property
+    def chunk_index(self) -> int:
+        return self.ordinal
 
 
 class KnowledgeIngestionJob(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -339,6 +381,12 @@ class CitationReference(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "citation_references"
     __table_args__ = (
         ForeignKeyConstraint(
+            ["source_id", "organization_id"],
+            ["knowledge_sources.id", "knowledge_sources.organization_id"],
+            name="fk_citations_source_org",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
             ["document_id", "organization_id"],
             ["knowledge_documents.id", "knowledge_documents.organization_id"],
             name="fk_citations_document_org",
@@ -361,9 +409,15 @@ class CitationReference(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("length(content_hash) = 64", name="ck_citations_hash_length"),
         Index("ix_citations_org_document_version", "organization_id", "document_version_id"),
         Index("ix_citations_chunk", "chunk_id"),
+        UniqueConstraint(
+            "organization_id",
+            "chunk_id",
+            name="uq_citation_references_org_chunk",
+        ),
     )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
+    source_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
     document_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
     document_version_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
     chunk_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
@@ -376,6 +430,11 @@ class CitationReference(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     retrieved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     page: Mapped[str | None] = mapped_column(String(100), nullable=True)
     section: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    page_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    page_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    section_path: Mapped[str | None] = mapped_column(String(1_000), nullable=True)
+    heading: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    external_source_id: Mapped[str | None] = mapped_column(String(500), nullable=True)
     source_url: Mapped[str | None] = mapped_column(String(2_000), nullable=True)
     internal_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
     label: Mapped[str | None] = mapped_column(String(500), nullable=True)

@@ -72,3 +72,6 @@ List/item Work Package and Artifact reads remain organization-scoped. Artifact r
 ## Knowledge ingestion boundary
 
 Sprint 6 Checkpoint 2 provides framework-neutral `IngestionRequest`, `IngestionResult`, parser contracts, and `KnowledgeIngestionService`. A multipart HTTP endpoint is intentionally deferred so upload transport limits and streaming can be designed without buffering untrusted files in a thin router. The future endpoint must derive organization and user IDs exclusively from authenticated active-membership context and require `knowledge.ingest`; job reads require `knowledge.read` and an organization predicate. Parser errors must map to allowlisted safe codes without stack traces.
+## Knowledge chunking boundary
+
+Sprint 6 Checkpoint 3 provides `KnowledgeChunkingService` and framework-neutral chunk/citation contracts. HTTP endpoints for chunk creation/list/citation reads remain deferred with the ingestion transport API. Future routes must derive organization from active membership, require `knowledge.ingest` for chunk creation and `knowledge.read` for reads, and avoid returning restricted chunk content unless an explicit classification-aware policy authorizes it. Safe citation metadata can be returned separately from raw chunk text.

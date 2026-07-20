@@ -23,3 +23,6 @@ ai_tasks and agent_runs store ownership, status, review state, lineage, prompt/m
 ## Secure knowledge ingestion persistence
 
 Ingestion creates an organization-scoped job before scanning and parsing. Job states are `pending`, `scanning`, `parsing`, `succeeded`, `failed`, `duplicate`, and `rejected`. Parsed normalized text is stored on the immutable document version; original file bytes are not stored. File and parser metadata, SHA-256, scan metadata, source lineage, classification, and optional official-document dates remain JSON metadata. Revision `20260720_0008` adds parsed content, ingestion states, and `knowledge.ingest`/`knowledge.read` permission seeds.
+## Deterministic chunk sets and citations
+
+Revision `20260720_0009` adds versioned chunk-set metadata and structured citation locators. A chunk set is identified by document version, chunking strategy/config hash, and organization. Unique constraints prevent duplicate indices and hashes within the same set. Changing configuration creates a new set without deleting prior chunks; the document version records the active config hash and `pending/running/succeeded/failed` chunking status. Citations retain source/document/version/chunk composite tenant lineage, page and section locators, heading, external source ID, content hash, and completeness metadata.
