@@ -71,6 +71,37 @@ class Settings(BaseSettings):
     mcp_server_allowlist: str = "law-mcp,minutes-mcp,finance-mcp,internal-docs-mcp,public-data-mcp"
     mcp_tool_allowlist: str = ""
     mcp_audit_retention_days: int = Field(default=365, ge=1)
+    knowledge_document_retention_days: int = Field(default=2555, ge=1)
+    knowledge_chunk_retention_days: int = Field(default=365, ge=1)
+    knowledge_embedding_retention_days: int = Field(default=365, ge=1)
+    knowledge_audit_retention_days: int = Field(default=730, ge=1)
+    knowledge_legal_hold_enabled: bool = True
+    knowledge_retention_dry_run: bool = True
+    knowledge_suspicious_content_detection_enabled: bool = True
+    knowledge_dlp_enabled: bool = True
+    knowledge_rate_limit_per_minute: int = Field(default=60, ge=1, le=10000)
+    knowledge_rate_limit_burst: int = Field(default=20, ge=1, le=10000)
+    knowledge_prompt_injection_detection_enabled: bool = True
+    knowledge_custom_secret_terms: str = ""
+    knowledge_restricted_excerpt_max_chars: int = Field(default=500, ge=0, le=5000)
+    knowledge_retention_dry_run_default: bool = True
+    knowledge_require_approval_for_purge: bool = True
+    knowledge_require_approval_for_reclassification_downgrade: bool = True
+    audit_retention_days: int = Field(default=730, ge=1)
+    audit_query_max_results: int = Field(default=500, ge=1, le=5000)
+    mcp_rate_limit_per_minute: int = Field(default=30, ge=1, le=10000)
+    agent_rate_limit_per_minute: int = Field(default=20, ge=1, le=10000)
+    security_incident_hook_enabled: bool = False
+    knowledge_source_retention_days: int = Field(default=2555, ge=1)
+    document_version_retention_days: int = Field(default=2555, ge=1)
+    chunk_retention_days: int = Field(default=365, ge=1)
+    embedding_retention_days: int = Field(default=365, ge=1)
+    retrieval_audit_retention_days: int = Field(default=730, ge=1)
+    agent_audit_retention_days: int = Field(default=365, ge=1)
+    provider_audit_retention_days: int = Field(default=365, ge=1)
+    artifact_retention_days: int = Field(default=2555, ge=1)
+    failed_ingestion_retention_days: int = Field(default=30, ge=1)
+    temporary_file_retention_hours: int = Field(default=24, ge=1)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

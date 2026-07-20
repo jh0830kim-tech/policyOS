@@ -75,3 +75,7 @@
 - Added governed rules-based knowledge routing, evidence merge/ranking, conflict and gap detection, confidence evaluation, and privacy-safe route audit.
 
 - Integrated governed RAG/MCP evidence packages into Office Agent context, citation propagation, review policy, Work Package metadata, and migration 0012.
+
+- Added organization-scoped knowledge access/classification enforcement, query-time retrieval filtering, prompt-injection and DLP detection, append-only unified audit metadata, legal hold, retention dry-run, governed archive/delete/reclassification, rate limiting, cache invalidation, and incident hooks (Sprint 6 Checkpoint 9).
+
+- Added Sprint 6 v0.4 synthetic E2E fixtures, network-free smoke/e2e/integration release gates, performance baseline metadata, release checklist, rollback guidance, and known-issue documentation (Sprint 6 v0.4 release preparation).

@@ -24,6 +24,7 @@ from app.models.knowledge import (
 from app.models.mcp import MCPAuditRecord, MCPServerConfig, MCPServerHealthRecord
 from app.models.policy_candidate import PolicyCandidate
 from app.models.provider_audit import ProviderAuditRecord
+from app.models.security_governance import LegalHold, ReclassificationRequest, UnifiedAuditEvent
 
 __all__ = [
     "AuditEvent",
@@ -39,6 +40,7 @@ __all__ = [
     "KnowledgeIngestionJob",
     "KnowledgeSource",
     "KnowledgeVersionImmutableError",
+    "LegalHold",
     "Membership",
     "MembershipRole",
     "MCPAuditRecord",
@@ -48,8 +50,10 @@ __all__ = [
     "Permission",
     "PolicyCandidate",
     "ProviderAuditRecord",
+    "ReclassificationRequest",
     "Role",
     "RolePermission",
+    "UnifiedAuditEvent",
     "User",
     "WorkPackageRecord",
 ]

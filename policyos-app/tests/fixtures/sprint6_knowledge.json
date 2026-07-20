@@ -1,0 +1,11 @@
+{
+  "fixture_notice": "Synthetic test data only. Titles, citations, dates, amounts, and excerpts are fictional and must not be treated as legal or financial facts.",
+  "organization": "Synthetic Metropolitan Government",
+  "items": [
+    {"route":"law-mcp","source_type":"law","title":"Synthetic Local Transit Assistance Act","page":"p. 12","section":"Article 8","effective_date":"2026-01-01","retrieved_date":"2026-07-20","fiscal_year":null,"classification":"public","citation":"Synthetic Act art. 8, p. 12","excerpt":"A fictional enabling clause for test-only transit assistance."},
+    {"route":"finance-mcp","source_type":"budget","title":"Synthetic FY2027 Budget Review","page":"p. 31","section":"Transit account","effective_date":"2027-01-01","retrieved_date":"2026-07-20","fiscal_year":2027,"classification":"internal","citation":"Synthetic FY2027 Review, p. 31","excerpt":"A fictional budget envelope of 100 test units, not a real amount."},
+    {"route":"minutes-mcp","source_type":"minutes","title":"Synthetic Welfare Committee Minutes","page":"p. 7","section":"Agenda item 3","effective_date":"2026-06-15","retrieved_date":"2026-07-20","fiscal_year":2027,"classification":"internal","citation":"Synthetic Committee Minutes, item 3, p. 7","excerpt":"Members discussed eligibility, fiscal safeguards, and an evaluation period."},
+    {"route":"internal_rag","source_type":"policy","title":"Synthetic Transit Policy Candidate","page":"p. 4","section":"Option B","effective_date":"2026-07-01","retrieved_date":"2026-07-20","fiscal_year":2027,"classification":"internal","citation":"Synthetic Policy Candidate, Option B, p. 4","excerpt":"A staged pilot with review gates is presented as a fictional policy option."},
+    {"route":"internal_rag","source_type":"internal","title":"Synthetic Prior Policy Review","page":"p. 18","section":"Risks","effective_date":"2025-12-01","retrieved_date":"2026-07-20","fiscal_year":2027,"classification":"internal","citation":"Synthetic Prior Review, Risks, p. 18","excerpt":"The fictional review identifies benefit leakage and fiscal volatility risks."}
+  ]
+}
