@@ -60,7 +60,7 @@ MCP responses are untrusted until schema, size, item count, source type, identif
 
 Provider results and audits contain neither raw MCP responses nor full legal text. Audit stores a SHA-256 query hash, query character count, safe identifiers/counts, status, warning/error codes, and timing. It does not store the full query, credential reference, exception cause, traceback, prompt, or raw response.
 
-Restricted information is not sent externally. Confidential transmission requires the existing explicit authorization. Existing organization, membership, RBAC, MCP execution, and classification contracts are reused.
+The trusted execution-context classification is the minimum request classification: requests cannot downgrade it. Provider policy uses the more sensitive of context and request classifications as the effective classification. Restricted information is not sent externally, and confidential transmission requires the existing explicit authorization. Existing organization, membership, RBAC, MCP execution, and classification contracts are reused.
 
 ## Legal normalization and evidence integrity
 

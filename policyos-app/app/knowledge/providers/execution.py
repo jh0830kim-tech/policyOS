@@ -34,6 +34,23 @@ from app.knowledge.providers.selection import (
     ProviderSelectionResult,
 )
 
+_CLASSIFICATION_RANK = {
+    DataClassification.PUBLIC: 0,
+    DataClassification.INTERNAL: 1,
+    DataClassification.CONFIDENTIAL: 2,
+    DataClassification.RESTRICTED: 3,
+}
+
+
+def _effective_classification(
+    context_classification: DataClassification,
+    request_classification: DataClassification,
+) -> DataClassification:
+    return max(
+        (context_classification, request_classification),
+        key=_CLASSIFICATION_RANK.__getitem__,
+    )
+
 
 class ProviderAuditEvent(ProviderModel):
     organization_id: str
@@ -112,7 +129,7 @@ class KnowledgeProviderExecutionService:
         self, request: KnowledgeProviderRequest, execution: ProviderExecutionContext
     ) -> ProviderExecutionResult:
         context = execution.context
-        self._authorize(request, context)
+        effective_classification = self._authorize(request, context)
         capability = required_capability(request.operation)
         selection = self.selector.select(
             ProviderSelectionRequest(
@@ -142,7 +159,12 @@ class KnowledgeProviderExecutionService:
             registration = self.registry.get(provider_name, context.organization_id)
             try:
                 response = await self._execute_one(
-                    registration, request, execution, selection, tuple(attempted)
+                    registration,
+                    request,
+                    execution,
+                    selection,
+                    tuple(attempted),
+                    effective_classification,
                 )
                 last_response = response
                 if response.evidence or not execution.allow_empty_fallback:
@@ -193,27 +215,35 @@ class KnowledgeProviderExecutionService:
             raise KnowledgeProviderPolicyDeniedError("Provider request scope is invalid")
         if not context.membership_active or "knowledge.read" not in context.permissions:
             raise KnowledgeProviderPolicyDeniedError("Knowledge provider access denied")
-        if context.classification is DataClassification.RESTRICTED:
-            # Restricted data may only remain inside the internal provider boundary.
-            return
-        if (
-            context.classification is DataClassification.CONFIDENTIAL
-            and not context.confidential_external_allowed
-        ):
-            return
+        effective = _effective_classification(context.classification, request.classification)
+        if _CLASSIFICATION_RANK[request.classification] < _CLASSIFICATION_RANK[
+            context.classification
+        ]:
+            raise KnowledgeProviderPolicyDeniedError(
+                "Provider request classification scope is invalid"
+            )
+        return effective
 
-    async def _execute_one(self, registration, request, execution, selection, attempted):
+    async def _execute_one(
+        self,
+        registration,
+        request,
+        execution,
+        selection,
+        attempted,
+        effective_classification,
+    ):
         if not registration.enabled:
             raise KnowledgeProviderUnavailableError("Provider is disabled")
         external = registration.provider_type.value not in {
             "internal_database",
             "internal_knowledge",
         }
-        if external and request.classification is DataClassification.RESTRICTED:
+        if external and effective_classification is DataClassification.RESTRICTED:
             raise KnowledgeProviderPolicyDeniedError("Restricted data cannot leave PolicyOS")
         if (
             external
-            and request.classification is DataClassification.CONFIDENTIAL
+            and effective_classification is DataClassification.CONFIDENTIAL
             and not execution.context.confidential_external_allowed
         ):
             raise KnowledgeProviderPolicyDeniedError("Confidential provider transmission denied")
