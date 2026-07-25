@@ -1,4 +1,4 @@
-﻿"""Reusable agent interface and deterministic test implementation."""
+"""Reusable agent interface and deterministic test implementation."""
 
 from typing import Protocol, runtime_checkable
 

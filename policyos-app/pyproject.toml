@@ -44,6 +44,7 @@ markers = [
   "smoke: network-free release smoke tests",
   "e2e: deterministic network-free end-to-end tests",
   "integration: deterministic component integration tests",
+  "knowledge_provider: deterministic Knowledge Provider Framework tests",
   "live_openai: explicit opt-in test that may call the OpenAI API",
 ]
 

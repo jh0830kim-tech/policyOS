@@ -135,3 +135,10 @@ Operational permissions: `knowledge.read` covers read/search; `knowledge.manage`
 The governed Knowledge Platform release candidate is covered by a synthetic, network-free E2E flow from login and organization RBAC through combined internal RAG/fake MCP routing, cited evidence merge, conflict/gap and confidence assessment, eight-agent Chief Secretary orchestration, reviewable Work Package/artifact persistence, and safe API output. All fixture facts are explicitly fictional. Default CI forbids real OpenAI, remote MCP, and subprocess MCP calls.
 
 Release operation requires Alembic head `20260720_0013`, reviewed environment settings, backup/rollback, retention dry-run, legal-hold protection, privacy incident handling, and provider/MCP outage procedures. See `RELEASE_NOTES_v0.4.md` and `RUNBOOK.md`. Production pgvector/ANN, real government connectors, workers, Redis coordination, scheduled cleanup, SIEM integrations, and live staging verification remain deferred.
+
+## Connector API
+
+`/api/v1/connectors` supports scoped CRUD, enable/disable, sync start/status, and health. Existing bearer authentication, active membership, and exact connector permissions apply. Responses expose endpoint origin and readiness only, not credential references or internal metadata.
+
+## Knowledge provider API
+Authenticated organization members with knowledge.read may list, inspect, select, and search providers under /api/v1/providers. Health requires connector.read. Responses exclude credentials, endpoint/configuration references, commands, transport controls, and raw provider output.

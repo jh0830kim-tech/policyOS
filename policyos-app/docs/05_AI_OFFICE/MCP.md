@@ -51,3 +51,10 @@ Operational permissions: `knowledge.read` covers read/search; `knowledge.manage`
 The governed Knowledge Platform release candidate is covered by a synthetic, network-free E2E flow from login and organization RBAC through combined internal RAG/fake MCP routing, cited evidence merge, conflict/gap and confidence assessment, eight-agent Chief Secretary orchestration, reviewable Work Package/artifact persistence, and safe API output. All fixture facts are explicitly fictional. Default CI forbids real OpenAI, remote MCP, and subprocess MCP calls.
 
 Release operation requires Alembic head `20260720_0013`, reviewed environment settings, backup/rollback, retention dry-run, legal-hold protection, privacy incident handling, and provider/MCP outage procedures. See `RELEASE_NOTES_v0.4.md` and `RUNBOOK.md`. Production pgvector/ANN, real government connectors, workers, Redis coordination, scheduled cleanup, SIEM integrations, and live staging verification remain deferred.
+
+## Production connectors
+
+Connectors extend governed MCP with persistent external-source configuration and incremental ingestion state. Default tests use FakeConnector/MockTransport only; live calls and remote health checks remain opt-in.
+
+## Generic MCP knowledge provider adapter
+MCP is available as an allowlisted provider transport through GovernedMCPGateway. PolicyOS operations map only to configured server/tool pairs. Checkpoint 3 uses fake gateways only; Korean Law mappings and live remote/process transports remain deferred.

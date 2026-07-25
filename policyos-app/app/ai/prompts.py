@@ -1,4 +1,4 @@
-﻿"""Versioned, path-safe registry for approved agent system prompts."""
+"""Versioned, path-safe registry for approved agent system prompts."""
 
 import hashlib
 import re
@@ -117,9 +117,7 @@ class PromptRegistry:
 
     def register(self, definition: PromptDefinition) -> RegisteredPrompt:
         if not SEMANTIC_VERSION_PATTERN.fullmatch(definition.version):
-            raise InvalidPromptVersionError(
-                f"Invalid semantic version: {definition.version}"
-            )
+            raise InvalidPromptVersionError(f"Invalid semantic version: {definition.version}")
         if not definition.prompt_name.strip():
             raise EmptyPromptError("Prompt name must not be empty")
 

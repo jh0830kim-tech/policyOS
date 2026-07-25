@@ -10,9 +10,7 @@ class XlsxDocumentParser:
     name = "openpyxl"
     version = openpyxl.__version__
     extensions = frozenset({".xlsx"})
-    mime_types = frozenset(
-        {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
-    )
+    mime_types = frozenset({"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
 
     def __init__(self, *, max_rows: int = 10_000, max_columns: int = 200) -> None:
         self.max_rows = max_rows
@@ -54,9 +52,7 @@ class XlsxDocumentParser:
         if not any(section.text.strip(" |\n") for section in sections):
             raise ParserError("XLSX document contains no data")
         return ParsedDocument(
-            text="\n\n".join(
-                f"[{section.sheet_name}]\n{section.text}" for section in sections
-            ),
+            text="\n\n".join(f"[{section.sheet_name}]\n{section.text}" for section in sections),
             sections=sections,
             parser_name=self.name,
             parser_version=self.version,

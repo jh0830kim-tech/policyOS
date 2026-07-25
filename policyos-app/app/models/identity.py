@@ -76,9 +76,7 @@ class Membership(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 class Role(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "roles"
-    __table_args__ = (
-        UniqueConstraint("organization_id", "key", name="uq_roles_org_key"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "key", name="uq_roles_org_key"),)
 
     organization_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True
