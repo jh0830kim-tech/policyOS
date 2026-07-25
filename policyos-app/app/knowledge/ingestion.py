@@ -150,9 +150,10 @@ class KnowledgeIngestionService:
         )
         if source is None:
             raise KnowledgeSourceNotFoundError("Knowledge source was not found")
-        if _CLASSIFICATION_RANK[request.classification.value] < _CLASSIFICATION_RANK[
-            source.classification
-        ]:
+        if (
+            _CLASSIFICATION_RANK[request.classification.value]
+            < _CLASSIFICATION_RANK[source.classification]
+        ):
             raise InvalidDocumentError("Document classification cannot be lower than its source")
 
         job = KnowledgeIngestionJob(
@@ -205,7 +206,12 @@ class KnowledgeIngestionService:
             parsed = await self._parse_with_cleanup(parser, request.content, validated.filename)
             parsed = self._normalize(parsed)
             metadata = self._metadata(
-                request, validated, parsed, source.source_type, organization_id, created_by,
+                request,
+                validated,
+                parsed,
+                source.source_type,
+                organization_id,
+                created_by,
                 scan.scanner,
             )
             document_external_id = request.external_source_id or validated.filename

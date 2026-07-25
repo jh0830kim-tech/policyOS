@@ -1,4 +1,4 @@
-﻿import uuid
+import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Annotated

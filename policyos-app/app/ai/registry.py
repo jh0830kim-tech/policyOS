@@ -1,4 +1,4 @@
-﻿"""Explicit in-memory registry for dependency-injected AI agents."""
+"""Explicit in-memory registry for dependency-injected AI agents."""
 
 from collections.abc import Iterable
 
@@ -51,6 +51,4 @@ class AgentRegistry:
         return tuple(self._agents.values())
 
     def with_capability(self, capability: AgentCapability) -> tuple[Agent, ...]:
-        return tuple(
-            agent for agent in self._agents.values() if capability in agent.capabilities
-        )
+        return tuple(agent for agent in self._agents.values() if capability in agent.capabilities)

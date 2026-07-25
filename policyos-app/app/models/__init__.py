@@ -1,6 +1,12 @@
 from app.models.ai_execution import AgentRunRecord, AITaskRecord
 from app.models.artifact import ArtifactRecord, WorkPackageRecord
 from app.models.audit import AuditEvent
+from app.models.connectors import (
+    ConnectorConfiguration,
+    ConnectorExecutionRecord,
+    ConnectorHealthState,
+    ConnectorSyncState,
+)
 from app.models.identity import (
     Membership,
     MembershipRole,
@@ -28,6 +34,10 @@ from app.models.security_governance import LegalHold, ReclassificationRequest, U
 
 __all__ = [
     "AuditEvent",
+    "ConnectorConfiguration",
+    "ConnectorExecutionRecord",
+    "ConnectorHealthState",
+    "ConnectorSyncState",
     "AITaskRecord",
     "AgentRunRecord",
     "ArtifactRecord",

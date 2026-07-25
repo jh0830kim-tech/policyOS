@@ -85,6 +85,11 @@ class Settings(BaseSettings):
     connector_block_private_networks: bool = True
     connector_user_agent: str = "policyos-connector/1.0"
     connector_sync_batch_size: int = Field(default=100, ge=1, le=10_000)
+    connector_sync_stale_after_seconds: int = Field(default=1800, ge=60)
+    connector_audit_retention_days: int = Field(default=730, ge=1)
+    connector_failed_sync_retention_days: int = Field(default=90, ge=1)
+    connector_health_history_retention_days: int = Field(default=365, ge=1)
+    connector_cache_metadata_retention_days: int = Field(default=30, ge=1)
     knowledge_document_retention_days: int = Field(default=2555, ge=1)
     knowledge_chunk_retention_days: int = Field(default=365, ge=1)
     knowledge_embedding_retention_days: int = Field(default=365, ge=1)
