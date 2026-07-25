@@ -1,6 +1,6 @@
 # ADR-016: Knowledge Provider Framework
 
-Status: Accepted  
+Status: Accepted
 Date: 2026-07-25
 
 ## Context
