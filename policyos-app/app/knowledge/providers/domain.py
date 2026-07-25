@@ -14,12 +14,14 @@ from app.ai.privacy import DataClassification
 from app.knowledge.providers.errors import KnowledgeProviderUnsupportedOperationError
 
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-_JURISDICTION = re.compile(r"^[\w .,'()가-힣-]{1,200}$")
+_JURISDICTION = re.compile(r"^[\w .,'()\-]{1,200}$")
 _SAFE_KEY = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 SOURCE_TYPES = frozenset(
     {
         "law",
         "case",
+        "administrative_rule",
+        "legal_interpretation",
         "regulation",
         "local_ordinance",
         "budget",
@@ -40,6 +42,8 @@ FILTER_KEYS = frozenset(
         "year",
         "tags",
         "resource_ids",
+        "article_locator",
+        "chain_depth",
     }
 )
 
@@ -93,6 +97,7 @@ class KnowledgeProviderOperation(StrEnum):
     SYNC = "sync"
     HISTORY = "history"
     COMPARE = "compare"
+    RELATIONSHIP_GRAPH = "relationship_graph"
 
 
 _OPERATION_CAPABILITY = {
@@ -101,6 +106,7 @@ _OPERATION_CAPABILITY = {
     KnowledgeProviderOperation.SYNC: KnowledgeProviderCapability.SYNC,
     KnowledgeProviderOperation.HISTORY: KnowledgeProviderCapability.HISTORY,
     KnowledgeProviderOperation.COMPARE: KnowledgeProviderCapability.COMPARE,
+    KnowledgeProviderOperation.RELATIONSHIP_GRAPH: (KnowledgeProviderCapability.RELATIONSHIP_GRAPH),
 }
 
 
@@ -191,6 +197,20 @@ class KnowledgeProviderRequest(ProviderModel):
         if self.operation is KnowledgeProviderOperation.GET_RESOURCE:
             if not self.resource_id:
                 raise ValueError("resource_id is required")
+        elif self.operation is KnowledgeProviderOperation.HISTORY:
+            if not (self.resource_id or self.filters.get("article_locator")):
+                raise ValueError("resource_id or article_locator is required")
+        elif self.operation is KnowledgeProviderOperation.COMPARE:
+            resource_ids = self.filters.get("resource_ids")
+            if (
+                not isinstance(resource_ids, (list, tuple))
+                or len(resource_ids) != 2
+                or len(set(resource_ids)) != 2
+            ):
+                raise ValueError("Two distinct resource_ids are required")
+        elif self.operation is KnowledgeProviderOperation.RELATIONSHIP_GRAPH:
+            if not (self.query or self.resource_id):
+                raise ValueError("query or resource_id is required")
         elif not self.query:
             raise ValueError("query is required")
         if self.date_from and self.date_to and self.date_from > self.date_to:

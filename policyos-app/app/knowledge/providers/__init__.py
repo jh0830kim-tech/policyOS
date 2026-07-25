@@ -44,6 +44,34 @@ from app.knowledge.providers.fakes import (
     FakeTimeoutProvider,
 )
 from app.knowledge.providers.fallback import ProviderFallbackPolicy
+from app.knowledge.providers.korean_law import (
+    KoreanLawMcpProvider,
+    KoreanLawProviderCapabilities,
+    KoreanLawProviderConfiguration,
+    KoreanLawProviderFactory,
+    KoreanLawProviderHealth,
+    KoreanLawProviderHealthService,
+    KoreanLawProviderMetadata,
+)
+from app.knowledge.providers.korean_law_runtime import (
+    KoreanLawExecutionStatus,
+    KoreanLawKnowledgeRouterExecutor,
+    KoreanLawProviderExecutionResult,
+    KoreanLawProviderExecutionService,
+    KoreanLawProviderRuntimeFactory,
+)
+from app.knowledge.providers.korean_law_tools import (
+    KoreanLawMcpCapabilityResolver,
+    KoreanLawMcpOperation,
+    KoreanLawMcpToolMapping,
+    KoreanLawMcpToolRegistry,
+)
+from app.knowledge.providers.legal_normalization import (
+    KoreanLawLegalNormalizer,
+    LegalCitationBuilder,
+    LegalEvidence,
+    LegalResource,
+)
 from app.knowledge.providers.registry import (
     KnowledgeProviderRegistry,
     ProviderRegistrationError,
@@ -56,6 +84,26 @@ from app.knowledge.providers.selection import (
 )
 
 __all__ = [
+    "KoreanLawExecutionStatus",
+    "KoreanLawKnowledgeRouterExecutor",
+    "KoreanLawLegalNormalizer",
+    "KoreanLawMcpCapabilityResolver",
+    "KoreanLawMcpOperation",
+    "KoreanLawMcpProvider",
+    "KoreanLawMcpToolMapping",
+    "KoreanLawMcpToolRegistry",
+    "KoreanLawProviderCapabilities",
+    "KoreanLawProviderConfiguration",
+    "KoreanLawProviderExecutionResult",
+    "KoreanLawProviderExecutionService",
+    "KoreanLawProviderFactory",
+    "KoreanLawProviderHealth",
+    "KoreanLawProviderHealthService",
+    "KoreanLawProviderMetadata",
+    "KoreanLawProviderRuntimeFactory",
+    "LegalCitationBuilder",
+    "LegalEvidence",
+    "LegalResource",
     "ConnectorProviderConfigurationResolver",
     "DisabledKnowledgeProvider",
     "FakeDegradedProvider",
