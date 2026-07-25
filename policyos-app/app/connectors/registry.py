@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.connectors.credentials import CredentialProvider
+from app.connectors.credentials import CredentialProvider, parse_credential_reference
 from app.connectors.domain import (
     ConnectorCapability,
     ConnectorDefinition,
@@ -48,4 +48,5 @@ class ConnectorRegistry:
     ) -> bool:
         if not definition.credential_reference:
             return False
-        return provider.get(definition.credential_reference.split(":", 1)[-1].strip()) is not None
+        key = parse_credential_reference(definition.credential_reference)
+        return provider.get(key) is not None

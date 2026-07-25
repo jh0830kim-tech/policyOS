@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.ai.privacy import DataClassification
+from app.connectors.credentials import parse_credential_reference
 from app.connectors.domain import ConnectorCapability, ConnectorType
 
 
@@ -39,8 +40,8 @@ class ConnectorConfigurationCreate(ConnectorSchema):
     @field_validator("credential_reference")
     @classmethod
     def validate_reference(cls, value: str | None) -> str | None:
-        if value is not None and not value.startswith("env:"):
-            raise ValueError("Only environment credential references are supported")
+        if value is not None:
+            parse_credential_reference(value)
         return value
 
 
@@ -65,8 +66,8 @@ class ConnectorConfigurationUpdate(ConnectorSchema):
     @field_validator("credential_reference")
     @classmethod
     def validate_reference(cls, value: str | None) -> str | None:
-        if value is not None and not value.startswith("env:"):
-            raise ValueError("Only environment credential references are supported")
+        if value is not None:
+            parse_credential_reference(value)
         return value
 
 

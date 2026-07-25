@@ -55,7 +55,7 @@ def test_registry_registration_filters_and_credentials():
         version="1.0",
         enabled=True,
         endpoint="https://example.test",
-        credential_reference="env: NATIONAL_LAW_API_KEY",
+        credential_reference="env:NATIONAL_LAW_API_KEY",
         timeout_seconds=10,
         max_retries=1,
         rate_limit_policy={"per_minute": 120},
@@ -81,7 +81,7 @@ def test_registry_registration_filters_and_credentials():
         version="1.0",
         enabled=True,
         endpoint="https://example.test",
-        credential_reference="env: MISSING_KEY",
+        credential_reference="env:MISSING_KEY",
         timeout_seconds=10,
         max_retries=1,
         rate_limit_policy={},
@@ -270,7 +270,7 @@ def test_environment_provider_requires_placeholder_and_credential_reference():
     provider = EnvironmentCredentialProvider(prefix="CONNECTOR")
     with pytest.raises(ConnectorConfigurationError):
         provider.get("LAW_KEY")
-    assert provider.reference("LAW_KEY") == "env: CONNECTOR_LAW_KEY"
+    assert provider.reference("LAW_KEY") == "env:CONNECTOR_LAW_KEY"
 
     with pytest.raises(ConnectorConfigurationError):
         DisabledCredentialProvider().get("LAW_KEY")

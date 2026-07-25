@@ -1,11 +1,12 @@
 """Safe application services for connector persistence lifecycles."""
 
-import re
 from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.connectors.credentials import parse_credential_reference
+from app.connectors.domain import ConnectorConfigurationError
 from app.connectors.repositories import (
     ConnectorAuditRepository,
     ConnectorConfigurationRepository,
@@ -15,7 +16,6 @@ from app.connectors.repositories import (
 from app.connectors.security import ConnectorSecurityPolicy
 from app.models.connectors import ConnectorConfiguration, ConnectorExecutionRecord
 
-REFERENCE_PATTERN = re.compile(r"^env:[A-Z][A-Z0-9_]{0,199}$")
 FORBIDDEN_KEYS = {"secret", "token", "password", "authorization", "raw_response", "api_key"}
 
 
@@ -66,10 +66,14 @@ class ConnectorConfigurationService:
 
     @staticmethod
     def validate_reference(value: str | None) -> str | None:
-        if value is not None and not REFERENCE_PATTERN.fullmatch(value):
+        if value is None:
+            return None
+        try:
+            parse_credential_reference(value)
+        except ConnectorConfigurationError as exc:
             raise ConnectorServiceError(
                 "invalid_credential_reference", "Credential reference is invalid"
-            )
+            ) from exc
         return value
 
     async def create(self, organization_id, user_id, payload):
