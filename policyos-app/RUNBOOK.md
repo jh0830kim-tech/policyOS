@@ -92,3 +92,6 @@ Before deployment, back up PostgreSQL, record the current revision, review `alem
 Run network-free gates with `pytest -q`, `pytest -q -m smoke`, `pytest -q -m e2e`, and `pytest -q -m integration`. OpenAI live connectivity requires the temporary staging-only `RUN_OPENAI_LIVE_TESTS=1` opt-in. `RUN_MCP_LIVE_TESTS=1` is reserved for future real connector tooling and must not be set in CI. For MCP outage, disable affected servers and permit only policy-approved stale cache; for OpenAI outage, disable provider execution and preserve failed/cancelled states rather than retrying indefinitely.
 
 For connector rollout, confirm head `20260720_0014`, reviewed HTTPS origins, secret-store references, and disabled-by-default configuration. Recover stale running syncs as failed without advancing cursor. Run retention dry-run first and preserve active legal holds.
+
+## Knowledge provider operations
+Inspect /api/v1/providers and local health aggregation without invoking remote health checks. For failures, use correlation ID and minimized audit metadata. Do not log raw query/evidence/response or credentials. Authentication, policy, classification, and security failures must not be bypassed with fallback.

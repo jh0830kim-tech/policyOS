@@ -55,3 +55,6 @@ Release operation requires Alembic head `20260720_0013`, reviewed environment se
 ## Production connectors
 
 Connectors extend governed MCP with persistent external-source configuration and incremental ingestion state. Default tests use FakeConnector/MockTransport only; live calls and remote health checks remain opt-in.
+
+## Generic MCP knowledge provider adapter
+MCP is available as an allowlisted provider transport through GovernedMCPGateway. PolicyOS operations map only to configured server/tool pairs. Checkpoint 3 uses fake gateways only; Korean Law mappings and live remote/process transports remain deferred.

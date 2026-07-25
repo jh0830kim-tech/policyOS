@@ -81,3 +81,5 @@
 - Added Sprint 6 v0.4 synthetic E2E fixtures, network-free smoke/e2e/integration release gates, performance baseline metadata, release checklist, rollback guidance, and known-issue documentation (Sprint 6 v0.4 release preparation).
 
 - Added organization-scoped connector configuration, sync/health state, minimized audit, transactional Knowledge ingestion, RBAC APIs, stale recovery, legal-hold-aware retention, and revision `20260720_0014` (Sprint 7 Checkpoint 2).
+
+- Added the provider-neutral Knowledge Provider Framework with organization-safe registry and selection, bounded fallback, governed execution, Generic MCP and internal adapters, deterministic evidence quality/merge/cache/health policies, safe API endpoints, and network-free tests (Sprint 7 Checkpoint 3).

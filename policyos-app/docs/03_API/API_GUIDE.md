@@ -139,3 +139,6 @@ Release operation requires Alembic head `20260720_0013`, reviewed environment se
 ## Connector API
 
 `/api/v1/connectors` supports scoped CRUD, enable/disable, sync start/status, and health. Existing bearer authentication, active membership, and exact connector permissions apply. Responses expose endpoint origin and readiness only, not credential references or internal metadata.
+
+## Knowledge provider API
+Authenticated organization members with knowledge.read may list, inspect, select, and search providers under /api/v1/providers. Health requires connector.read. Responses exclude credentials, endpoint/configuration references, commands, transport controls, and raw provider output.

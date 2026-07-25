@@ -97,3 +97,6 @@ Release operation requires Alembic head `20260720_0013`, reviewed environment se
 ## Connector ingestion
 
 Normalized records reuse the existing Knowledge domain. Equal hashes create duplicate jobs; changed content creates a new immutable version. Citation, provenance, and classification propagate, and the final cursor commits with the Knowledge transaction.
+
+## Knowledge providers
+Internal retrieval now has a provider adapter that preserves organization, classification, and citation controls. External results are normalized into the same evidence contract before optional ingestion; persistent ingestion scheduling remains deferred.

@@ -116,3 +116,6 @@ Release operation requires Alembic head `20260720_0013`, reviewed environment se
 ## Connector security
 
 HTTPS, normalized-origin allowlisting, DNS/private-address checks, and rejection of URL userinfo, fragments, query secrets, and CR/LF headers protect requests. Secrets resolve only at call time. Audit metadata recursively blocks secret and raw-response fields.
+
+## Knowledge provider trust boundary
+Provider selection is organization-scoped and capability allowlisted. Restricted data cannot use external providers; confidential external transmission requires explicit authorization. API callers cannot choose adapter classes, MCP servers/tools, commands, endpoints, or transports. Provider instructions are treated as untrusted data.

@@ -37,3 +37,6 @@ Release operation requires Alembic head `20260720_0013`, reviewed environment se
 ## Connector deployment
 
 Review revision `20260720_0014` SQL, configure exact HTTPS origins and secret-store references, and keep connectors disabled until ready. Start retention dry-run first. Live institution mappings and scheduled workers remain deferred.
+
+## Provider deployment checks
+Validate registry health and organization scopes before enabling a provider. Keep remote health checks and live MCP/network transports disabled until a provider-specific deployment review is complete. Provider version changes invalidate cache keys.

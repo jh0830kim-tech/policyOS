@@ -9,6 +9,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.connectors import router as connectors_router
 from app.api.routes.health import router as health_router
 from app.api.routes.policy_candidates import router as policy_candidates_router
+from app.api.routes.providers import router as providers_router
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -32,3 +33,4 @@ app.include_router(connectors_router, prefix="/api/v1")
 app.include_router(artifacts_router, prefix="/api/v1")
 app.include_router(ai_tasks_router, prefix="/api/v1")
 app.include_router(policy_candidates_router, prefix="/api/v1")
+app.include_router(providers_router, prefix="/api/v1")

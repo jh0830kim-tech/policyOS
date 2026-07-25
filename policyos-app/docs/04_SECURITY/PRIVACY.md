@@ -99,3 +99,6 @@ Release operation requires Alembic head `20260720_0013`, reviewed environment se
 ## Connector privacy
 
 Only credential reference identifiers are persisted; API responses expose a readiness boolean. Audit excludes Authorization, raw response, sensitive query, restricted content, and reasoning. Retention is dry-run first and respects legal hold.
+
+## Provider privacy
+Provider audit stores query hashes and minimized operational metadata, never raw queries, evidence bodies, responses, credentials, tokens, commands, hidden reasoning, or prompts. Provider caches hash query/resource/filter inputs and include organization and provider version boundaries.
