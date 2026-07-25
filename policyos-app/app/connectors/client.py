@@ -6,6 +6,7 @@ import asyncio
 import inspect
 from typing import Any
 
+import httpcore
 import httpx
 
 from app.connectors.credentials import CredentialProvider
@@ -19,6 +20,60 @@ from app.connectors.domain import (
 )
 from app.connectors.resilience import RetryPolicy
 from app.connectors.security import ConnectorSecurityPolicy
+
+
+class PinnedDNSNetworkBackend(httpcore.AsyncNetworkBackend):
+    """Resolve, validate, and pin every TCP connection to a public IP."""
+
+    def __init__(
+        self,
+        security_policy: ConnectorSecurityPolicy,
+        *,
+        backend: httpcore.AsyncNetworkBackend | None = None,
+    ) -> None:
+        self.security_policy = security_policy
+        self.backend = backend or httpcore.AnyIOBackend()
+
+    async def connect_tcp(
+        self,
+        host: str,
+        port: int,
+        timeout: float | None = None,
+        local_address: str | None = None,
+        socket_options=None,
+    ):
+        addresses = self.security_policy.resolve_host(host, port)
+        last_error = None
+        for address in addresses:
+            try:
+                return await self.backend.connect_tcp(
+                    address,
+                    port,
+                    timeout=timeout,
+                    local_address=local_address,
+                    socket_options=socket_options,
+                )
+            except (OSError, httpcore.ConnectError) as exc:
+                last_error = exc
+        raise httpcore.ConnectError("Connector TCP connection failed") from last_error
+
+    async def connect_unix_socket(self, path, timeout=None, socket_options=None):
+        raise httpcore.ConnectError("Connector Unix sockets are disabled")
+
+    async def sleep(self, seconds: float) -> None:
+        await self.backend.sleep(seconds)
+
+
+class PinnedDNSAsyncHTTPTransport(httpx.AsyncHTTPTransport):
+    """HTTPX transport with validated DNS-to-socket target pinning."""
+
+    def __init__(self, security_policy: ConnectorSecurityPolicy) -> None:
+        super().__init__(verify=True, trust_env=False, retries=0)
+        self._pool = httpcore.AsyncConnectionPool(
+            ssl_context=httpx.create_ssl_context(verify=True, trust_env=False),
+            retries=0,
+            network_backend=PinnedDNSNetworkBackend(security_policy),
+        )
 
 
 class FakeConnectorClient:
@@ -78,11 +133,15 @@ class HTTPConnectorClient:
         self.user_agent = user_agent or "policyos-connector/1.0"
         self.security_policy = security_policy or ConnectorSecurityPolicy()
         self.credential_name = credential_name
+        if transport is not None and not isinstance(transport, httpx.MockTransport):
+            raise ConnectorConfigurationError("Custom connector transports are not allowed")
+        effective_transport = transport or PinnedDNSAsyncHTTPTransport(self.security_policy)
         self._async_client = httpx.AsyncClient(
-            transport=transport,
+            transport=effective_transport,
             timeout=httpx.Timeout(self.timeout_seconds),
             follow_redirects=False,
             verify=True,
+            trust_env=False,
         )
 
     async def request(

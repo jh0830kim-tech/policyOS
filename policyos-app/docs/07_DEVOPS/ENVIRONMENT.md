@@ -107,7 +107,7 @@ Release operation requires Alembic head `20260720_0013`, reviewed environment se
 
 ## Connector environment
 
-Connectors default disabled. Review timeout, retry, limits, cache, stale recovery, retention, and exact endpoint origins. `.env.example` values are placeholders; production credentials belong in the secret store.
+Connectors default disabled. Review timeout, retry, limits, cache, stale recovery, retention, and exact endpoint origins. Connector DNS must return only globally routable addresses; each connection pins its socket to a freshly validated answer. Redirects and environment proxies are disabled. Production DNS and endpoint-origin allowlists remain deployment responsibilities. `.env.example` values are placeholders; production credentials belong in the secret store.
 
 ## Provider configuration
 Provider configuration must reference deployment-managed secrets and allowlisted adapter types. Do not expose credentials, endpoints, MCP commands, or transport settings through the provider API. Live provider transports are opt-in and are not enabled by Checkpoint 3.
