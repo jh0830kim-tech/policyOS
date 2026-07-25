@@ -182,7 +182,6 @@ def upgrade() -> None:
         sa.Column("policy_decision", sa.String(50), nullable=False),
         sa.Column("external_transmission", sa.Boolean(), nullable=False),
         sa.Column("classification", sa.String(40), nullable=False),
-        sa.Column("credential_reference_used", sa.String(500)),
         sa.Column("metadata", sa.JSON(), nullable=False),
         sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),

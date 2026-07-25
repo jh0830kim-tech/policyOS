@@ -176,7 +176,6 @@ class ConnectorExecutionRecord(UUIDPrimaryKeyMixin, Base):
     policy_decision: Mapped[str] = mapped_column(String(50), nullable=False)
     external_transmission: Mapped[bool] = mapped_column(Boolean, nullable=False)
     classification: Mapped[str] = mapped_column(String(40), nullable=False)
-    credential_reference_used: Mapped[str | None] = mapped_column(String(500))
     metadata_json: Mapped[dict[str, object]] = mapped_column(
         "metadata", JSON_DOCUMENT, nullable=False, default=dict
     )

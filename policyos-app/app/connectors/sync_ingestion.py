@@ -95,6 +95,5 @@ class ConnectorSyncIngestionService:
             policy_decision="allow",
             external_transmission=True,
             classification=context.classification.value,
-            credential_reference_used=configuration.credential_reference,
             metadata_json={"sync_key": state.sync_key},
         )

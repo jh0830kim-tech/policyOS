@@ -89,4 +89,4 @@ Release operation requires Alembic head `20260720_0013`, reviewed environment se
 
 ## Sprint 7 connector persistence
 
-Head `20260720_0014` adds organization-scoped configuration, current sync and health state, and minimized execution audit. Only credential references are stored. `last_cursor` changes only with a successful Knowledge transaction; failure discards `pending_cursor`. Organization/name and configuration/sync-key are unique.
+Head `20260720_0014` adds organization-scoped configuration, current sync and health state, and minimized execution audit. Credential references are stored only in connector configuration for runtime resolution; execution and audit records persist no credential values, keys, or references. `last_cursor` changes only with a successful Knowledge transaction; failure discards `pending_cursor`. Organization/name and configuration/sync-key are unique.
