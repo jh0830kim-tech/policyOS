@@ -1,5 +1,30 @@
 """Provider-neutral PolicyOS intelligence contracts."""
 
+from app.intelligence.composition import build_grounded_narrative_generator
+from app.intelligence.generation import (
+    GroundedNarrativeGenerator,
+    NarrativeGenerationContext,
+    NarrativeGenerationOutcome,
+    NarrativeGenerationRequest,
+    NarrativeGenerationSafeError,
+    NarrativeGenerationStatus,
+    NarrativeGenerator,
+    build_grounded_narrative_provider_request,
+    narrative_output_schema,
+)
+from app.intelligence.generation_errors import (
+    NarrativeDraftNormalizationError,
+    NarrativeGenerationClassificationError,
+    NarrativeGenerationContextError,
+    NarrativeGenerationError,
+    NarrativeGenerationIdentityError,
+    NarrativeGenerationRequestError,
+    NarrativeGenerationResultMismatchError,
+    NarrativeProviderCapabilityError,
+    NarrativeProviderInvocationError,
+    NarrativeProviderMalformedOutputError,
+    NarrativeProviderTimeoutError,
+)
 from app.intelligence.narrative import (
     DisclosureBehavior,
     NarrativeAudience,
@@ -30,9 +55,22 @@ from app.intelligence.narrative_errors import (
     NarrativeIdentityError,
     NarrativeSourceError,
 )
+from app.intelligence.narrative_provider import (
+    GROUNDED_CAPABILITY,
+    NARRATIVE_SCHEMA_VERSION,
+    ModelGatewayNarrativeAdapter,
+    NarrativeProviderAdapter,
+    NarrativeProviderMetrics,
+    NarrativeProviderRequest,
+    NarrativeProviderResult,
+)
 
-__all__ = [
+__all__ = (
     "DisclosureBehavior",
+    "GROUNDED_CAPABILITY",
+    "GroundedNarrativeGenerator",
+    "ModelGatewayNarrativeAdapter",
+    "NARRATIVE_SCHEMA_VERSION",
     "NarrativeAudience",
     "NarrativeCitationUse",
     "NarrativeClaim",
@@ -40,9 +78,30 @@ __all__ = [
     "NarrativeClassificationError",
     "NarrativeContractError",
     "NarrativeDraft",
+    "NarrativeDraftNormalizationError",
     "NarrativeFormat",
+    "NarrativeGenerationClassificationError",
+    "NarrativeGenerationContext",
+    "NarrativeGenerationContextError",
+    "NarrativeGenerationError",
+    "NarrativeGenerationIdentityError",
+    "NarrativeGenerationOutcome",
+    "NarrativeGenerationRequest",
+    "NarrativeGenerationRequestError",
+    "NarrativeGenerationResultMismatchError",
+    "NarrativeGenerationSafeError",
+    "NarrativeGenerationStatus",
+    "NarrativeGenerator",
     "NarrativeIdentityError",
     "NarrativePolicy",
+    "NarrativeProviderAdapter",
+    "NarrativeProviderCapabilityError",
+    "NarrativeProviderInvocationError",
+    "NarrativeProviderMalformedOutputError",
+    "NarrativeProviderMetrics",
+    "NarrativeProviderRequest",
+    "NarrativeProviderResult",
+    "NarrativeProviderTimeoutError",
     "NarrativePurpose",
     "NarrativeRenderStatus",
     "NarrativeRequest",
@@ -56,6 +115,14 @@ __all__ = [
     "UnsupportedClaimBehavior",
     "ValidationSeverity",
     "build_default_section_plan",
+    "build_grounded_narrative_generator",
+    "build_grounded_narrative_provider_request",
     "build_narrative_source_bundle",
+    "generation",
+    "generation_errors",
+    "narrative",
+    "narrative_errors",
+    "narrative_output_schema",
+    "narrative_provider",
     "validate_narrative_draft",
-]
+)
