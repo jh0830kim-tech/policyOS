@@ -46,6 +46,32 @@ from app.execution.planner import (
     PlanningRuleError,
     RuleBasedPlanner,
 )
+from app.execution.provider_errors import (
+    BindingExpiredError,
+    BindingIdentityMismatchError,
+    DispatchBindingError,
+    NoEligibleProviderError,
+    ProviderCatalogError,
+    ProviderResolutionError,
+)
+from app.execution.provider_resolution import (
+    AvailabilityStatus,
+    CapacityState,
+    DeterministicProviderResolver,
+    DispatchBinding,
+    ProviderAvailability,
+    ProviderAvailabilitySnapshot,
+    ProviderCandidate,
+    ProviderCapability,
+    ProviderCatalog,
+    ProviderDescriptor,
+    ProviderKind,
+    ProviderRequirement,
+    ProviderSelectionDecision,
+    ProviderSelectionPolicy,
+    bind_dispatch,
+    korean_law_mcp_descriptor,
+)
 from app.execution.runtime import (
     DispatchRequest,
     ExecutionRuntimeState,
@@ -173,4 +199,29 @@ __all__ = [
     "TraceEvent",
     "topological_step_ids",
     "validate_dependency_graph",
+]
+
+__all__ += [
+    "AvailabilityStatus",
+    "BindingExpiredError",
+    "BindingIdentityMismatchError",
+    "CapacityState",
+    "DeterministicProviderResolver",
+    "DispatchBinding",
+    "DispatchBindingError",
+    "NoEligibleProviderError",
+    "ProviderAvailability",
+    "ProviderAvailabilitySnapshot",
+    "ProviderCandidate",
+    "ProviderCapability",
+    "ProviderCatalog",
+    "ProviderCatalogError",
+    "ProviderDescriptor",
+    "ProviderKind",
+    "ProviderRequirement",
+    "ProviderResolutionError",
+    "ProviderSelectionDecision",
+    "ProviderSelectionPolicy",
+    "bind_dispatch",
+    "korean_law_mcp_descriptor",
 ]
