@@ -1,5 +1,24 @@
 """Coordination and execution boundary contracts."""
 
+from app.orchestration.runtime import (
+    AssignmentExecutionCancellation,
+    AssignmentExecutionExpiration,
+    AssignmentExecutionFailure,
+    AssignmentExecutionLease,
+    AssignmentExecutionRecord,
+    AssignmentExecutionRuntimeContext,
+    AssignmentExecutionRuntimePolicy,
+    AssignmentExecutionRuntimeStatus,
+    AssignmentExpirationCause,
+    cancel_assignment_execution,
+    claim_assignment_execution,
+    expire_assignment_execution,
+    fail_assignment_execution,
+    prepare_assignment_execution,
+    start_assignment_execution,
+    succeed_assignment_execution,
+)
+from app.orchestration.runtime_errors import *  # noqa: F403
 from app.orchestration.translation import (
     AssignmentExecutionBinding,
     AssignmentExecutionInputReference,
@@ -19,6 +38,22 @@ from app.orchestration.translation import (
 from app.orchestration.translation_errors import *  # noqa: F403
 
 __all__ = (
+    "AssignmentExecutionCancellation",
+    "AssignmentExecutionExpiration",
+    "AssignmentExecutionFailure",
+    "AssignmentExecutionLease",
+    "AssignmentExecutionRecord",
+    "AssignmentExecutionRuntimeContext",
+    "AssignmentExecutionRuntimePolicy",
+    "AssignmentExecutionRuntimeStatus",
+    "AssignmentExpirationCause",
+    "cancel_assignment_execution",
+    "claim_assignment_execution",
+    "expire_assignment_execution",
+    "fail_assignment_execution",
+    "prepare_assignment_execution",
+    "start_assignment_execution",
+    "succeed_assignment_execution",
     "AssignmentExecutionBinding",
     "AssignmentExecutionInputReference",
     "AssignmentExecutionOutputSpec",
