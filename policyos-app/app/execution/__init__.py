@@ -136,6 +136,30 @@ from app.execution.scheduler import (
     ready_step_ids,
     terminal_step_ids,
 )
+from app.execution.synthesis import (
+    Citation,
+    CitationBuilder,
+    ConfidenceAssessment,
+    ConfidenceEngine,
+    ConfidenceLevel,
+    ConflictDetector,
+    EvidenceConflict,
+    EvidenceGraph,
+    EvidenceNode,
+    NarrativeInput,
+    NarrativeInputBuilder,
+    NarrativeStep,
+    ResultAssembler,
+    SynthesisAssembly,
+    WarningBuilder,
+    canonical_source_id,
+)
+from app.execution.synthesis_errors import (
+    EvidenceGraphError,
+    ResultSynthesisError,
+    SynthesisCompletenessError,
+    SynthesisIdentityError,
+)
 from app.execution.validation import topological_step_ids, validate_dependency_graph
 
 __all__ = [
@@ -263,4 +287,27 @@ __all__ += [
     "ProviderInvocationRequest",
     "ProviderResultMismatchError",
     "UnknownProviderAdapterError",
+]
+
+__all__ += [
+    "Citation",
+    "CitationBuilder",
+    "ConfidenceAssessment",
+    "ConfidenceEngine",
+    "ConfidenceLevel",
+    "ConflictDetector",
+    "EvidenceConflict",
+    "EvidenceGraph",
+    "EvidenceGraphError",
+    "EvidenceNode",
+    "NarrativeInput",
+    "NarrativeInputBuilder",
+    "NarrativeStep",
+    "ResultAssembler",
+    "ResultSynthesisError",
+    "SynthesisAssembly",
+    "SynthesisCompletenessError",
+    "SynthesisIdentityError",
+    "WarningBuilder",
+    "canonical_source_id",
 ]
