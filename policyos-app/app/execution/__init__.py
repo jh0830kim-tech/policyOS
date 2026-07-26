@@ -1,0 +1,56 @@
+"""Provider-independent execution domain foundation."""
+
+from app.execution.domain import (
+    ErrorCategory,
+    EvidenceReference,
+    ExecutionContext,
+    ExecutionError,
+    ExecutionMetrics,
+    ExecutionPlan,
+    ExecutionRequest,
+    ExecutionResult,
+    ExecutionStatus,
+    ExecutionStep,
+    ExecutionTrace,
+    RetryPolicy,
+    StepKind,
+    StepResult,
+    StepStatus,
+    TraceEvent,
+)
+from app.execution.errors import (
+    CyclicExecutionPlanError,
+    ExecutionClassificationError,
+    ExecutionDomainError,
+    InvalidExecutionPlanError,
+    InvalidExecutionRequestError,
+    InvalidStepDependencyError,
+)
+from app.execution.validation import topological_step_ids, validate_dependency_graph
+
+__all__ = [
+    "CyclicExecutionPlanError",
+    "ErrorCategory",
+    "EvidenceReference",
+    "ExecutionClassificationError",
+    "ExecutionContext",
+    "ExecutionDomainError",
+    "ExecutionError",
+    "ExecutionMetrics",
+    "ExecutionPlan",
+    "ExecutionRequest",
+    "ExecutionResult",
+    "ExecutionStatus",
+    "ExecutionStep",
+    "ExecutionTrace",
+    "InvalidExecutionPlanError",
+    "InvalidExecutionRequestError",
+    "InvalidStepDependencyError",
+    "RetryPolicy",
+    "StepKind",
+    "StepResult",
+    "StepStatus",
+    "TraceEvent",
+    "topological_step_ids",
+    "validate_dependency_graph",
+]
