@@ -1,6 +1,9 @@
 """Provider-neutral PolicyOS intelligence contracts."""
 
-from app.intelligence.composition import build_grounded_narrative_generator
+from app.intelligence.composition import (
+    build_grounded_narrative_generator,
+    build_grounding_validator,
+)
 from app.intelligence.generation import (
     GroundedNarrativeGenerator,
     NarrativeGenerationContext,
@@ -24,6 +27,44 @@ from app.intelligence.generation_errors import (
     NarrativeProviderInvocationError,
     NarrativeProviderMalformedOutputError,
     NarrativeProviderTimeoutError,
+)
+from app.intelligence.grounding import (
+    CitationGroundingAssessment,
+    ClaimGroundingAssessment,
+    DeterministicGroundingValidator,
+    DisclosureAssessment,
+    GroundingAssessment,
+    GroundingIssue,
+    GroundingIssueCode,
+    GroundingSeverity,
+    GroundingStatistics,
+    GroundingValidationContext,
+    GroundingValidationRequest,
+    GroundingValidationResult,
+    GroundingValidationStatus,
+    SemanticGroundingAdapter,
+    SemanticValidationStatus,
+    ValidationMode,
+    validate_grounding,
+    validate_grounding_deterministically,
+)
+from app.intelligence.grounding_errors import (
+    GroundingClassificationError,
+    GroundingContextError,
+    GroundingError,
+    GroundingIdentityError,
+    GroundingProviderCapabilityError,
+    GroundingProviderInvocationError,
+    GroundingProviderMalformedOutputError,
+    GroundingRequestError,
+    GroundingResultMismatchError,
+)
+from app.intelligence.grounding_provider import (
+    ModelGatewaySemanticGroundingAdapter,
+    SemanticGroundingPayload,
+    SemanticGroundingProviderRequest,
+    SemanticGroundingProviderResult,
+    build_semantic_grounding_provider_request,
 )
 from app.intelligence.narrative import (
     DisclosureBehavior,
@@ -125,4 +166,37 @@ __all__ = (
     "narrative_output_schema",
     "narrative_provider",
     "validate_narrative_draft",
+    "CitationGroundingAssessment",
+    "ClaimGroundingAssessment",
+    "DeterministicGroundingValidator",
+    "DisclosureAssessment",
+    "GroundingAssessment",
+    "GroundingClassificationError",
+    "GroundingContextError",
+    "GroundingError",
+    "GroundingIdentityError",
+    "GroundingIssue",
+    "GroundingIssueCode",
+    "GroundingProviderCapabilityError",
+    "GroundingProviderInvocationError",
+    "GroundingProviderMalformedOutputError",
+    "GroundingRequestError",
+    "GroundingResultMismatchError",
+    "GroundingSeverity",
+    "GroundingStatistics",
+    "GroundingValidationContext",
+    "GroundingValidationRequest",
+    "GroundingValidationResult",
+    "GroundingValidationStatus",
+    "ModelGatewaySemanticGroundingAdapter",
+    "SemanticGroundingAdapter",
+    "SemanticGroundingPayload",
+    "SemanticGroundingProviderRequest",
+    "SemanticGroundingProviderResult",
+    "SemanticValidationStatus",
+    "ValidationMode",
+    "build_grounding_validator",
+    "build_semantic_grounding_provider_request",
+    "validate_grounding",
+    "validate_grounding_deterministically",
 )
