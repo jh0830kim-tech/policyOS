@@ -26,6 +26,26 @@ from app.execution.errors import (
     InvalidExecutionRequestError,
     InvalidStepDependencyError,
 )
+from app.execution.executor import (
+    Clock,
+    DeterministicProviderExecutor,
+    InvocationStatus,
+    ProviderAdapter,
+    ProviderAdapterCatalog,
+    ProviderExecutionOutcome,
+    ProviderInvocationContext,
+    ProviderInvocationOutcome,
+    ProviderInvocationRequest,
+)
+from app.execution.executor_errors import (
+    ExecutorIdentityMismatchError,
+    ExecutorRevisionConflictError,
+    ExecutorStepStateError,
+    ProviderAdapterCapabilityError,
+    ProviderExecutorError,
+    ProviderResultMismatchError,
+    UnknownProviderAdapterError,
+)
 from app.execution.planner import (
     CapabilityCatalog,
     CapabilityKind,
@@ -224,4 +244,23 @@ __all__ += [
     "ProviderSelectionPolicy",
     "bind_dispatch",
     "korean_law_mcp_descriptor",
+]
+
+__all__ += [
+    "Clock",
+    "DeterministicProviderExecutor",
+    "ExecutorIdentityMismatchError",
+    "ExecutorRevisionConflictError",
+    "ExecutorStepStateError",
+    "InvocationStatus",
+    "ProviderAdapter",
+    "ProviderAdapterCapabilityError",
+    "ProviderAdapterCatalog",
+    "ProviderExecutionOutcome",
+    "ProviderExecutorError",
+    "ProviderInvocationContext",
+    "ProviderInvocationOutcome",
+    "ProviderInvocationRequest",
+    "ProviderResultMismatchError",
+    "UnknownProviderAdapterError",
 ]
