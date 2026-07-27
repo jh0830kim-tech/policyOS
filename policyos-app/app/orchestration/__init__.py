@@ -1,5 +1,15 @@
 """Coordination and execution boundary contracts."""
 
+from app.orchestration.dispatch import (
+    AssignmentExecutionDispatchContext,
+    AssignmentExecutionDispatchRequest,
+    AssignmentExecutionDispatchResult,
+    AssignmentExecutionDispatchStatus,
+    ExecutionDispatchBoundary,
+    ExecutionDispatchReceipt,
+    dispatch_assignment_execution,
+)
+from app.orchestration.dispatch_errors import *  # noqa: F403
 from app.orchestration.runtime import (
     AssignmentExecutionCancellation,
     AssignmentExecutionExpiration,
@@ -38,6 +48,13 @@ from app.orchestration.translation import (
 from app.orchestration.translation_errors import *  # noqa: F403
 
 __all__ = (
+    "AssignmentExecutionDispatchContext",
+    "AssignmentExecutionDispatchRequest",
+    "AssignmentExecutionDispatchResult",
+    "AssignmentExecutionDispatchStatus",
+    "ExecutionDispatchBoundary",
+    "ExecutionDispatchReceipt",
+    "dispatch_assignment_execution",
     "AssignmentExecutionCancellation",
     "AssignmentExecutionExpiration",
     "AssignmentExecutionFailure",
