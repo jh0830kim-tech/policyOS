@@ -50,6 +50,6 @@ provider or model, execute new research, approve, publish, persist, retry, fall 
 cross-validate, or emit telemetry. Conflicts require upstream typed declarations because free-text
 semantic comparison is deliberately outside this deterministic boundary.
 
-CP6 owns human approval and publication. Sprint 11 owns model selection, Sprint 12 owns independent
-cross-validation, and Sprint 13 owns evaluation and observability. ADR-032 remains reserved for the
-proposed multi-model extension.
+CP6 owns human approval. External publication remains a separate later boundary. Sprint 11 owns
+model selection, Sprint 12 owns independent cross-validation, and Sprint 13 owns evaluation and
+observability. ADR-032 remains reserved for the proposed multi-model extension.

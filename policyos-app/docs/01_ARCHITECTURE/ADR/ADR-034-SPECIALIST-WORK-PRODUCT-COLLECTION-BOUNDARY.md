@@ -54,6 +54,7 @@ a Secretary answer, approve, publish, persist, retry, fall back, score, cross-va
 telemetry. Reference existence is bounded to typed source-execution lineage available at this
 in-memory boundary; durable catalog validation remains outside CP4.
 
-CP5 Secretary integration and CP6 approval or publication remain deferred. Sprint 11 owns model and
-provider selection, Sprint 12 owns cross-validation, and Sprint 13 owns evaluation and
-observability. ADR-032 remains reserved for the proposed multi-model extension boundary.
+CP5 Secretary integration and CP6 human approval remain deferred. External publication is a
+separate later boundary. Sprint 11 owns model and provider selection, Sprint 12 owns
+cross-validation, and Sprint 13 owns evaluation and observability. ADR-032 remains reserved for the
+proposed multi-model extension boundary.

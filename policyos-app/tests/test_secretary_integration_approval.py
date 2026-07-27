@@ -13,11 +13,13 @@ from app.orchestration import (
     ApprovalActorKind,
     ApprovalAuthorizationError,
     ApprovalAuthorizationEvidence,
+    ApprovalClassificationMismatchError,
     ApprovalDecision,
     ApprovalDuplicateError,
     ApprovalEligibilityError,
     ApprovalIdentityMismatchError,
     ApprovalSeparationOfDutiesError,
+    ApprovalTenantMismatchError,
     ApprovalTimestampError,
     HumanApprovalDecisionInput,
     IntegrationConflictType,
@@ -251,6 +253,14 @@ def test_identity_and_timestamp_substitution_are_rejected():
     early = decision(decided_at=NOW)
     with pytest.raises(ApprovalTimestampError):
         decide(context=context(decided_at=NOW), decision=early)
+
+
+def test_tenant_and_classification_substitution_are_rejected():
+    other_tenant = IDS[10]
+    with pytest.raises(ApprovalTenantMismatchError):
+        decide(context=context(organization_id=other_tenant))
+    with pytest.raises(ApprovalClassificationMismatchError):
+        decide(context=context(classification=DataClassification.INTERNAL))
 
 
 def test_known_acknowledgements_are_preserved_and_unknown_rejected():
