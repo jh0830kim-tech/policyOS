@@ -18,6 +18,21 @@ from app.orchestration.dispatch import (
     dispatch_assignment_execution,
 )
 from app.orchestration.dispatch_errors import *  # noqa: F403
+from app.orchestration.integration import (
+    IntegrationConflictType,
+    IntegrationGapType,
+    IntegrationNextBoundary,
+    SecretaryIntegrationConflict,
+    SecretaryIntegrationConflictInput,
+    SecretaryIntegrationContext,
+    SecretaryIntegrationGap,
+    SecretaryIntegrationRequest,
+    SecretaryIntegrationResult,
+    SecretaryIntegrationSection,
+    SecretaryIntegrationStatus,
+    integrate_secretary_work_products,
+)
+from app.orchestration.integration_errors import *  # noqa: F403
 from app.orchestration.runtime import (
     AssignmentExecutionCancellation,
     AssignmentExecutionExpiration,
@@ -68,6 +83,18 @@ __all__ = (
     "ExecutionDispatchBoundary",
     "ExecutionDispatchReceipt",
     "dispatch_assignment_execution",
+    "IntegrationConflictType",
+    "IntegrationGapType",
+    "IntegrationNextBoundary",
+    "SecretaryIntegrationConflict",
+    "SecretaryIntegrationConflictInput",
+    "SecretaryIntegrationContext",
+    "SecretaryIntegrationGap",
+    "SecretaryIntegrationRequest",
+    "SecretaryIntegrationResult",
+    "SecretaryIntegrationSection",
+    "SecretaryIntegrationStatus",
+    "integrate_secretary_work_products",
     "AssignmentExecutionCancellation",
     "AssignmentExecutionExpiration",
     "AssignmentExecutionFailure",
