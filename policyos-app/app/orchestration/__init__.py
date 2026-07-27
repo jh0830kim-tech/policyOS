@@ -1,5 +1,13 @@
 """Coordination and execution boundary contracts."""
 
+from app.orchestration.collection import (
+    AssignmentExecutionCompletionInput,
+    AssignmentWorkProductCollectionContext,
+    AssignmentWorkProductCollectionRequest,
+    AssignmentWorkProductCollectionResult,
+    collect_assignment_work_product,
+)
+from app.orchestration.collection_errors import *  # noqa: F403
 from app.orchestration.dispatch import (
     AssignmentExecutionDispatchContext,
     AssignmentExecutionDispatchRequest,
@@ -48,6 +56,11 @@ from app.orchestration.translation import (
 from app.orchestration.translation_errors import *  # noqa: F403
 
 __all__ = (
+    "AssignmentExecutionCompletionInput",
+    "AssignmentWorkProductCollectionContext",
+    "AssignmentWorkProductCollectionRequest",
+    "AssignmentWorkProductCollectionResult",
+    "collect_assignment_work_product",
     "AssignmentExecutionDispatchContext",
     "AssignmentExecutionDispatchRequest",
     "AssignmentExecutionDispatchResult",
