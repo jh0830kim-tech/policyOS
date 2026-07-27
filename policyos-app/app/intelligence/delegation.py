@@ -288,12 +288,16 @@ class WorkProductStatus(StrEnum):
 
 class AgentWorkProduct(NarrativeModel):
     work_product_id: UUID
+    assignment_request_id: str = Field(min_length=1, max_length=200)
     assignment_id: UUID
     delegation_id: UUID
+    task_id: str = Field(min_length=1, max_length=100)
+    execution_id: UUID
     agent_id: str
     role: AgentRole
     work_product_type: WorkProductType
     status: WorkProductStatus
+    content: str = Field(min_length=1, max_length=200_000)
     references: tuple[WorkProductReference, ...]
     evidence_ids: tuple[str, ...] = ()
     citation_ids: tuple[str, ...] = ()
@@ -301,6 +305,21 @@ class AgentWorkProduct(NarrativeModel):
     classification: DataClassification
     requires_human_review: bool = False
     completed_at: datetime
+
+    @field_validator("assignment_request_id", "task_id", "agent_id", "content")
+    @classmethod
+    def not_blank(cls, value: str):
+        if not value.strip():
+            raise AgentWorkProductError("Work product value must not be blank")
+        return value
+
+    @field_validator("references")
+    @classmethod
+    def canonical_references(cls, value):
+        identities = tuple(item.reference_id for item in value)
+        if len(value) > 100 or tuple(sorted(set(identities))) != identities:
+            raise AgentWorkProductError("Work product references must be canonical")
+        return value
 
     @field_validator("completed_at")
     @classmethod

@@ -55,6 +55,8 @@ class CoordinationTaskType(StrEnum):
     BUDGET_ANALYSIS = "budget_analysis"
     STATISTICS_ANALYSIS = "statistics_analysis"
     COMMUNICATIONS_DRAFT = "communications_draft"
+    SPEECH_DRAFT = "speech_draft"
+    SOCIAL_MEDIA_DRAFT = "social_media_draft"
     PRESENTATION_SPEC = "presentation_spec"
     INTEGRATION = "integration"
     QUALITY_REVIEW = "quality_review"
@@ -207,6 +209,20 @@ _MAPPINGS = {
         role="communications_officer",
         capabilities=(AgentCapability.COMMUNICATIONS_PRESS,),
         work_product_types=(WorkProductType.COMMUNICATIONS_DRAFT,),
+        human_review_required=True,
+    ),
+    CoordinationTaskType.SPEECH_DRAFT: RoleCapabilityMapping(
+        task_type="speech_draft",
+        role="speech_writer",
+        capabilities=(AgentCapability.SPEECH_DRAFT,),
+        work_product_types=(WorkProductType.SPEECH_DRAFT,),
+        human_review_required=True,
+    ),
+    CoordinationTaskType.SOCIAL_MEDIA_DRAFT: RoleCapabilityMapping(
+        task_type="social_media_draft",
+        role="social_media_manager",
+        capabilities=(AgentCapability.SOCIAL_SHORT,),
+        work_product_types=(WorkProductType.SOCIAL_CONTENT,),
         human_review_required=True,
     ),
     CoordinationTaskType.PRESENTATION_SPEC: RoleCapabilityMapping(
