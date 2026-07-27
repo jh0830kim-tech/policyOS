@@ -1,5 +1,17 @@
 """Coordination and execution boundary contracts."""
 
+from app.orchestration.approval import (
+    SECRETARY_INTEGRATION_APPROVAL_PERMISSION,
+    ApprovalActorKind,
+    ApprovalAuthorizationEvidence,
+    ApprovalDecision,
+    HumanApprovalDecisionInput,
+    SecretaryIntegrationApprovalContext,
+    SecretaryIntegrationApprovalRecord,
+    SecretaryIntegrationApprovalRequest,
+    decide_secretary_integration_approval,
+)
+from app.orchestration.approval_errors import *  # noqa: F403
 from app.orchestration.collection import (
     AssignmentExecutionCompletionInput,
     AssignmentWorkProductCollectionContext,
@@ -71,6 +83,15 @@ from app.orchestration.translation import (
 from app.orchestration.translation_errors import *  # noqa: F403
 
 __all__ = (
+    "SECRETARY_INTEGRATION_APPROVAL_PERMISSION",
+    "ApprovalActorKind",
+    "ApprovalAuthorizationEvidence",
+    "ApprovalDecision",
+    "HumanApprovalDecisionInput",
+    "SecretaryIntegrationApprovalContext",
+    "SecretaryIntegrationApprovalRecord",
+    "SecretaryIntegrationApprovalRequest",
+    "decide_secretary_integration_approval",
     "AssignmentExecutionCompletionInput",
     "AssignmentWorkProductCollectionContext",
     "AssignmentWorkProductCollectionRequest",
