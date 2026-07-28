@@ -73,6 +73,43 @@ class CrossValidationClassificationError(CrossValidationError):
     code = "cross_validation_classification"
 
 
+class CrossValidationConsensusError(CrossValidationError):
+    code = "cross_validation_consensus"
+
+
+class CrossValidationConsensusValidationError(CrossValidationConsensusError):
+    code = "cross_validation_consensus_validation"
+
+
+class CrossValidationConsensusLineageError(CrossValidationConsensusError):
+    code = "cross_validation_consensus_lineage"
+
+
+class CrossValidationConsensusDuplicateError(CrossValidationConsensusError):
+    code = "cross_validation_consensus_duplicate"
+
+
+class CrossValidationConsensusClassificationError(CrossValidationConsensusError):
+    code = "cross_validation_consensus_classification"
+
+
+class CrossValidationConsensusPackageError(CrossValidationConsensusError):
+    code = "cross_validation_consensus_package"
+
+
+class CrossValidationReviewRequirementError(CrossValidationConsensusError):
+    code = "cross_validation_review_requirement"
+
+
+def require_consensus_classification(effective, included) -> None:
+    try:
+        require_comparison_classification(effective, included)
+    except CrossValidationClassificationError as exc:
+        raise CrossValidationConsensusClassificationError(
+            "effective consensus classification is too low"
+        ) from exc
+
+
 def require_comparison_classification(effective, included) -> None:
     from app.execution.errors import ExecutionClassificationError
     from app.execution.validation import require_not_lower
