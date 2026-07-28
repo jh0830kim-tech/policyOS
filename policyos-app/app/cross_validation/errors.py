@@ -110,6 +110,43 @@ def require_consensus_classification(effective, included) -> None:
         ) from exc
 
 
+class CrossValidationSecretaryHandoffError(CrossValidationError):
+    code = "cross_validation_secretary_handoff"
+
+
+class CrossValidationSecretaryHandoffValidationError(CrossValidationSecretaryHandoffError):
+    code = "cross_validation_secretary_handoff_validation"
+
+
+class CrossValidationSecretaryHandoffLineageError(CrossValidationSecretaryHandoffError):
+    code = "cross_validation_secretary_handoff_lineage"
+
+
+class CrossValidationSecretaryHandoffClassificationError(CrossValidationSecretaryHandoffError):
+    code = "cross_validation_secretary_handoff_classification"
+
+
+class CrossValidationSecretaryIntegrationError(CrossValidationSecretaryHandoffError):
+    code = "cross_validation_secretary_integration"
+
+
+class CrossValidationSecretaryApprovalRequestError(CrossValidationSecretaryHandoffError):
+    code = "cross_validation_secretary_approval_request"
+
+
+class CrossValidationSecretaryPackageError(CrossValidationSecretaryHandoffError):
+    code = "cross_validation_secretary_package"
+
+
+def require_handoff_classification(effective, included) -> None:
+    try:
+        require_consensus_classification(effective, included)
+    except CrossValidationConsensusClassificationError as exc:
+        raise CrossValidationSecretaryHandoffClassificationError(
+            "effective Secretary handoff classification is too low"
+        ) from exc
+
+
 def require_comparison_classification(effective, included) -> None:
     from app.execution.errors import ExecutionClassificationError
     from app.execution.validation import require_not_lower
