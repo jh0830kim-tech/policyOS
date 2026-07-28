@@ -35,3 +35,51 @@ class CrossValidationResultMismatchError(CrossValidationError):
 
 class CrossValidationCollectionError(CrossValidationError):
     code = "cross_validation_collection"
+
+
+class CrossValidationClaimError(CrossValidationError):
+    code = "cross_validation_claim"
+
+
+class CrossValidationClaimLineageError(CrossValidationClaimError):
+    code = "cross_validation_claim_lineage"
+
+
+class CrossValidationClaimDuplicateError(CrossValidationClaimError):
+    code = "cross_validation_claim_duplicate"
+
+
+class CrossValidationEvidenceError(CrossValidationError):
+    code = "cross_validation_evidence"
+
+
+class CrossValidationEvidenceLinkError(CrossValidationEvidenceError):
+    code = "cross_validation_evidence_link"
+
+
+class CrossValidationComparisonError(CrossValidationError):
+    code = "cross_validation_comparison"
+
+
+class CrossValidationComparisonDuplicateError(CrossValidationComparisonError):
+    code = "cross_validation_comparison_duplicate"
+
+
+class CrossValidationComparisonMismatchError(CrossValidationComparisonError):
+    code = "cross_validation_comparison_mismatch"
+
+
+class CrossValidationClassificationError(CrossValidationError):
+    code = "cross_validation_classification"
+
+
+def require_comparison_classification(effective, included) -> None:
+    from app.execution.errors import ExecutionClassificationError
+    from app.execution.validation import require_not_lower
+
+    try:
+        require_not_lower(effective, included, field="comparison classification")
+    except ExecutionClassificationError as exc:
+        raise CrossValidationClassificationError(
+            "effective comparison classification is too low"
+        ) from exc
