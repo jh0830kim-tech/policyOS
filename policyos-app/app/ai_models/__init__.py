@@ -1,0 +1,63 @@
+"""Intentional public API for provider-neutral AI model registry contracts."""
+
+from app.ai_models.domain import (
+    ModelCapability,
+    ModelId,
+    ModelModality,
+    ProviderInstanceId,
+    ProviderType,
+    RegisteredModel,
+    RegisteredProvider,
+    RegistryLifecycleStatus,
+)
+from app.ai_models.errors import (
+    DuplicateModelError,
+    DuplicateProviderError,
+    ModelCapabilityError,
+    ModelNotFoundError,
+    ModelNotSelectableError,
+    ModelRegistryError,
+    ModelRegistryValidationError,
+    ProviderNotFoundError,
+    RegistryOrderingError,
+    UnknownProviderReferenceError,
+)
+from app.ai_models.registry import (
+    ModelRegistrySnapshot,
+    create_model_registry_snapshot,
+    get_registered_model,
+    get_registered_provider,
+    list_models_by_capability,
+    list_models_by_provider,
+    list_registered_models,
+    validate_model_is_selectable,
+)
+
+__all__ = (
+    "DuplicateModelError",
+    "DuplicateProviderError",
+    "ModelCapability",
+    "ModelCapabilityError",
+    "ModelId",
+    "ModelModality",
+    "ModelNotFoundError",
+    "ModelNotSelectableError",
+    "ModelRegistryError",
+    "ModelRegistrySnapshot",
+    "ModelRegistryValidationError",
+    "ProviderInstanceId",
+    "ProviderNotFoundError",
+    "ProviderType",
+    "RegisteredModel",
+    "RegisteredProvider",
+    "RegistryLifecycleStatus",
+    "RegistryOrderingError",
+    "UnknownProviderReferenceError",
+    "create_model_registry_snapshot",
+    "get_registered_model",
+    "get_registered_provider",
+    "list_models_by_capability",
+    "list_models_by_provider",
+    "list_registered_models",
+    "validate_model_is_selectable",
+)
