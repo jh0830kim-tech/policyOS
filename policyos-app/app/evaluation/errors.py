@@ -139,3 +139,47 @@ class EvaluationExecutionTerminalStateError(EvaluationExecutionError):
 
 class EvaluationExecutionCapabilityError(EvaluationExecutionError):
     pass
+
+
+class EvaluationEvidenceError(EvaluationError):
+    pass
+
+
+class InvalidEvaluationEvidenceReferenceError(EvaluationEvidenceError):
+    pass
+
+
+class InvalidEvaluationEvidenceBundleError(EvaluationEvidenceError):
+    pass
+
+
+class EvaluationEvidenceBindingMismatchError(EvaluationEvidenceError):
+    pass
+
+
+class EvaluationEvidenceProvenanceError(EvaluationEvidenceError):
+    pass
+
+
+class EvaluationEvidenceLineageError(EvaluationEvidenceError):
+    pass
+
+
+class EvaluationEvidenceIntegrityReferenceError(EvaluationEvidenceError):
+    pass
+
+
+class EvaluationEvidenceSequenceError(EvaluationEvidenceError):
+    pass
+
+
+class DuplicateEvaluationEvidenceError(EvaluationEvidenceError):
+    pass
+
+
+class EvaluationEvidenceLifecycleStateError(EvaluationEvidenceError):
+    pass
+
+
+class EvaluationEvidenceAuditMetadataError(EvaluationEvidenceError):
+    pass
