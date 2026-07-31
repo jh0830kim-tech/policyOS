@@ -107,3 +107,35 @@ class EvaluationPlanLineageError(EvaluationPlanningError):
 
 class EvaluationPlanTierError(EvaluationPlanningError):
     pass
+
+
+class EvaluationExecutionError(EvaluationError):
+    pass
+
+
+class InvalidEvaluationExecutionStateError(EvaluationExecutionError):
+    pass
+
+
+class InvalidEvaluationExecutionTransitionError(EvaluationExecutionError):
+    pass
+
+
+class EvaluationExecutionBindingMismatchError(EvaluationExecutionError):
+    pass
+
+
+class EvaluationExecutionAuthorizationError(EvaluationExecutionError):
+    pass
+
+
+class EvaluationExecutionSequenceError(EvaluationExecutionError):
+    pass
+
+
+class EvaluationExecutionTerminalStateError(EvaluationExecutionError):
+    pass
+
+
+class EvaluationExecutionCapabilityError(EvaluationExecutionError):
+    pass
