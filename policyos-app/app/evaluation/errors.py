@@ -79,3 +79,31 @@ class EvaluationRegistryError(EvaluationError):
 
 class CrossValidationEvaluationBindingError(EvaluationError):
     pass
+
+
+class EvaluationPlanningError(EvaluationError):
+    pass
+
+
+class EvaluationPlanBindingError(EvaluationPlanningError):
+    pass
+
+
+class EvaluationTaskDependencyError(EvaluationPlanningError):
+    pass
+
+
+class EvaluationTaskOrderError(EvaluationPlanningError):
+    pass
+
+
+class EvaluationPlanAuthorizationError(EvaluationPlanningError):
+    pass
+
+
+class EvaluationPlanLineageError(EvaluationPlanningError):
+    pass
+
+
+class EvaluationPlanTierError(EvaluationPlanningError):
+    pass
