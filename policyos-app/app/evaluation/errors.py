@@ -183,3 +183,25 @@ class EvaluationEvidenceLifecycleStateError(EvaluationEvidenceError):
 
 class EvaluationEvidenceAuditMetadataError(EvaluationEvidenceError):
     pass
+
+
+class EvaluationEvidenceValidationError(EvaluationError):
+    pass
+
+
+class DuplicateEvaluationEvidenceValidationFindingError(
+    EvaluationEvidenceValidationError
+):
+    pass
+
+
+class EvaluationEvidenceValidationFindingError(EvaluationEvidenceValidationError):
+    pass
+
+
+class EvaluationEvidenceValidationSummaryError(EvaluationEvidenceValidationError):
+    pass
+
+
+class EvaluationEvidenceValidationReportError(EvaluationEvidenceValidationError):
+    pass
