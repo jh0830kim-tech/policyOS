@@ -189,9 +189,7 @@ class EvaluationEvidenceValidationError(EvaluationError):
     pass
 
 
-class DuplicateEvaluationEvidenceValidationFindingError(
-    EvaluationEvidenceValidationError
-):
+class DuplicateEvaluationEvidenceValidationFindingError(EvaluationEvidenceValidationError):
     pass
 
 
@@ -204,4 +202,44 @@ class EvaluationEvidenceValidationSummaryError(EvaluationEvidenceValidationError
 
 
 class EvaluationEvidenceValidationReportError(EvaluationEvidenceValidationError):
+    pass
+
+
+class EvaluationPipelineError(EvaluationError):
+    pass
+
+
+class InvalidEvaluationPipelineError(EvaluationPipelineError):
+    pass
+
+
+class EvaluationPipelineBindingMismatchError(EvaluationPipelineError):
+    pass
+
+
+class EvaluationPipelineComponentSequenceError(EvaluationPipelineError):
+    pass
+
+
+class DuplicateEvaluationPipelineComponentError(EvaluationPipelineError):
+    pass
+
+
+class EvaluationPipelineStateError(EvaluationPipelineError):
+    pass
+
+
+class EvaluationPipelineVersionError(EvaluationPipelineError):
+    pass
+
+
+class EvaluationPipelineAuditMetadataError(EvaluationPipelineError):
+    pass
+
+
+class EvaluationPipelineTimestampError(EvaluationPipelineError):
+    pass
+
+
+class EvaluationPipelineAuthorizationBindingError(EvaluationPipelineError):
     pass
