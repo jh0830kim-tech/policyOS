@@ -41,7 +41,7 @@ def _pipeline_event(record, classification):
         observation_subject_reference_id=uid(92500),
         subject_type=ObservationSubjectType.EVALUATION_PIPELINE,
         subject_id=str(record.pipeline_id),
-        subject_schema_version="pipeline-schema-v1",
+        subject_schema_version="pipeline-schema-v2",
         tenant_id=record.tenant_id,
         organization_id=record.organization_id,
         classification=classification,

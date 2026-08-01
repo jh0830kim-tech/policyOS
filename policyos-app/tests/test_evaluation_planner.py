@@ -234,11 +234,11 @@ def test_valid_request_builds_frozen_plan_and_retains_exact_references() -> None
         plan.tenant_id = uid(999)
 
 
-def enhanced_request(values, *, audit_updates=None, fingerprint_schema="planner-schema-v1"):
+def enhanced_request(values, *, audit_updates=None, fingerprint_schema="planner-schema-v2"):
     version = EvaluationPlanVersion(
         evaluation_plan_version="plan-v1", planning_revision=1,
-        planner_contract_version="planner-contract-v1",
-        planner_schema_version="planner-schema-v1",
+        planner_contract_version="planner-contract-v2",
+        planner_schema_version="planner-schema-v2",
     )
     fingerprint = PlanningFingerprintReference(
         planning_fingerprint_reference="planning://fingerprint/abcd123",

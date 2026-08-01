@@ -52,7 +52,7 @@ def evidence_reference(
         evidence_id=evidence_id or uid(700 + ordinal),
         evidence_type=evidence_type,
         evidence_role=evidence_role,
-        evidence_schema_version="evidence-schema-v1",
+        evidence_schema_version="evidence-schema-v2",
         evidence_reference=evidence_value or f"evidence://{ordinal}",
         source_reference=f"source://{ordinal}",
         media_type_reference="media-type://opaque",
@@ -75,9 +75,9 @@ def evidence_values(state=EvaluationExecutionState.IN_PROGRESS, *, audit=True):
     plan = planner["plan"]
     context = record.execution_context
     version = EvaluationEvidenceBundleVersion(
-        evidence_bundle_version="bundle-v1",
-        evidence_contract_version="contract-v1",
-        evidence_schema_version="evidence-schema-v1",
+        evidence_bundle_version="bundle-v2",
+        evidence_contract_version="contract-v2",
+        evidence_schema_version="evidence-schema-v2",
     )
     references = (
         evidence_reference(1),
@@ -133,7 +133,7 @@ def evidence_values(state=EvaluationExecutionState.IN_PROGRESS, *, audit=True):
     )
     audit_metadata = EvaluationEvidenceBundleAuditMetadata(
         evidence_bundle_id=uid(722),
-        evidence_bundle_version="bundle-v1",
+        evidence_bundle_version="bundle-v2",
         evidence_count=2,
         evidence_type_count=2,
         evidence_role_count=2,
