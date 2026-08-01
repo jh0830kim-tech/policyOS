@@ -113,13 +113,13 @@ def bundle_request(*, events=None, declarations=(), assessments=(), signals=(), 
     events = events or (event(),)
     bundle_time = max(item.recorded_at for item in events) + timedelta(minutes=1)
     version = ObservabilityBundleVersion(
-        observability_bundle_version="bundle-v1",
-        observability_contract_version="contract-v1",
-        observability_schema_version="schema-v1",
+        observability_bundle_version="bundle-v2",
+        observability_contract_version="contract-v2",
+        observability_schema_version="schema-v2",
     )
     metadata = ObservabilityBundleAuditMetadata(
         observability_bundle_id=uid(2100),
-        observability_bundle_version="bundle-v1",
+        observability_bundle_version="bundle-v2",
         correlation_id="correlation-1",
         event_count=len(events),
         category_count=len({item.category for item in events}),
@@ -423,7 +423,7 @@ def test_evaluation_pipeline_source_binding_is_exact() -> None:
         observation_subject_reference_id=uid(2500),
         subject_type=ObservationSubjectType.EVALUATION_PIPELINE,
         subject_id=str(record.pipeline_id),
-        subject_schema_version="pipeline-schema-v1",
+        subject_schema_version="pipeline-schema-v2",
         tenant_id=record.tenant_id,
         organization_id=record.organization_id,
         classification=DataClassification.CONFIDENTIAL,

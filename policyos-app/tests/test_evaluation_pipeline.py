@@ -56,9 +56,9 @@ def pipeline_values(
         )
     )
     version = EvaluationPipelineVersion(
-        pipeline_version="pipeline-v1",
-        pipeline_contract_version="contract-v1",
-        pipeline_schema_version="pipeline-schema-v1",
+        pipeline_version="pipeline-v2",
+        pipeline_contract_version="contract-v2",
+        pipeline_schema_version="pipeline-schema-v2",
     )
     plan_version = values["plan"].evaluation_plan_version
     specifications = (
@@ -67,13 +67,13 @@ def pipeline_values(
             plan_version.evaluation_plan_version,
             plan_version.planner_schema_version,
         ),
-        (values["record"].evaluation_execution_id, None, "evaluation-execution-schema-v1"),
+        (values["record"].evaluation_execution_id, None, "evaluation-execution-schema-v2"),
         (
             bundle.evidence_bundle_id,
             bundle.evidence_bundle_version.evidence_bundle_version,
             bundle.evidence_bundle_version.evidence_schema_version,
         ),
-        (report.report_id, None, "evaluation-validation-schema-v1"),
+        (report.report_id, None, "evaluation-validation-schema-v2"),
         (uid(1000), version.pipeline_version, version.pipeline_schema_version),
     )
     references = tuple(
@@ -92,7 +92,7 @@ def pipeline_values(
     )
     audit = EvaluationPipelineAuditMetadata(
         pipeline_id=uid(1000),
-        pipeline_version="pipeline-v1",
+        pipeline_version="pipeline-v2",
         plan_id=values["plan"].evaluation_plan_id,
         execution_id=values["record"].evaluation_execution_id,
         evidence_bundle_id=bundle.evidence_bundle_id,

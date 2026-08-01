@@ -8,6 +8,7 @@ import hashlib
 import json
 from datetime import UTC, datetime
 from enum import StrEnum
+from types import MappingProxyType
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
@@ -50,7 +51,9 @@ class LineageStage(StrEnum):
     RESULT_STORAGE_BOUND = "result_storage_bound"
 
 
-_STAGE_ORDER = {stage: index for index, stage in enumerate(LineageStage)}
+_STAGE_ORDER = MappingProxyType(
+    {stage: index for index, stage in enumerate(LineageStage)}
+)
 _LINEAGE_FIELD_ORDER = (
     "delegation_id",
     "tenant_id",

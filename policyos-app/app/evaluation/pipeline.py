@@ -41,9 +41,9 @@ from app.evaluation.validation import (
 from app.execution.validation import require_aware
 from app.zero_trust.execution_tiers import ExecutionTier
 
-PIPELINE_SCHEMA_VERSION = "pipeline-schema-v1"
-EXECUTION_COMPONENT_SCHEMA_VERSION = "evaluation-execution-schema-v1"
-VALIDATION_COMPONENT_SCHEMA_VERSION = "evaluation-validation-schema-v1"
+PIPELINE_SCHEMA_VERSION = "pipeline-schema-v2"
+EXECUTION_COMPONENT_SCHEMA_VERSION = "evaluation-execution-schema-v2"
+VALIDATION_COMPONENT_SCHEMA_VERSION = "evaluation-validation-schema-v2"
 
 
 class EvaluationPipelineStage(StrEnum):

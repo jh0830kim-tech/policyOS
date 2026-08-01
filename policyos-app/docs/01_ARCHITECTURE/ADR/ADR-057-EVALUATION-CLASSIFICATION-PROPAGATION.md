@@ -37,6 +37,22 @@ owner must migrate legacy metadata by supplying an explicit classification
 from a trusted historical source before deserialization. No default, implicit
 upgrade, persistence migration, or runtime compatibility lookup is provided.
 
+For serialized contracts that already carry caller-supplied contract, schema,
+record, or bundle version metadata, producers must publish a new major contract
+or schema identifier (conventionally `v2`) when writing the classification-aware
+shape. Existing `v1` identifiers describe the pre-classification shape and must
+not be reused. PolicyOS does not generate or increment these values: producers
+and migration owners supply them explicitly, and consumers must negotiate their
+compatibility out of band. Contracts without an explicit version field gain no
+invented version field in this correction.
+
+Migration requires a trusted historical classification recorded by the system
+that owned the original evaluation source. Tenant, organization, actor, URI,
+resource, reference, and payload content are not classification sources. If no
+trusted historical classification exists, the record cannot be migrated safely
+and remains rejected. A legacy record may not reach observability source
+validation until its migration metadata is complete.
+
 ## Consequences
 
 - Missing classification fails closed.
