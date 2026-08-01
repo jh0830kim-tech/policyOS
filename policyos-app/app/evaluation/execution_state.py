@@ -6,7 +6,9 @@ from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
+from app.ai.privacy import DataClassification
 from app.evaluation._base import EvaluationModel
+from app.evaluation._classification import require_classification_not_lower
 from app.evaluation.errors import (
     EvaluationExecutionAuthorizationError,
     EvaluationExecutionBindingMismatchError,
@@ -67,6 +69,7 @@ class EvaluationExecutionContext(EvaluationModel):
     planning_fingerprint_reference: PlanningFingerprintReference | None = None
     tenant_id: UUID
     organization_id: UUID
+    classification: DataClassification
     actor_id: UUID
     agent_instance_id: UUID | None = None
     evaluation_policy_reference_id: UUID
@@ -169,6 +172,7 @@ class EvaluationExecutionRecord(EvaluationModel):
     evaluation_plan_id: UUID
     evaluation_plan_version: EvaluationPlanVersion | None = None
     evaluation_run_request_id: UUID
+    classification: DataClassification
     initial_state: EvaluationExecutionState
     current_state: EvaluationExecutionState
     execution_context: EvaluationExecutionContext
@@ -183,6 +187,11 @@ class EvaluationExecutionRecord(EvaluationModel):
 
     @model_validator(mode="after")
     def internally_consistent(self):
+        require_classification_not_lower(
+            self.classification,
+            self.execution_context.classification,
+            field="evaluation execution record classification",
+        )
         if self.initial_state is not EvaluationExecutionState.PLANNED:
             raise InvalidEvaluationExecutionStateError(
                 "evaluation execution initial state must be planned"
@@ -306,6 +315,11 @@ def validate_evaluation_execution_plan_binding(
     context: EvaluationExecutionContext,
     plan: EvaluationPlan,
 ) -> None:
+    require_classification_not_lower(
+        context.classification,
+        plan.classification,
+        field="evaluation execution classification",
+    )
     actual = (
         context.evaluation_plan_id,
         context.evaluation_plan_version,
@@ -463,6 +477,12 @@ def validate_evaluation_execution_record(
     plan: EvaluationPlan,
     authorization_decisions: tuple[EvaluationDataAccessDecision, ...] = (),
 ) -> None:
+    require_classification_not_lower(
+        record.classification,
+        plan.classification,
+        record.execution_context.classification,
+        field="evaluation execution record classification",
+    )
     validate_evaluation_execution_plan_binding(record.execution_context, plan)
     context = record.execution_context
     if (
@@ -542,6 +562,7 @@ def apply_evaluation_execution_transition(
         evaluation_plan_id=record.evaluation_plan_id,
         evaluation_plan_version=record.evaluation_plan_version,
         evaluation_run_request_id=record.evaluation_run_request_id,
+        classification=record.classification,
         initial_state=record.initial_state,
         current_state=transition.to_state,
         execution_context=record.execution_context,

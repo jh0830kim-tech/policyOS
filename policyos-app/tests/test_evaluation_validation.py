@@ -86,6 +86,7 @@ def validation_values(*, audit=True):
         bundle=bundle,
         plan=evidence["plan"],
         execution_record=evidence["record"],
+        classification=bundle.classification,
         findings=rule_findings,
         created_at=REPORT_TIME,
     )
@@ -284,6 +285,7 @@ def test_failed_finding_deterministically_makes_report_failed() -> None:
         bundle_id=values["bundle"].evidence_bundle_id,
         plan_id=values["request"].plan.evaluation_plan_id,
         execution_id=values["request"].execution_record.evaluation_execution_id,
+        classification=values["bundle"].classification,
         findings=changed,
         summary=summary,
         overall_status=EvaluationEvidenceValidationStatus.FAILED,

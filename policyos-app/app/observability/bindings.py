@@ -60,11 +60,12 @@ def _scope(event: ObservationEvent, tenant_id, organization_id=None) -> None:
 
 def _classification(event: ObservationEvent, source_classification) -> None:
     try:
-        require_not_lower(
-            event.classification,
-            source_classification,
-            field="observation source classification",
-        )
+        for actual, field in (
+            (event.classification, "observation source classification"),
+            (event.subject_reference.classification, "observation subject classification"),
+            (event.correlation_context.classification, "observation correlation classification"),
+        ):
+            require_not_lower(actual, source_classification, field=field)
     except ValueError as exc:
         raise ObservabilityBindingMismatchError(
             "observation source classification downgrade"
@@ -72,6 +73,7 @@ def _classification(event: ObservationEvent, source_classification) -> None:
 
 
 def validate_evaluation_plan_observation(event: ObservationEvent, source: EvaluationPlan) -> None:
+    _classification(event, source.classification)
     _bind(
         event,
         kind="evaluation-plan",
@@ -87,6 +89,7 @@ def validate_evaluation_plan_observation(event: ObservationEvent, source: Evalua
 def validate_evaluation_execution_observation(
     event: ObservationEvent, source: EvaluationExecutionRecord
 ) -> None:
+    _classification(event, source.classification)
     _bind(
         event,
         kind="evaluation-execution",
@@ -103,6 +106,7 @@ def validate_evaluation_execution_observation(
 def validate_evidence_bundle_observation(
     event: ObservationEvent, source: EvaluationEvidenceBundle
 ) -> None:
+    _classification(event, source.classification)
     _bind(
         event,
         kind="evaluation-evidence",
@@ -121,6 +125,7 @@ def validate_evidence_bundle_observation(
 def validate_validation_report_observation(
     event: ObservationEvent, source: EvaluationEvidenceValidationReport
 ) -> None:
+    _classification(event, source.classification)
     _bind(
         event,
         kind="evaluation-validation",
@@ -139,6 +144,7 @@ def validate_validation_report_observation(
 def validate_evaluation_pipeline_observation(
     event: ObservationEvent, source: EvaluationPipelineRecord
 ) -> None:
+    _classification(event, source.classification)
     _bind(
         event,
         kind="evaluation-pipeline",

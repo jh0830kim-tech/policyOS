@@ -6,7 +6,9 @@ from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
+from app.ai.privacy import DataClassification
 from app.evaluation._base import EvaluationModel
+from app.evaluation._classification import require_classification_not_lower
 from app.evaluation.errors import (
     DuplicateEvaluationEvidenceError,
     EvaluationEvidenceAuditMetadataError,
@@ -97,6 +99,7 @@ class EvaluationEvidenceProvenance(EvaluationModel):
     agent_instance_id: UUID | None = None
     tenant_id: UUID
     organization_id: UUID
+    classification: DataClassification
     execution_tier: ExecutionTier
     planning_fingerprint_reference: PlanningFingerprintReference | None = None
     recorded_at: datetime
@@ -113,6 +116,7 @@ class EvaluationEvidenceLineage(EvaluationModel):
     evaluation_plan_version: EvaluationPlanVersion | None = None
     evaluation_execution_id: UUID
     evaluation_run_request_id: UUID
+    classification: DataClassification
     parent_lineage_reference: str = Field(min_length=1, max_length=300)
     delegation_lineage_id: UUID
     delegation_lineage_digest: str = Field(min_length=1, max_length=300)
@@ -153,6 +157,7 @@ class EvaluationEvidenceBundle(EvaluationModel):
     evaluation_plan_version: EvaluationPlanVersion | None = None
     evaluation_execution_id: UUID
     evaluation_run_request_id: UUID
+    classification: DataClassification
     provenance: EvaluationEvidenceProvenance
     lineage: EvaluationEvidenceLineage
     evidence_references: tuple[EvaluationEvidenceReference, ...] = Field(min_length=1)
@@ -264,6 +269,12 @@ def validate_evaluation_evidence_audit_metadata(bundle: EvaluationEvidenceBundle
 def _validate_evaluation_evidence_bundle_structure(
     bundle: EvaluationEvidenceBundle,
 ) -> None:
+    require_classification_not_lower(
+        bundle.classification,
+        bundle.provenance.classification,
+        bundle.lineage.classification,
+        field="evaluation evidence bundle classification",
+    )
     validate_evaluation_evidence_references(
         bundle.evidence_references,
         expected_schema_version=bundle.evidence_bundle_version.evidence_schema_version,
@@ -284,6 +295,13 @@ def _validate_provenance(
     plan: EvaluationPlan,
     record: EvaluationExecutionRecord,
 ) -> None:
+    require_classification_not_lower(
+        provenance.classification,
+        plan.classification,
+        record.classification,
+        record.execution_context.classification,
+        field="evaluation evidence provenance classification",
+    )
     context = record.execution_context
     actual = (
         provenance.evaluation_plan_id, provenance.evaluation_plan_version,
@@ -322,6 +340,12 @@ def _validate_lineage(
     record: EvaluationExecutionRecord,
 ) -> None:
     lineage = bundle.lineage
+    require_classification_not_lower(
+        lineage.classification,
+        plan.classification,
+        record.classification,
+        field="evaluation evidence lineage classification",
+    )
     context = record.execution_context
     actual = (
         lineage.evaluation_plan_id, lineage.evaluation_plan_version,
@@ -363,6 +387,14 @@ def validate_evaluation_evidence_bundle(
     plan: EvaluationPlan,
     execution_record: EvaluationExecutionRecord,
 ) -> None:
+    require_classification_not_lower(
+        bundle.classification,
+        plan.classification,
+        execution_record.classification,
+        bundle.provenance.classification,
+        bundle.lineage.classification,
+        field="evaluation evidence bundle classification",
+    )
     _validate_evaluation_evidence_bundle_structure(bundle)
     if execution_record.current_state not in (
         EvaluationExecutionState.IN_PROGRESS,
@@ -406,6 +438,7 @@ def build_evaluation_evidence_bundle(
             request.evaluation_execution_record.evaluation_execution_id
         ),
         "evaluation_run_request_id": request.evaluation_plan.evaluation_run_request_id,
+        "classification": request.provenance.classification,
         "provenance": request.provenance,
         "lineage": request.lineage,
         "evidence_references": request.evidence_references,
