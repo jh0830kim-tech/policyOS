@@ -11,6 +11,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.policy_candidates import router as policy_candidates_router
 from app.api.routes.providers import router as providers_router
 from app.core.config import get_settings
+from app.version import get_version
 
 settings = get_settings()
 
@@ -23,7 +24,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.2.0",
+    version=get_version(),
     description="PolicyOS MVP API",
     lifespan=lifespan,
 )
