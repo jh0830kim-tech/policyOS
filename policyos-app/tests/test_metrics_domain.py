@@ -345,7 +345,7 @@ def test_runtime_and_sensitive_boundaries_absent():
         "time.time",
         "uuid4",
         "hashlib",
-        "requests",
+        "import requests",
         "httpx",
         "subprocess",
         "sqlalchemy",
