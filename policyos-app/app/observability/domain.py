@@ -492,6 +492,7 @@ class DeploymentStopSignal(ObservabilityModel):
     signal_reason_codes: tuple[str, ...] = Field(min_length=1)
     signal_status: DeploymentStopSignalStatus
     policy_revision: str = Field(min_length=1, max_length=200)
+    classification: DataClassification
     clearing_governance_decision_reference: str | None = Field(default=None, max_length=300)
     created_at: datetime
 
@@ -657,6 +658,7 @@ def _validate_event_collection(bundle: ObservabilityBundle) -> None:
 
 def _validate_bundle_links(bundle: ObservabilityBundle) -> None:
     event_ids = {item.observation_event_id for item in bundle.observation_events}
+    by_id = {item.observation_event_id: item for item in bundle.observation_events}
     declaration_ids = tuple(item.redaction_declaration_id for item in bundle.redaction_declarations)
     assessment_ids = tuple(
         item.completeness_assessment_id for item in bundle.completeness_assessments
@@ -680,6 +682,9 @@ def _validate_bundle_links(bundle: ObservabilityBundle) -> None:
     for signal in bundle.deployment_stop_signals:
         if not set(signal.triggering_observation_event_ids).issubset(event_ids):
             raise DeploymentStopSignalError("deployment-stop trigger is unknown")
+        for event_id in signal.triggering_observation_event_ids:
+            _not_lower(signal.classification, by_id[event_id].classification)
+        _not_lower(bundle.classification, signal.classification)
 
 
 def _validate_bundle_audit(bundle: ObservabilityBundle) -> None:

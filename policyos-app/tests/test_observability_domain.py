@@ -312,6 +312,7 @@ def signal(**updates):
         signal_reason_codes=("governance",),
         signal_status=DeploymentStopSignalStatus.RECORDED,
         policy_revision="policy-1",
+        classification=DataClassification.CONFIDENTIAL,
         created_at=NOW,
     )
     values.update(updates)

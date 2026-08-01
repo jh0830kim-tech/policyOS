@@ -6,7 +6,12 @@ from uuid import UUID
 
 from pydantic import Field, field_validator
 
+from app.ai.privacy import DataClassification
 from app.evaluation._base import EvaluationModel
+from app.evaluation._classification import (
+    effective_classification,
+    require_classification_not_lower,
+)
 from app.evaluation.errors import (
     DuplicateEvaluationPipelineComponentError,
     EvaluationPipelineAuditMetadataError,
@@ -127,6 +132,7 @@ class EvaluationPipelineRecord(EvaluationModel):
     agent_instance_id: UUID | None = None
     tenant_id: UUID
     organization_id: UUID
+    classification: DataClassification
     execution_tier: ExecutionTier
     registry_snapshot_reference_id: UUID
     registry_revision: int = Field(ge=1)
@@ -152,6 +158,7 @@ class EvaluationPipelineRequest(EvaluationModel):
     pipeline_version: EvaluationPipelineVersion
     pipeline_state: EvaluationPipelineState
     current_stage: EvaluationPipelineStage
+    classification: DataClassification
     component_references: tuple[EvaluationPipelineComponentReference, ...] = Field(
         min_length=5, max_length=5
     )
@@ -292,6 +299,15 @@ def validate_evaluation_pipeline(request: EvaluationPipelineRequest) -> None:
     bundle = request.evidence_bundle
     report = request.validation_report
     context = record.execution_context
+    require_classification_not_lower(
+        request.classification,
+        plan.classification,
+        context.classification,
+        record.classification,
+        bundle.classification,
+        report.classification,
+        field="evaluation pipeline classification",
+    )
     validate_evaluation_plan_metadata(
         plan, expected_authorization_revision=context.authorization_revision
     )
@@ -348,6 +364,13 @@ def build_evaluation_pipeline_record(
         agent_instance_id=context.agent_instance_id,
         tenant_id=plan.tenant_id,
         organization_id=plan.organization_id,
+        classification=effective_classification(
+            request.classification,
+            plan.classification,
+            record.classification,
+            request.evidence_bundle.classification,
+            request.validation_report.classification,
+        ),
         execution_tier=plan.execution_tier,
         registry_snapshot_reference_id=plan.evaluation_registry_snapshot_reference_id,
         registry_revision=plan.registry_revision,

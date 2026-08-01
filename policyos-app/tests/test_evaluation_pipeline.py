@@ -50,6 +50,7 @@ def pipeline_values(
             bundle=bundle,
             plan=values["plan"],
             execution_record=values["record"],
+            classification=bundle.classification,
             findings=findings(),
             created_at=REPORT_TIME,
         )
@@ -113,6 +114,7 @@ def pipeline_values(
         pipeline_version=version,
         pipeline_state=pipeline_state,
         current_stage=current_stage,
+        classification=report.classification,
         component_references=references,
         audit_metadata=audit,
         created_at=PIPELINE_TIME,
@@ -179,6 +181,7 @@ def test_failed_validation_supports_failed_pipeline_without_regeneration() -> No
         bundle_id=report.bundle_id,
         plan_id=report.plan_id,
         execution_id=report.execution_id,
+        classification=report.classification,
         findings=changed,
         summary=EvaluationEvidenceValidationSummary(
             passed_count=len(changed) - 1,

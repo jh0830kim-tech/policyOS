@@ -6,7 +6,9 @@ from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
+from app.ai.privacy import DataClassification
 from app.evaluation._base import EvaluationModel
+from app.evaluation._classification import require_classification_not_lower
 from app.evaluation.errors import (
     DuplicateEvaluationEvidenceValidationFindingError,
     EvaluationEvidenceValidationFindingError,
@@ -79,6 +81,7 @@ class EvaluationEvidenceValidationReport(EvaluationModel):
     bundle_id: UUID
     plan_id: UUID
     execution_id: UUID
+    classification: DataClassification
     findings: tuple[EvaluationEvidenceValidationFinding, ...] = Field(min_length=1)
     summary: EvaluationEvidenceValidationSummary
     overall_status: EvaluationEvidenceValidationStatus
@@ -110,6 +113,7 @@ class EvaluationEvidenceValidationRequest(EvaluationModel):
     bundle: EvaluationEvidenceBundle
     plan: EvaluationPlan
     execution_record: EvaluationExecutionRecord
+    classification: DataClassification
     findings: tuple[EvaluationEvidenceValidationFinding, ...] = Field(min_length=1)
     created_at: datetime
 
@@ -209,6 +213,13 @@ def _derive_overall_status(
 
 
 def validate_bundle(request: EvaluationEvidenceValidationRequest) -> None:
+    require_classification_not_lower(
+        request.classification,
+        request.plan.classification,
+        request.execution_record.classification,
+        request.bundle.classification,
+        field="evaluation validation classification",
+    )
     validate_evaluation_evidence_bundle(
         request.bundle,
         plan=request.plan,
@@ -241,6 +252,7 @@ def build_validation_report(
         bundle_id=request.bundle.evidence_bundle_id,
         plan_id=request.plan.evaluation_plan_id,
         execution_id=request.execution_record.evaluation_execution_id,
+        classification=request.classification,
         findings=request.findings,
         summary=summary,
         overall_status=_derive_overall_status(request.findings),

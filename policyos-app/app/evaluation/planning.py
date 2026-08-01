@@ -6,7 +6,12 @@ from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
+from app.ai.privacy import DataClassification
 from app.evaluation._base import EvaluationModel
+from app.evaluation._classification import (
+    effective_classification,
+    require_classification_not_lower,
+)
 from app.evaluation.datasets import (
     DatasetManifestReference,
     EvaluationDatasetReference,
@@ -160,6 +165,7 @@ class EvaluationPlan(EvaluationModel):
     authorization_decision_id: UUID
     tenant_id: UUID
     organization_id: UUID
+    classification: DataClassification
     delegation_lineage_id: UUID
     delegation_lineage_digest: str = Field(min_length=1, max_length=300)
     execution_tier: ExecutionTier
@@ -238,6 +244,7 @@ class EvaluationPlanningRequest(EvaluationModel):
     evaluation_plan_version: EvaluationPlanVersion | None = None
     planning_fingerprint_reference: PlanningFingerprintReference | None = None
     audit_metadata: PlanAuditMetadata | None = None
+    classification: DataClassification
     created_at: datetime
 
     @field_validator("created_at")
@@ -535,6 +542,19 @@ def validate_evaluation_plan_bindings(request: EvaluationPlanningRequest) -> Non
 def build_evaluation_plan(request: EvaluationPlanningRequest) -> EvaluationPlan:
     if request.run_request.execution_tier is not ExecutionTier.OFFLINE_EVALUATION:
         raise EvaluationPlanTierError("evaluation planning requires offline evaluation tier")
+    source_classification = effective_classification(
+        request.definition.classification,
+        request.target.classification,
+        request.dataset.classification,
+        request.evaluator.classification,
+        request.policy.classification,
+        request.access_context.classification,
+    )
+    require_classification_not_lower(
+        request.classification,
+        source_classification,
+        field="evaluation plan classification",
+    )
     validate_evaluation_plan_bindings(request)
     validate_evaluation_plan_lineage(request)
     validate_evaluation_plan_authorization(request)
@@ -570,6 +590,7 @@ def build_evaluation_plan(request: EvaluationPlanningRequest) -> EvaluationPlan:
         authorization_decision_id=binding.authorization_decision_id,
         tenant_id=request.run_request.tenant_id,
         organization_id=request.run_request.organization_id,
+        classification=request.classification,
         delegation_lineage_id=request.lineage.lineage_id,
         delegation_lineage_digest=request.lineage.digest.digest_value,
         execution_tier=request.run_request.execution_tier,

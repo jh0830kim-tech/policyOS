@@ -214,7 +214,8 @@ def planner_values() -> dict[str, object]:
         registry_snapshot_reference=snapshot_reference, authorization_binding=authorization,
         access_context=access_context, access_decision=access_decision, lineage=root,
         evaluator_actor_id=uid(50), evaluator_agent_instance_id=uid(51),
-        evaluated_actor_id=uid(5), created_at=NOW,
+        evaluated_actor_id=uid(5), classification=DataClassification.CONFIDENTIAL,
+        created_at=NOW,
     )
     return locals()
 
