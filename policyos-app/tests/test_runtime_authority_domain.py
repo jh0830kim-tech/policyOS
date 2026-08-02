@@ -500,7 +500,7 @@ def test_production_boundary_has_no_runtime_or_issuance_implementation() -> None
     assert not any(
         (root / name).exists()
         for name in (
-            "planning",
+            "registry",
             "state",
             "orchestration",
             "adapters",
