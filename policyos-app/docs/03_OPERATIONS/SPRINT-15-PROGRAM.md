@@ -6,7 +6,7 @@ This document is the operational control plane for the Sprint 15 Runtime program
 checkpoint work, defines evidence required to enter and complete each checkpoint, and prevents a
 later runtime layer from being implemented before its dependencies and governance decisions are
 ready. It does not supersede `AGENTS.md`, the normative Sprint 15 Runtime Architecture Rules, or
-ADR-065 through ADR-075. A conflict is recorded under Governance inconsistencies and resolved
+ADR-065 through ADR-077. A conflict is recorded under Governance decisions and resolved
 before implementation through the appropriate governance change.
 
 Status terms are used precisely:
@@ -46,7 +46,7 @@ revalidated immediately before the effect.
 
 ## 4. Current baseline
 
-The baseline is `main` after merged PR #37.
+The baseline is `main` after merged PR #39.
 
 | Checkpoint | Status | Evidence |
 | --- | --- | --- |
@@ -54,11 +54,16 @@ The baseline is `main` after merged PR #37.
 | CP1 Runtime Authority | Merged | `app.runtime.authority`, ADR-073, focused authority tests. |
 | CP2 Execution Planning | Merged | `app.runtime.planning`, ADR-074, focused planning tests. |
 | CP3 Execution State | Merged | `app.runtime.state`, ADR-075, PR #37, focused state tests. |
-| CP4 through CP10 | Planned | No corresponding runtime implementation is present. |
+| CP4 Runtime Registry | Merged | `app.runtime.registry`, ADR-076, PR #39, focused registry tests. |
+| CP5-Gate-Audit | Planned | Approved review unit; implementation not present. |
+| CP5-Gate-Ports | Blocked | Starts only after CP5-Gate-Audit merges. |
+| CP5 Runtime Orchestration | Blocked | Requires both prerequisite gates to merge. |
+| CP6 through CP10 | Planned | No corresponding runtime implementation is present. |
 
-The current runtime is immutable metadata and pure validation only. It has no registry package,
-audit package, ports, orchestration, adapter, persistence, outbox, runtime API, worker, live
-provider invocation, credential resolution, or external side effect.
+The current runtime is immutable metadata and pure validation only. It has Authority, Planning,
+State, and Registry packages. It has no runtime Audit package, Ports, Orchestration, adapter,
+persistence, outbox, runtime API, worker, live provider invocation, credential resolution, or
+external side effect.
 
 ## 5. Program work structure
 
@@ -82,7 +87,8 @@ Sprint 15 Final Review
 Checkpoint numbering is a delivery sequence, not a statement that every dependency is delivered
 in the immediately preceding numbered checkpoint. Runtime Audit contracts and Runtime Ports are
 explicit CP5 prerequisite gates. They require approved package placement and ADR coverage before
-CP5 orchestration implementation begins.
+CP5 orchestration implementation begins. ADR-077 fixes their review order as CP5-Gate-Audit
+followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ## 6. Checkpoint controls
 
@@ -164,7 +170,7 @@ CP5 orchestration implementation begins.
 
 ### CP4 - Runtime Registry
 
-- **Status:** Planned.
+- **Status:** Merged.
 - **Purpose:** Define enumerable governed actions and immutable registry snapshots without
   executable dynamic discovery.
 - **Entry conditions:** CP0-CP3 merged; ADR-068 requirements reconciled with the action identity,
@@ -189,24 +195,45 @@ CP5 orchestration implementation begins.
 - **Excluded:** Audit transport, orchestration, adapter implementation, repository implementation,
   outbox, API, workers, credentials, external invocation, and CP5+ behavior.
 
-### CP5 prerequisite gates - Runtime Audit and Runtime Ports
+### CP5-Gate-Audit - Runtime Audit contracts
 
-- **Status:** Decision required.
-- **Blocker:** Package placement and ADR treatment must be approved before CP5 may enter.
-- **Purpose:** Supply the stable contracts that ADR-065 says orchestration imports and uses.
-- **Entry conditions:** CP4 merged; governance inconsistency resolved; no change to fixed CP
-  numbering without explicit approval.
-- **Allowed outputs:** Approved ADR or superseding ADR, `app.runtime.audit` safe append-only event
-  contracts, and `app.runtime.ports` protocols for adapters, repositories, outbox, clock and
-  tenant-bound credential broker. Whether these are preparatory changes or separately reviewed
-  sub-checkpoints is an open decision.
-- **Security gates:** Audit is not authority; ports contain no implementation; event and envelope
-  metadata are allowlisted and bounded; no credentials or provider payloads.
-- **Verification:** Dependency guards, protocol-only tests, safe-event field tests, no I/O or
-  infrastructure imports, and CP0-CP4 regression tests.
-- **Completion:** CP5 cannot enter until both contract surfaces are approved and merged.
-- **Excluded:** Orchestration logic, real clocks/brokers/repositories, adapters, persistence,
-  outbox delivery, API, workers, and side effects.
+- **Status:** Planned.
+- **Purpose:** Supply immutable append-only safe event contracts before any orchestrator can
+  request or persist audit facts.
+- **Entry conditions:** CP4 and ADR-077 merged; clean gate-specific branch; implementation ADR
+  approved; CP1-CP4 public contracts unchanged.
+- **Allowed outputs:** `app.runtime.audit`, implementation ADR, immutable safe events and pure
+  validation, focused tests, narrow root exports and architecture-guard updates.
+- **Dependency direction:** Audit may import stable public Authority, Planning, State, and Registry
+  contracts. None of those packages imports Audit.
+- **Security gates:** Audit is not authority or proof of correctness; metadata is allowlisted,
+  bounded, tenant/organization-bound, classification-aware, revision-aware, and free of sensitive
+  content.
+- **Verification:** Append-only sequence and scope tests, event-field safety tests, dependency and
+  infrastructure guards, CP0-CP4 regressions, Ruff, import smoke, and `git diff --check`.
+- **Completion:** Audit contracts and implementation ADR merge independently with green CI.
+- **Excluded:** Sink, logging, transport, repository, database, filesystem, network, queue,
+  orchestration, adapter, credential, API, worker, and side effect.
+
+### CP5-Gate-Ports - Runtime Port contracts
+
+- **Status:** Blocked on CP5-Gate-Audit.
+- **Purpose:** Supply implementation-neutral protocols consumed by Orchestration and implemented
+  only by later Adapters or Persistence checkpoints.
+- **Entry conditions:** CP5-Gate-Audit merged; clean gate-specific branch; implementation ADR and
+  exact port surface approved.
+- **Allowed outputs:** `app.runtime.ports`, implementation ADR, immutable invocation/result/error
+  envelopes, and Protocol contracts for adapters, repositories, transaction, outbox storage,
+  clock, cancellation, and tenant-bound credential broker.
+- **Dependency direction:** Ports may import stable runtime domain and Audit contracts; Ports must
+  not import Orchestration or any implementation package.
+- **Security gates:** Protocols contain no implementation, credentials, raw provider payloads,
+  hidden clock, default provider, policy decision, permit issuance, or I/O.
+- **Verification:** Protocol-only and envelope tests, dependency and sensitive-field guards,
+  CP0 through Audit-gate regressions, Ruff, import smoke, and `git diff --check`.
+- **Completion:** Ports contracts and implementation ADR merge independently with green CI.
+- **Excluded:** Production test doubles, adapter/repository/transaction/outbox implementations,
+  orchestration, database, filesystem, network, environment access, API, workers, and side effects.
 
 ### CP5 - Runtime Orchestration
 
@@ -353,8 +380,9 @@ CP5 orchestration implementation begins.
 
 ## 8. ADR management
 
-ADR-065 through ADR-072 define the accepted CP0 architecture. ADR-073 through ADR-075 document
-the implemented authority, planning, and state domains. CP4 and every new architecture domain
+ADR-065 through ADR-072 define the accepted CP0 architecture. ADR-073 through ADR-076 document
+the implemented Authority, Planning, State, and Registry domains. ADR-077 fixes the CP5
+prerequisite-gate review units and canonical dependency direction. Every new architecture domain
 must cite these decisions and add an implementation ADR when package placement, dependency
 direction, public contracts, or security behavior is not already sufficiently decided. A
 contradiction requires a superseding ADR; roadmap prose alone cannot supersede an ADR.
@@ -374,9 +402,9 @@ contradiction requires a superseding ADR; roadmap prose alone cannot supersede a
 
 | ID | Status | Risk or decision | Required evidence or owner action |
 | --- | --- | --- | --- |
-| R15-01 | Decision required | CP5 needs Audit and Ports, but neither has a fixed program CP number. | Approve package placement and review unit before CP5. |
-| R15-02 | Decision required | `AGENTS.md` summary ordering places registry/ports after orchestration, while ADR-065 makes orchestration depend on them. | Superseding ADR or operating-rule correction before CP5. |
-| R15-03 | Planned | CP2 records opaque registry references before the registry implementation exists. | CP4 compatibility tests must preserve existing plan semantics. |
+| R15-01 | Resolved by ADR-077 | CP5 needs Audit and Ports, but neither has a fixed program CP number. | Use separate CP5-Gate-Audit and CP5-Gate-Ports PRs without renumbering. |
+| R15-02 | Resolved by ADR-077 | `AGENTS.md` placed registry/ports after orchestration, contrary to ADR-065. | Correct the operating rule; ADR-065 remains authoritative. |
+| R15-03 | Resolved by ADR-076 and CP4 | CP2 records opaque registry references before the registry implementation exists. | Field-level compatibility tests preserve CP2 semantics. |
 | R15-04 | Deferred | Physical partitioning and retention schedules are unspecified. | Decide before CP7 production persistence. |
 | R15-05 | Deferred | Real adapter families, credential broker, destination redirect policy, and provider enablement are not selected. | Separate CP6 adapter approvals and threat reviews. |
 | R15-06 | Deferred | Queue, lease, scheduling, and worker operational model are unspecified. | Decide before CP10 implementation. |
@@ -414,25 +442,23 @@ Sprint 15 is complete only after Final Review approval, green CI for the integra
 reviewed operational evidence, explicit release/version decision, and merge to `main`. Completion
 does not imply a Git tag, release publication, production enablement, or Sprint 16 start.
 
-## 15. CP4 entry checklist
+## 15. CP5 prerequisite-gate entry checklist
 
-- CP0-CP3 and PR #37 are merged on `main`.
-- Working tree and checkpoint branch preconditions pass.
-- ADR-068 and ADR-074 field-level compatibility is reviewed without changing CP2 contracts.
-- Registry production code imports neither Planning nor State; compatibility evidence is
-  structural and semantic at the test boundary.
-- Actual plan-to-registry binding validation remains downstream of Registry, Planning, and State
-  in an approved application/orchestration boundary.
-- CP4 scope is registry metadata and immutable snapshots only.
-- Action identity/version, schemas, capabilities, risk, side-effect, permit, destination,
-  idempotency, retry/compensation eligibility, and adapter reference fields are decided.
-- Unknown, disabled, substituted, and revision-mismatched actions fail closed.
-- No callback, executable import, dynamic registration, credential, adapter call, I/O, or CP5+
-  implementation is included.
-- Focused dependency, security, immutability, canonical-ordering, and regression tests are planned.
-- R15-01 and R15-02 are acknowledged as CP5 blockers, not silently solved inside CP4.
+- CP0 through CP4 and PR #39 are merged on `main`.
+- ADR-077 and the corrected `AGENTS.md` dependency direction are merged before production gate
+  packages begin.
+- CP5-Gate-Audit starts first on its own clean branch with a dedicated implementation ADR.
+- CP5-Gate-Ports starts only after Audit merges and has its own clean branch and implementation
+  ADR.
+- Audit imports only stable public runtime contracts and provides no sink, transport, repository,
+  I/O, authority, or correctness decision.
+- Ports imports only stable runtime and Audit contracts and provides no implementation or
+  Orchestration dependency.
+- Each gate has explicit tuple exports, focused dependency/security tests, architecture-guard
+  updates, direct upstream regressions, import smoke, and diff checks.
+- CP5 Orchestration remains absent until both prerequisite gates merge independently.
 
-## 16. Governance inconsistencies
+## 16. Governance decisions
 
 1. ADR-065 describes Planning as binding Registry contracts, while the fixed program sequence
    implemented Planning and State before CP4 Registry. CP4 therefore defines independent
@@ -442,23 +468,22 @@ does not imply a Git tag, release publication, production enablement, or Sprint 
    plan-to-registry binding validation belongs downstream in an approved application/orchestration
    boundary. Changing Planning to import Registry requires separately approved scope and regression
    review; CP2 and CP3 public contracts remain unchanged.
-2. The `AGENTS.md` dependency summary shows Orchestration before Registry and Ports, while ADR-065
-   and the normative orchestrator rules require orchestration to use registry-defined actions and
-   ports. ADR-065 is the architecture source for dependency direction; implementation must not
-   proceed through this conflict without a superseding ADR or operating-rule correction.
+2. ADR-077 resolves the `AGENTS.md` ordering error by making ADR-065 the canonical source and
+   correcting the operating-rule summary. Registry, Audit, and Ports are upstream inputs to
+   Orchestration. Planning and Registry remain independent under ADR-076.
 3. Audit and Ports are required dependencies for CP5 but have no dedicated number in the fixed
-   CP0-CP10 program. They are therefore explicit CP5 prerequisite gates, not implicit CP5
-   implementation. Their review/merge structure remains a decision.
+   CP0-CP10 program. ADR-077 resolves their review structure as separate CP5-Gate-Audit and
+   CP5-Gate-Ports PRs, in that order, without renumbering.
 4. CP8 is a fixed delivery stage, but ADR-065 and ADR-071 assign outbox protocols to Ports and
    storage implementation to Persistence without approving a dedicated outbox package. Package
    placement requires an implementation ADR before CP8 begins.
 
 ## 17. Open decisions
 
-- Decide whether Runtime Audit and Runtime Ports are separate preparatory PRs, named CP5 gates, or
-  governed sub-checkpoints without renumbering CP4-CP10.
-- Decide and document the corrected canonical dependency ordering before CP5.
-- Decide whether CP4 requires a new implementation ADR beyond ADR-068.
+- Define the exact immutable Runtime Audit event and append-only validation contracts in its
+  implementation ADR.
+- Define the exact Runtime Ports protocol and immutable envelope surface in its implementation
+  ADR after Audit merges.
 - Define the runtime application boundary public contract before orchestration or API work.
 - Select credential-broker, destination policy, and real-adapter enablement rules before CP6.
 - Select persistence engine mapping, transaction ownership, partitioning, and retention before

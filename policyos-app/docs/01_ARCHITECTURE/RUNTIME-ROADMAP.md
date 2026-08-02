@@ -13,7 +13,7 @@ state, and execution result is not a policy outcome.
 
 ## 2. Current and target state
 
-### Current state - Merged through CP3
+### Current state - Merged through CP4
 
 - `app.runtime.authority`: immutable request, authority reference, permit reference, admission,
   revocation, bundle, audit-metadata, and pure validation contracts.
@@ -21,15 +21,17 @@ state, and execution result is not a policy outcome.
   retry/timeout metadata, compensation references, validation records, and pure validation.
 - `app.runtime.state`: immutable explicit transition request/decision/record contracts,
   optimistic revisions, append-only history, terminal states, and pure validation.
-- No registry, runtime audit package, ports, orchestration, adapters, persistence, outbox, runtime
-  API, workers, credential broker, live provider call, or external effect exists.
+- `app.runtime.registry`: immutable action definitions, lifecycle entries, tenant/organization-bound
+  snapshots, exact resolution facts, side-effect requirements, and pure validation.
+- No runtime audit package, ports, orchestration, adapters, persistence, outbox, runtime API,
+  workers, credential broker, live provider call, or external effect exists.
 
 ### Target state - Planned
 
-The target adds immutable registry and audit contracts, explicit ports, pure orchestration,
-fake/dry-run-first adapters, repositories and local transactions, transactional outbox and
-reconciliation, authenticated API transport, and governed workers. Each remains independently
-reviewable and cannot own authority outside its accepted boundary.
+The target adds immutable audit contracts, explicit ports, pure orchestration, fake/dry-run-first
+adapters, repositories and local transactions, transactional outbox and reconciliation,
+authenticated API transport, and governed workers. Each remains independently reviewable and
+cannot own authority outside its accepted boundary.
 
 ## 3. Program sequence versus dependency order
 
@@ -48,31 +50,35 @@ downstream of Registry, Planning and State in an approved application/orchestrat
 Changing Planning to import Registry requires separately approved scope and regression review;
 CP2 and CP3 public contracts remain unchanged.
 
-Audit and Ports are prerequisite gates before CP5. Their exact review unit and package-governance
-treatment are Decision required.
+ADR-077 fixes Audit and Ports as separate prerequisite gates before CP5. CP5-Gate-Audit is first;
+CP5-Gate-Ports begins only after Audit merges. These gates do not renumber CP5 through CP10.
 
 ## 4. Dependency view
 
 ```mermaid
 flowchart TD
-    S14[Sprint 14 immutable domains] --> AUTH[Runtime Authority - CP1 Merged]
-    AUTH --> PLAN[Execution Planning - CP2 Merged]
-    AUTH --> STATE[Execution State - CP3 Merged]
+    S14[Sprint 14 domains] --> AUTH[Runtime Authority]
+    AUTH --> PLAN[Execution Planning]
+    AUTH --> REG[Runtime Registry]
+    AUTH --> STATE[Execution State]
     PLAN --> STATE
 
-    REG[Runtime Registry - CP4 Planned] --> ORCH[Runtime Orchestration - CP5 Blocked]
+    AUTH --> AUDIT[Runtime Audit Gate]
+    PLAN --> AUDIT
+    REG --> AUDIT
+    STATE --> AUDIT
+    AUDIT --> PORTS[Runtime Ports Gate]
+
+    AUTH --> ORCH[Runtime Orchestration]
+    REG --> ORCH
     PLAN --> ORCH
     STATE --> ORCH
-    AUDIT[Runtime Audit - CP5 prerequisite] --> ORCH
-    PORTS[Runtime Ports - CP5 prerequisite] --> ORCH
+    AUDIT --> ORCH
+    PORTS --> ORCH
 
-    PORTS --> ADAPTERS[Adapter implementations - CP6 Planned]
-    PORTS --> PERSIST[Persistence implementations - CP7 Planned]
-    PERSIST --> OUTBOX[Outbox storage and delivery foundation - CP8 Planned]
-
-    ORCH --> API[API entry point in app.api - CP9 Planned]
-    ORCH --> WORKERS[Worker entry points - CP10 Planned]
-    OUTBOX --> WORKERS
+    PORTS --> ADAPTERS[Adapters]
+    PORTS --> PERSIST[Persistence]
+    ORCH --> ENTRY[API and Workers]
 ```
 
 Arrows mean "is an input contract or required boundary for," not authority delegation. No arrow
@@ -86,9 +92,9 @@ grants permission or causes automatic execution.
 | CP1 | Merged | Authority | Immutable authority bundle and validation | No issuance or execution |
 | CP2 | Merged | Planning | Immutable plans and validation records | Plan remains inert |
 | CP3 | Merged | State | Explicit append-only transition metadata | No automatic progress |
-| CP4 | Planned | Registry | Action definitions and immutable snapshots | No executable registration |
-| CP5 gate | Decision required | Audit | Safe append-only event contracts | Audit is not authority |
-| CP5 gate | Decision required | Ports | Adapter/repository/outbox/clock/broker protocols | Protocols have no implementation |
+| CP4 | Merged | Registry | Action definitions and immutable snapshots | No executable registration |
+| CP5-Gate-Audit | Planned | Audit | Safe append-only event contracts | Audit is not authority |
+| CP5-Gate-Ports | Blocked on Audit | Ports | Adapter/repository/outbox/clock/broker protocols | Protocols have no implementation |
 | CP5 | Blocked | Orchestration | Pure governed coordination | Requires Registry, Audit, and Ports |
 | CP6 | Planned | Adapters | Fake/dry-run first, then approved real adapters | Permit revalidation before effect |
 | CP7 | Planned | Persistence | Repositories, migrations, local transactions | Storage owns no policy |
@@ -291,30 +297,22 @@ hidden retry/cancellation/compensation.
 
 ## 14. Capabilities not yet implemented
 
-The following are Planned or Decision required, not current capabilities: action registry lookup,
-runtime audit event package, ports, orchestration, adapter invocation, tenant credential broker,
-real model/provider/MCP/connector calls, runtime repositories, migrations, transaction manager,
-outbox dispatch, dead-letter processing, reconciliation jobs, runtime API, workers, queues,
-schedulers, live cancellation, compensation execution, operational retries, and external effects.
+The following are Planned or Decision required, not current capabilities: runtime audit event
+package, ports, orchestration, adapter invocation, tenant credential broker, real
+model/provider/MCP/connector calls, runtime repositories, migrations, transaction manager, outbox
+dispatch, dead-letter processing, reconciliation jobs, runtime API, workers, queues, schedulers,
+live cancellation, compensation execution, operational retries, and external effects.
 
-## 15. CP4 pre-start checklist
+## 15. CP5 prerequisite-gate plan
 
-- Confirm clean `main`, merged CP3/PR #37 and checkpoint branch baseline.
-- Re-read ADR-065 through ADR-075 and normative rules.
-- Preserve CP1-CP3 public contracts and dependency direction.
-- Reconcile ADR-068 definitions with CP2 opaque action references by validation, not mutation.
-- Define immutable registry snapshot/revision and canonical action ordering.
-- Define action capability, schemas, risk, side-effect, permit, destination, idempotency,
-  retry/compensation eligibility and adapter reference fields.
-- Reject unknown, disabled, substituted and revision-mismatched actions.
-- Exclude callbacks, executable imports, dynamic loading, runtime self-registration, credentials,
-  arbitrary schemas/payloads, I/O and CP5+ packages.
-- Plan focused strictness, security, dependency, compatibility and architecture-guard tests.
-- Record but do not solve the CP5 Audit/Ports governance decision inside CP4.
-- Keep Registry production code independent of Planning and State; prove CP2 compatibility with
-  structural and semantic tests only.
-- Place actual plan-to-registry binding validation downstream in a separately approved
-  application/orchestration boundary.
+- Merge ADR-077 and the corrected `AGENTS.md` dependency summary first.
+- Implement CP5-Gate-Audit on a dedicated branch and PR with its own implementation ADR.
+- Keep Audit immutable, append-only, safe, deterministic, and free of authority or transport.
+- Merge Audit with green CI before opening the Ports implementation gate.
+- Implement CP5-Gate-Ports on a separate branch and PR with its own implementation ADR.
+- Keep Ports protocol-only and free of Orchestration or infrastructure implementations.
+- Continue prohibiting `app.runtime.orchestration` until both gates merge independently.
+- Define the application-boundary contract in the CP5 implementation ADR before orchestration.
 
 ## 16. Preparation after CP10
 
@@ -335,14 +333,16 @@ or release publication is not implied.
 - Broader UI/operations experiences beyond the reviewed Runtime API and worker boundaries.
 - Any new runtime layer not explicitly approved after Sprint 15 Final Review.
 
-## 18. Governance decisions required before downstream work
+## 18. Governance decisions and remaining downstream work
 
-The fixed program numbering and accepted architecture currently disagree on the summarized
-placement of Registry and Ports relative to Orchestration. ADR-065 requires Registry, Audit and
-Ports as inputs to Orchestration, while `AGENTS.md` depicts Orchestration before Registry/Ports.
-Before CP5 implementation, a superseding ADR or explicit operating-rule correction must establish
-one canonical dependency direction. Audit and Ports must also receive explicit package placement,
-review scope and merge criteria. CP8 package placement is also Decision required because existing
-ADRs approve outbox protocols and persistence responsibilities but not a dedicated package. CP9
-routes remain in `app.api`, and workers remain external entry points unless superseding ADRs
-approve different placement. Roadmap documentation does not resolve or supersede these items.
+ADR-077 and the corrected operating rule resolve the CP5 dependency-order and review-unit
+decisions. ADR-065 remains canonical: Registry, Audit, and Ports are inputs to Orchestration;
+Planning and Registry remain independent under ADR-076. Audit and Ports are separate prerequisite
+gates and each requires its own implementation ADR and merged PR.
+
+The exact Audit event surface, Ports protocol surface, and CP5 application-boundary contract still
+require their gate-specific implementation ADRs. CP8 package placement remains Decision required
+because existing ADRs approve outbox protocols and persistence responsibilities but not a
+dedicated package. CP9 routes remain in `app.api`, and workers remain external entry points unless
+superseding ADRs approve different placement. Roadmap documentation does not resolve or supersede
+those later decisions.
