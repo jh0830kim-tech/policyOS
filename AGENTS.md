@@ -134,28 +134,44 @@ Preserve this dependency direction:
 Sprint 14 immutable domains
     ↓
 app.runtime.authority
-    ↓
-app.runtime.planning
+    ├── app.runtime.planning
+    └── app.runtime.registry
+
+app.runtime.authority + planning
     ↓
 app.runtime.state
+
+authority + planning + state + registry
+    ↓
+future app.runtime.audit
+    ↓
+future app.runtime.ports
+
+authority + planning + state + registry + audit + ports
     ↓
 future app.runtime.orchestration
-    ↓
-future app.runtime.registry and ports
-    ↓
-future adapters
-    ↓
-future persistence and outbox
-    ↓
-future API and workers
+
+ports ──→ future adapters and persistence
+orchestration ──→ future API and workers
 ```
 
 Rules:
 
 - Sprint 14 packages MUST NOT import `app.runtime`.
 - `app.runtime.authority` MUST NOT import planning or later runtime layers.
-- `app.runtime.planning` MUST NOT import state or later runtime layers.
-- `app.runtime.state` MUST NOT import orchestration or later runtime layers.
+- `app.runtime.planning` MUST NOT import registry, state, or later runtime layers.
+- `app.runtime.registry` MAY import stable authority enums/types and MUST NOT import planning,
+  state, audit, ports, orchestration, or later runtime layers.
+- `app.runtime.state` MUST NOT import registry, audit, ports, orchestration, or later runtime
+  layers.
+- `app.runtime.audit` MAY import stable public authority, planning, state, and registry contracts
+  and MUST NOT import ports, orchestration, or later runtime layers.
+- `app.runtime.ports` MAY import stable public runtime domain and audit contracts and MUST NOT
+  import orchestration, adapters, persistence, API, or workers.
+- `app.runtime.orchestration` consumes authority, planning, state, registry, audit, and ports;
+  none of those upstream packages may import orchestration.
+- Adapters and persistence implement ports. API and workers call the orchestration/application
+  boundary and MUST NOT bypass it.
 - Runtime domain packages MUST NOT import FastAPI, SQLAlchemy, Redis,
   workers, schedulers, provider SDKs, MCP clients, or connector clients.
 - Reverse dependencies and dependency cycles are prohibited.
