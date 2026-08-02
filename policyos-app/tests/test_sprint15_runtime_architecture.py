@@ -55,8 +55,22 @@ def test_sprint14_packages_have_no_runtime_reverse_imports() -> None:
             assert "app.runtime" not in source.read_text(encoding="utf-8")
 
 
-def test_cp0_introduces_no_production_runtime_package() -> None:
-    assert not (ROOT / "app" / "runtime").exists()
+def test_runtime_contains_only_the_cp1_authority_domain() -> None:
+    runtime = ROOT / "app" / "runtime"
+    assert (runtime / "authority").is_dir()
+    assert not any(
+        (runtime / name).exists()
+        for name in (
+            "planning",
+            "state",
+            "orchestration",
+            "adapters",
+            "persistence",
+            "api",
+            "workers",
+            "scheduler",
+        )
+    )
 
 
 def test_version_and_deferred_decision_remain_unchanged() -> None:
