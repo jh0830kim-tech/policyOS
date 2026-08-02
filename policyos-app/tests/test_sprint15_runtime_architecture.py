@@ -55,17 +55,17 @@ def test_sprint14_packages_have_no_runtime_reverse_imports() -> None:
             assert "app.runtime" not in source.read_text(encoding="utf-8")
 
 
-def test_runtime_contains_only_domains_through_cp5_audit_gate() -> None:
+def test_runtime_contains_only_domains_through_cp5_ports_gate() -> None:
     runtime = ROOT / "app" / "runtime"
     assert (runtime / "authority").is_dir()
     assert (runtime / "planning").is_dir()
     assert (runtime / "state").is_dir()
     assert (runtime / "registry").is_dir()
     assert (runtime / "audit").is_dir()
+    assert (runtime / "ports").is_dir()
     assert not any(
         (runtime / name).exists()
         for name in (
-            "ports",
             "orchestration",
             "adapters",
             "persistence",
