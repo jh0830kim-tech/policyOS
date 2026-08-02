@@ -55,15 +55,15 @@ def test_sprint14_packages_have_no_runtime_reverse_imports() -> None:
             assert "app.runtime" not in source.read_text(encoding="utf-8")
 
 
-def test_runtime_contains_only_cp1_authority_and_cp2_planning_domains() -> None:
+def test_runtime_contains_only_cp1_authority_cp2_planning_and_cp3_state_domains() -> None:
     runtime = ROOT / "app" / "runtime"
     assert (runtime / "authority").is_dir()
     assert (runtime / "planning").is_dir()
+    assert (runtime / "state").is_dir()
     assert not any(
         (runtime / name).exists()
         for name in (
             "registry",
-            "state",
             "orchestration",
             "adapters",
             "persistence",
