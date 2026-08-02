@@ -1,5 +1,5 @@
-"""Sprint 15 runtime domains; CP1 exposes authority contracts only."""
+"""Sprint 15 immutable runtime domains through CP3."""
 
-from app.runtime import authority, planning
+from app.runtime import authority, planning, state
 
-__all__ = ("authority", "planning")
+__all__ = ("authority", "planning", "state")
