@@ -23,7 +23,7 @@ engine exists.
 ## 5. Pipeline lifecycle
 
 Lifecycle statuses describe metadata assembly only. `COMPLETED` means metadata assembly
-complete only.
+complete only. Lifecycle is metadata only. COMPLETED means that metadata assembly is complete only and does not imply approval, authorization, publication, transmission, deployment, or execution.
 
 ## 6. Package binding
 
@@ -38,6 +38,7 @@ work, scheduling, progression, or execution.
 ## 8. Release gate
 
 Release-gate status is inert governance metadata. `BLOCKED` does not execute a stop.
+A BLOCKED release gate triggers no action. It creates no stop, deployment, publication, transmission, authorization, approval, or permit action, and no stage advances automatically.
 
 ## 9. Review versus approval versus authorization
 
