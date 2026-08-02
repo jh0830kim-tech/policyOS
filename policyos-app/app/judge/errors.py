@@ -67,3 +67,35 @@ class OrphanJudgeReferenceError(JudgeError):
 
 class JudgeVersionError(JudgeError):
     pass
+
+
+class JudgeDecisionBundleError(JudgeError):
+    """Raised when a Judge decision bundle is invalid."""
+
+
+class JudgeReviewRequirementError(JudgeError):
+    """Raised when a Judge review requirement is invalid."""
+
+
+class JudgeDecisionLineageReferenceError(JudgeError):
+    """Raised when Judge decision lineage metadata is invalid."""
+
+
+class JudgeDecisionProvenanceReferenceError(JudgeError):
+    """Raised when Judge decision provenance metadata is invalid."""
+
+
+class JudgeDecisionAuditMetadataError(JudgeError):
+    """Raised when Judge decision audit metadata is invalid."""
+
+
+class JudgeDecisionBundleOrderingError(JudgeDecisionBundleError):
+    """Raised when Judge decision bundle ordering is noncanonical."""
+
+
+class DuplicateJudgeDecisionBundleReferenceError(JudgeDecisionBundleError):
+    """Raised when duplicate decision bundle references exist."""
+
+
+class OrphanJudgeDecisionBundleReferenceError(JudgeDecisionBundleError):
+    """Raised when orphan decision bundle references exist."""
