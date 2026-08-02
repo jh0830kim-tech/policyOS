@@ -9,6 +9,11 @@ from pydantic import field_validator, model_validator
 
 from app.ai.privacy import DataClassification
 from app.runtime.audit import RuntimeAuditTrail
+from app.runtime.authority import (
+    RuntimeExecutionEnvironment,
+    RuntimeRiskLevel,
+)
+from app.runtime.planning import ExecutionPlanMode
 from app.runtime.ports._base import (
     BoundedId,
     BoundedVersion,
@@ -17,6 +22,7 @@ from app.runtime.ports._base import (
     aware,
     canonical,
 )
+from app.runtime.registry import RuntimeActionSideEffectLevel
 from app.runtime.state import RuntimeExecutionState, RuntimeExecutionStateRecord
 
 
@@ -111,6 +117,36 @@ class RuntimeResultArtifactReference(RuntimePortModel):
     classification: DataClassification
 
 
+class RuntimeInvocationPolicyBinding(RuntimePortModel):
+    resource_reference: BoundedId
+    purpose: BoundedId
+    risk_level: RuntimeRiskLevel
+    execution_environment: RuntimeExecutionEnvironment
+    plan_mode: ExecutionPlanMode
+    side_effect_level: RuntimeActionSideEffectLevel
+    side_effect_level_reference: BoundedId
+    model_id: BoundedId | None = None
+    provider_id: BoundedId | None = None
+    tool_id: BoundedId | None = None
+    connector_id: BoundedId | None = None
+    retry_eligible: bool
+    maximum_attempt_count: PositiveInt
+
+    @model_validator(mode="after")
+    def execution_and_retry_bounds(self) -> Self:
+        if self.plan_mode is ExecutionPlanMode.VALIDATION_ONLY or (
+            self.execution_environment is RuntimeExecutionEnvironment.VALIDATION_ONLY
+        ):
+            raise ValueError("validation-only plans cannot create invocation bindings")
+        if (self.plan_mode is ExecutionPlanMode.DRY_RUN) != (
+            self.execution_environment is RuntimeExecutionEnvironment.DRY_RUN
+        ):
+            raise ValueError("dry-run plan and execution environment must agree")
+        if not self.retry_eligible and self.maximum_attempt_count != 1:
+            raise ValueError("non-retryable invocation must allow exactly one attempt")
+        return self
+
+
 class RuntimeAdapterInvocationEnvelope(RuntimePortModel):
     runtime_adapter_invocation_id: UUID
     contract_version: RuntimePortContractVersion
@@ -128,6 +164,7 @@ class RuntimeAdapterInvocationEnvelope(RuntimePortModel):
     input_reference: BoundedId
     input_digest_reference: BoundedId
     output_schema_reference: BoundedId
+    policy_binding: RuntimeInvocationPolicyBinding
     destination_reference: BoundedId | None = None
     idempotency_key: BoundedId
     required_state: RuntimeExecutionState
