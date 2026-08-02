@@ -149,6 +149,51 @@ def validate_runtime_adapter_invocation_envelope(
         action_reference.registry_revision,
     ):
         raise RuntimePortReferenceError("invocation differs from planned action")
+    policy_binding = envelope.policy_binding
+    if (
+        policy_binding.resource_reference,
+        policy_binding.purpose,
+        policy_binding.risk_level,
+        policy_binding.execution_environment,
+        policy_binding.model_id,
+        policy_binding.provider_id,
+        policy_binding.tool_id,
+        policy_binding.connector_id,
+    ) != (
+        request.resource_reference,
+        request.purpose,
+        request.risk_level,
+        request.execution_environment,
+        request.model_id,
+        request.provider_id,
+        request.tool_id,
+        request.connector_id,
+    ):
+        raise RuntimePortReferenceError("invocation policy differs from authority")
+    if policy_binding.plan_mode is not plan.plan_mode:
+        raise RuntimePortReferenceError("invocation plan mode differs from execution plan")
+    if (
+        policy_binding.resource_reference,
+        policy_binding.purpose,
+        policy_binding.risk_level,
+        policy_binding.side_effect_level_reference,
+        policy_binding.execution_environment,
+        policy_binding.model_id,
+        policy_binding.provider_id,
+        policy_binding.tool_id,
+        policy_binding.connector_id,
+    ) != (
+        action_reference.resource_reference,
+        action_reference.purpose,
+        action_reference.risk_level,
+        action_reference.side_effect_level_reference,
+        action_reference.execution_environment,
+        action_reference.model_id,
+        action_reference.provider_id,
+        action_reference.tool_id,
+        action_reference.connector_id,
+    ):
+        raise RuntimePortReferenceError("invocation policy differs from planned selectors")
 
     if (
         scope.runtime_execution_request_id,
@@ -225,6 +270,36 @@ def validate_runtime_adapter_invocation_envelope(
         definition.output_schema.schema_reference,
     ):
         raise RuntimePortReferenceError("invocation substituted registry action facts")
+    if (
+        policy_binding.resource_reference,
+        policy_binding.purpose,
+        policy_binding.risk_level,
+        policy_binding.execution_environment,
+        policy_binding.side_effect_level,
+        policy_binding.side_effect_level_reference,
+        policy_binding.model_id,
+        policy_binding.provider_id,
+        policy_binding.tool_id,
+        policy_binding.connector_id,
+        policy_binding.retry_eligible,
+        policy_binding.maximum_attempt_count,
+    ) != (
+        definition.selectors.resource_reference,
+        definition.selectors.purpose,
+        definition.risk_profile.risk_level,
+        definition.selectors.execution_environment,
+        definition.risk_profile.side_effect_level,
+        definition.risk_profile.side_effect_level_reference,
+        definition.selectors.model_id,
+        definition.selectors.provider_id,
+        definition.selectors.tool_id,
+        definition.selectors.connector_id,
+        definition.retry_eligibility.retry_eligible,
+        definition.retry_eligibility.maximum_attempt_count,
+    ):
+        raise RuntimePortReferenceError("invocation policy substituted registry facts")
+    if policy_binding.maximum_attempt_count > request.requested_attempt_count:
+        raise RuntimePortReferenceError("invocation retry bound exceeds admitted request")
 
     if (
         audit_trail.scope.runtime_execution_request_id,

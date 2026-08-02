@@ -24,11 +24,14 @@ from app.runtime.authority import (
     RuntimeAdmissionDecision,
     RuntimeAuthorityBundle,
     RuntimeAuthorityDecisionStatus,
+    RuntimeExecutionEnvironment,
     RuntimeExecutionRequest,
+    RuntimeRiskLevel,
 )
 from app.runtime.planning import (
     ExecutionActionReference,
     ExecutionPlan,
+    ExecutionPlanMode,
     ExecutionPlanStatus,
     ExecutionPlanStep,
 )
@@ -52,6 +55,7 @@ from app.runtime.ports import (
     RuntimeCredentialLeaseStatus,
     RuntimeIdempotencyRepository,
     RuntimeIdempotencyReservation,
+    RuntimeInvocationPolicyBinding,
     RuntimeInvocationStatus,
     RuntimeOutboxEnqueueRecord,
     RuntimeOutboxRepository,
@@ -82,7 +86,11 @@ from app.runtime.registry import (
     RuntimeActionRegistrySnapshot,
     RuntimeActionResolutionDecision,
     RuntimeActionResolutionStatus,
+    RuntimeActionRetryEligibility,
+    RuntimeActionRiskProfile,
     RuntimeActionSchemaReference,
+    RuntimeActionSelector,
+    RuntimeActionSideEffectLevel,
     RuntimeActionStatus,
     RuntimeRegistrySnapshotEntry,
 )
@@ -153,6 +161,19 @@ def envelope(
         input_reference="input-ref",
         input_digest_reference="input-digest",
         output_schema_reference="schema.output",
+        policy_binding=RuntimeInvocationPolicyBinding(
+            resource_reference="resource.document",
+            purpose="purpose.summarize",
+            risk_level=RuntimeRiskLevel.LOW,
+            execution_environment=RuntimeExecutionEnvironment.INTERNAL,
+            plan_mode=ExecutionPlanMode.EXECUTION,
+            side_effect_level=RuntimeActionSideEffectLevel.READ_ONLY,
+            side_effect_level_reference="side-effect.read-only",
+            model_id="model.alpha",
+            provider_id="provider.alpha",
+            retry_eligible=True,
+            maximum_attempt_count=3,
+        ),
         destination_reference="destination.internal",
         idempotency_key="idempotency-1",
         required_state=RuntimeExecutionState.RUNNING,
@@ -170,6 +191,16 @@ def upstream_facts():
         requester_actor_id=uid(7),
         requester_agent_instance_id=uid(8),
         on_behalf_of_user_id=uid(9),
+        resource_reference="resource.document",
+        action="summarize",
+        purpose="purpose.summarize",
+        risk_level=RuntimeRiskLevel.LOW,
+        execution_environment=RuntimeExecutionEnvironment.INTERNAL,
+        model_id="model.alpha",
+        provider_id="provider.alpha",
+        tool_id=None,
+        connector_id=None,
+        requested_attempt_count=3,
         classification=DataClassification.CONFIDENTIAL,
     )
     decision = RuntimeAdmissionDecision.model_construct(
@@ -193,11 +224,20 @@ def upstream_facts():
     action_reference = ExecutionActionReference.model_construct(
         action_definition_id="summarize-document",
         action_version="1.0",
+        resource_reference="resource.document",
         action="summarize",
+        purpose="purpose.summarize",
+        risk_level=RuntimeRiskLevel.LOW,
+        side_effect_level_reference="side-effect.read-only",
         input_schema_reference="schema.input",
         output_schema_reference="schema.output",
         adapter_reference="adapter.provider",
+        execution_environment=RuntimeExecutionEnvironment.INTERNAL,
         destination_reference="destination.internal",
+        model_id="model.alpha",
+        provider_id="provider.alpha",
+        tool_id=None,
+        connector_id=None,
         registry_revision=4,
     )
     step = ExecutionPlanStep.model_construct(
@@ -209,6 +249,7 @@ def upstream_facts():
         execution_plan_id=uid(4),
         runtime_execution_request_id=uid(1),
         plan_status=ExecutionPlanStatus.VALIDATED,
+        plan_mode=ExecutionPlanMode.EXECUTION,
         actor_id=uid(7),
         agent_instance_id=uid(8),
         on_behalf_of_user_id=uid(9),
@@ -253,6 +294,25 @@ def upstream_facts():
     )
     definition = RuntimeActionDefinition.model_construct(
         identity=identity,
+        selectors=RuntimeActionSelector(
+            resource_reference="resource.document",
+            purpose="purpose.summarize",
+            execution_environment=RuntimeExecutionEnvironment.INTERNAL,
+            destination_reference="destination.internal",
+            model_id="model.alpha",
+            provider_id="provider.alpha",
+        ),
+        risk_profile=RuntimeActionRiskProfile(
+            risk_level=RuntimeRiskLevel.LOW,
+            side_effect_level=RuntimeActionSideEffectLevel.READ_ONLY,
+            side_effect_level_reference="side-effect.read-only",
+            side_effect_policy_revision=2,
+        ),
+        retry_eligibility=RuntimeActionRetryEligibility(
+            retry_eligible=True,
+            maximum_attempt_count=3,
+            retry_policy_reference="retry.policy",
+        ),
         adapter=RuntimeActionAdapterReference(
             adapter_reference="adapter.provider",
             adapter_contract_version="1.0",
@@ -413,6 +473,18 @@ def test_invocation_envelope_rejects_non_executable_state_and_deadline() -> None
         RuntimeAdapterInvocationEnvelope.model_validate(values)
 
 
+def test_invocation_policy_binding_rejects_validation_only_and_inconsistent_retry() -> None:
+    values = envelope().policy_binding.model_dump()
+    values["plan_mode"] = ExecutionPlanMode.VALIDATION_ONLY
+    values["execution_environment"] = RuntimeExecutionEnvironment.VALIDATION_ONLY
+    with pytest.raises(ValidationError):
+        RuntimeInvocationPolicyBinding.model_validate(values)
+    values = envelope().policy_binding.model_dump()
+    values["retry_eligible"] = False
+    with pytest.raises(ValidationError):
+        RuntimeInvocationPolicyBinding.model_validate(values)
+
+
 def test_invocation_envelope_binds_exact_upstream_facts() -> None:
     invocation = envelope()
     assert validate_runtime_adapter_invocation_envelope(
@@ -421,6 +493,14 @@ def test_invocation_envelope_binds_exact_upstream_facts() -> None:
     with pytest.raises(RuntimePortReferenceError):
         validate_runtime_adapter_invocation_envelope(
             invocation.model_copy(update={"action": "substituted-action"}),
+            *upstream_facts(),
+        )
+    substituted = invocation.policy_binding.model_copy(
+        update={"purpose": "purpose.substituted"}
+    )
+    with pytest.raises(RuntimePortReferenceError):
+        validate_runtime_adapter_invocation_envelope(
+            invocation.model_copy(update={"policy_binding": substituted}),
             *upstream_facts(),
         )
 
@@ -717,6 +797,7 @@ def test_ports_have_no_downstream_or_infrastructure_imports_or_sensitive_fields(
             RuntimeAdapterInvocationEnvelope,
             RuntimeAdapterInvocationResult,
             RuntimeCredentialLeaseReference,
+            RuntimeInvocationPolicyBinding,
             RuntimeOutboxEnqueueRecord,
         )
         for name in model.model_fields
