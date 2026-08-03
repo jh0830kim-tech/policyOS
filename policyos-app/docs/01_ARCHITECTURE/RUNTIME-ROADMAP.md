@@ -52,6 +52,8 @@ CP2 and CP3 public contracts remain unchanged.
 
 ADR-077 fixes Audit and Ports as separate prerequisite gates before CP5. CP5-Gate-Audit is first;
 CP5-Gate-Ports begins only after Audit merges. These gates do not renumber CP5 through CP10.
+ADR-083 adds a narrow CP7-Gate-Commit-Facts prerequisite without renumbering CP7. It supplies
+caller-bound receipt and digest facts and an injected-clock reference before Persistence begins.
 
 ## 4. Dependency view
 
@@ -93,10 +95,11 @@ grants permission or causes automatic execution.
 | CP2 | Merged | Planning | Immutable plans and validation records | Plan remains inert |
 | CP3 | Merged | State | Explicit append-only transition metadata | No automatic progress |
 | CP4 | Merged | Registry | Action definitions and immutable snapshots | No executable registration |
-| CP5-Gate-Audit | Planned | Audit | Safe append-only event contracts | Audit is not authority |
-| CP5-Gate-Ports | Blocked on Audit | Ports | Adapter/repository/outbox/clock/broker protocols | Protocols have no implementation |
-| CP5 | Blocked | Orchestration | Pure governed coordination | Requires Registry, Audit, and Ports |
-| CP6 | Planned | Adapters | Fake/dry-run first, then approved real adapters | Permit revalidation before effect |
+| CP5-Gate-Audit | Merged | Audit | Safe append-only event contracts | Audit is not authority |
+| CP5-Gate-Ports | Merged | Ports | Adapter/repository/outbox/clock/broker protocols | Protocols have no implementation |
+| CP5 | Merged | Orchestration | Pure governed coordination | Requires Registry, Audit, and Ports |
+| CP6 | Merged | Adapters | Deterministic fake and dry-run adapters | No external effect or credential resolution |
+| CP7-Gate-Commit-Facts | Required before CP7 | Ports receipt provenance | Caller-bound record receipts, digest and clock reference | No hidden UUID, hash, or time |
 | CP7 | Planned | Persistence | Repositories, migrations, local transactions | Storage owns no policy |
 | CP8 | Planned | Outbox | Delivery, idempotency, dead-letter, reconciliation | No external atomicity claim |
 | CP9 | Planned | API | Authenticated transport | No direct adapter/repository access |
@@ -238,8 +241,16 @@ adapters.
 
 Where supported, state change, audit event, idempotency reservation and outbox record commit in
 one local transaction. External side effects are never claimed transactionally atomic with local
-storage. Migration ownership belongs to runtime persistence. Physical partitioning and retention
-schedules remain decisions required before production persistence.
+storage. Migration ownership belongs to runtime persistence. ADR-083 selects PostgreSQL 16,
+SQLAlchemy 2 asynchronous Sessions, explicit transaction ownership, logical tenant partitioning,
+and preservation-only retention for CP7. CP7 performs no purge; physical partitioning and any
+destructive retention schedule require later operational evidence and approval.
+
+Repository write requests carry their exact receipt identifiers. Atomic write sets carry typed
+record receipt facts, a transaction receipt identifier, a transaction digest reference, and an
+injected clock reference. Persistence echoes and stores those facts and observes commit time from
+the named clock Port; it does not invent identifiers, digests, State, Audit, Idempotency, or
+Outbox facts.
 
 ## 11. Outbox, idempotency and reconciliation
 
@@ -297,11 +308,12 @@ hidden retry/cancellation/compensation.
 
 ## 14. Capabilities not yet implemented
 
-The following are Planned or Decision required, not current capabilities: runtime audit event
-package, ports, orchestration, adapter invocation, tenant credential broker, real
-model/provider/MCP/connector calls, runtime repositories, migrations, transaction manager, outbox
-dispatch, dead-letter processing, reconciliation jobs, runtime API, workers, queues, schedulers,
-live cancellation, compensation execution, operational retries, and external effects.
+The following are Planned or Decision required, not current capabilities: tenant credential
+broker implementation, real model/provider/MCP/connector calls, runtime repositories, migrations,
+transaction manager, persistence I/O, outbox dispatch, dead-letter processing, reconciliation
+jobs, runtime API, workers, queues, schedulers, live cancellation, compensation execution,
+operational retries, and external effects. Existing fake and dry-run adapters perform no external
+effect.
 
 ## 15. CP5 prerequisite-gate plan
 

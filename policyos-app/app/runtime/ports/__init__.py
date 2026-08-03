@@ -32,7 +32,10 @@ from app.runtime.ports.domain import (
     RuntimeRepositoryWriteReceipt,
     RuntimeRepositoryWriteRequest,
     RuntimeResultArtifactReference,
+    RuntimeTransactionCommitFacts,
     RuntimeTransactionReceipt,
+    RuntimeTransactionRecordReceiptFact,
+    RuntimeTransactionRecordType,
 )
 from app.runtime.ports.errors import (
     RuntimePortAdapterError,
@@ -127,7 +130,10 @@ __all__ = (
     "RuntimeRepositoryWriteReceipt",
     "RuntimeRepositoryWriteRequest",
     "RuntimeResultArtifactReference",
+    "RuntimeTransactionCommitFacts",
     "RuntimeTransactionPort",
+    "RuntimeTransactionRecordReceiptFact",
+    "RuntimeTransactionRecordType",
     "RuntimeTransactionReceipt",
     "validate_runtime_adapter_invocation_envelope",
     "validate_runtime_adapter_invocation_result",

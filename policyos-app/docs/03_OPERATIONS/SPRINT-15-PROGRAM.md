@@ -197,7 +197,7 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP5-Gate-Audit - Runtime Audit contracts
 
-- **Status:** Planned.
+- **Status:** Merged.
 - **Purpose:** Supply immutable append-only safe event contracts before any orchestrator can
   request or persist audit facts.
 - **Entry conditions:** CP4 and ADR-077 merged; clean gate-specific branch; implementation ADR
@@ -217,7 +217,7 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP5-Gate-Ports - Runtime Port contracts
 
-- **Status:** Blocked on CP5-Gate-Audit.
+- **Status:** Merged.
 - **Purpose:** Supply implementation-neutral protocols consumed by Orchestration and implemented
   only by later Adapters or Persistence checkpoints.
 - **Entry conditions:** CP5-Gate-Audit merged; clean gate-specific branch; implementation ADR and
@@ -237,8 +237,7 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP5 - Runtime Orchestration
 
-- **Status:** Blocked.
-- **Planned scope:** Pure orchestration after the prerequisite gates are resolved.
+- **Status:** Merged.
 - **Purpose:** Purely coordinate validated authority, plan, registry, state, audit, and port
   contracts while requesting explicit decisions and transitions.
 - **Entry conditions:** CP4 plus Audit and Ports gates complete; dependency direction approved;
@@ -257,7 +256,7 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP6 - Runtime Adapters
 
-- **Status:** Planned.
+- **Status:** Merged for deterministic fake and dry-run adapters.
 - **Purpose:** Implement governed invocation ports, beginning with fake and dry-run adapters before
   any real model, provider, MCP, connector, or approved external/internal action adapter.
 - **Entry conditions:** CP5 merged; adapter and credential-broker ports stable; invocation envelope
@@ -277,13 +276,35 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 - **Excluded:** Adapter self-registration, API responses, direct state mutation, unrestricted raw
   payloads, automatic retries, persistence, outbox delivery, API, and workers.
 
+### CP7-Gate-Commit-Facts - Persistence receipt provenance
+
+- **Status:** Required CP7 prerequisite.
+- **Purpose:** Close the repository and transaction receipt-provenance gap before a production
+  Persistence implementation can generate or infer hidden identifiers, digests, or time.
+- **Entry conditions:** CP6 fake/dry-run adapters merged; Ports and Orchestration contracts stable;
+  ADR-083 approved on a dedicated branch.
+- **Allowed outputs:** Caller-supplied repository receipt identity, immutable typed transaction
+  record receipt facts, transaction digest and clock references, pure validation, focused Ports
+  and Orchestration tests, and ADR-083 documentation.
+- **Allowed scope:** Amend the minimum CP5 Ports surface required for deterministic CP7 receipts
+  while retaining `RuntimeTransactionPort.commit(write_set)`.
+- **Security gates:** No hidden UUID, hash, clock, sorting, database, repository implementation,
+  transaction implementation, migration, retention job, or Outbox delivery.
+- **Verification:** Exact record-set binding, canonical receipt identities, substituted receipt
+  rejection, injected-clock reference binding, CP0-CP6 regressions, Ruff, import smoke, and
+  `git diff --check`.
+- **Completion:** The gate merges independently with green CI before CP7 production code begins.
+- **Excluded:** SQLAlchemy models, repository implementations, migrations, storage I/O, API,
+  workers, releases, tags, and CP8 delivery behavior.
+
 ### CP7 - Runtime Persistence
 
 - **Status:** Planned.
 - **Purpose:** Implement approved repository ports and a local transaction boundary for validated
   runtime facts.
-- **Entry conditions:** CP5 ports stable; CP6 boundaries reviewed; storage design and migrations
-  approved; tenant partitioning and retention decisions recorded where required.
+- **Entry conditions:** CP7-Gate-Commit-Facts merged; CP5 ports stable; CP6 boundaries reviewed;
+  storage design and migrations approved; tenant partitioning and retention decisions recorded
+  by ADR-083.
 - **Allowed outputs:** `app.runtime.persistence`, repository implementations, transaction manager,
   migrations, optimistic revision and uniqueness enforcement, integration tests.
 - **Allowed scope:** Store/retrieve validated authority, plan, state, audit, result, permit, and
@@ -405,10 +426,11 @@ contradiction requires a superseding ADR; roadmap prose alone cannot supersede a
 | R15-01 | Resolved by ADR-077 | CP5 needs Audit and Ports, but neither has a fixed program CP number. | Use separate CP5-Gate-Audit and CP5-Gate-Ports PRs without renumbering. |
 | R15-02 | Resolved by ADR-077 | `AGENTS.md` placed registry/ports after orchestration, contrary to ADR-065. | Correct the operating rule; ADR-065 remains authoritative. |
 | R15-03 | Resolved by ADR-076 and CP4 | CP2 records opaque registry references before the registry implementation exists. | Field-level compatibility tests preserve CP2 semantics. |
-| R15-04 | Deferred | Physical partitioning and retention schedules are unspecified. | Decide before CP7 production persistence. |
+| R15-04 | Resolved for CP7 by ADR-083 | Physical partitioning and retention schedules were unspecified. | Use logical tenant partitioning and preservation-only retention; require a later approved operational schedule before any purge. |
 | R15-05 | Deferred | Real adapter families, credential broker, destination redirect policy, and provider enablement are not selected. | Separate CP6 adapter approvals and threat reviews. |
 | R15-06 | Deferred | Queue, lease, scheduling, and worker operational model are unspecified. | Decide before CP10 implementation. |
 | R15-07 | Decision required | CP8 is a fixed program stage, but no accepted ADR approves a dedicated outbox package. | Decide whether CP8 extends Ports/Persistence or uses a separately approved package before implementation. |
+| R15-08 | Resolved by ADR-083 | Repository and transaction outputs required receipt IDs, digest, and time that were absent from their inputs. | Carry exact caller-supplied receipt and digest facts in the Ports contracts and bind commit time to an injected clock reference. |
 
 ## 11. Security and privacy baseline
 
@@ -486,8 +508,9 @@ does not imply a Git tag, release publication, production enablement, or Sprint 
   ADR after Audit merges.
 - Define the runtime application boundary public contract before orchestration or API work.
 - Select credential-broker, destination policy, and real-adapter enablement rules before CP6.
-- Select persistence engine mapping, transaction ownership, partitioning, and retention before
-  CP7 migrations.
+- Implement the ADR-083 PostgreSQL mapping, explicit transaction ownership, logical tenant
+  partitioning, and preservation-only retention in CP7; approve any destructive retention
+  schedule separately before purge is enabled.
 - Define outbox delivery, dead-letter, and reconciliation state contracts before CP8.
 - Decide whether CP8 extends `app.runtime.ports` and `app.runtime.persistence` or receives a
   separately approved package; do not create `app.runtime.outbox` implicitly.
