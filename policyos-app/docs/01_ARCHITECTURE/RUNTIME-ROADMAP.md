@@ -13,7 +13,7 @@ state, and execution result is not a policy outcome.
 
 ## 2. Current and target state
 
-### Current state - Merged through CP4
+### Current state - Merged through CP7 and its Acceptance Gate
 
 - `app.runtime.authority`: immutable request, authority reference, permit reference, admission,
   revocation, bundle, audit-metadata, and pure validation contracts.
@@ -23,15 +23,25 @@ state, and execution result is not a policy outcome.
   optimistic revisions, append-only history, terminal states, and pure validation.
 - `app.runtime.registry`: immutable action definitions, lifecycle entries, tenant/organization-bound
   snapshots, exact resolution facts, side-effect requirements, and pure validation.
-- No runtime audit package, ports, orchestration, adapters, persistence, outbox, runtime API,
-  workers, credential broker, live provider call, or external effect exists.
+- `app.runtime.audit`: immutable append-only safe event and trail contracts with pure validation.
+- `app.runtime.ports`: implementation-neutral adapter, repository, transaction, initial outbox,
+  clock, cancellation, and credential-broker Protocols and immutable boundary contracts.
+- `app.runtime.orchestration`: governed one-call invocation and caller-supplied atomic outcome
+  coordination through Ports only.
+- `app.runtime.adapters`: deterministic fake and dry-run implementations with no external effect.
+- `app.runtime.persistence`: PostgreSQL repositories, optimistic append, initial outbox storage,
+  and local atomic State, Audit, Idempotency, and optional enqueue commit.
+- CP7 Acceptance proves the Request-to-read-back vertical slice with the production Fake Adapter
+  and PostgreSQL without changing production behavior.
+- No CP8 delivery lifecycle, claim, retry execution, dead-letter, reconciliation implementation,
+  real external adapter, runtime API, Worker, live credential resolver, or external effect exists.
 
 ### Target state - Planned
 
-The target adds immutable audit contracts, explicit ports, pure orchestration, fake/dry-run-first
-adapters, repositories and local transactions, transactional outbox and reconciliation,
-authenticated API transport, and governed workers. Each remains independently reviewable and
-cannot own authority outside its accepted boundary.
+The remaining target adds the ADR-085 delivery-contract gate, effect-level idempotency,
+transactional outbox lifecycle and reconciliation, separately approved real adapters and
+credential resolution, authenticated API transport, and governed Workers. Each remains
+independently reviewable and cannot own authority outside its accepted boundary.
 
 ## 3. Program sequence versus dependency order
 
@@ -54,6 +64,8 @@ ADR-077 fixes Audit and Ports as separate prerequisite gates before CP5. CP5-Gat
 CP5-Gate-Ports begins only after Audit merges. These gates do not renumber CP5 through CP10.
 ADR-083 adds a narrow CP7-Gate-Commit-Facts prerequisite without renumbering CP7. It supplies
 caller-bound receipt and digest facts and an injected-clock reference before Persistence begins.
+ADR-085 adds `CP8-Gate-Delivery-Contracts` without renumbering CP8. It resolves package placement
+and external-effect semantics before any delivery implementation or migration begins.
 
 ## 4. Dependency view
 
@@ -101,8 +113,9 @@ grants permission or causes automatic execution.
 | CP6 | Merged | Adapters | Deterministic fake and dry-run adapters | No external effect or credential resolution |
 | CP7-Gate-Commit-Facts | Merged | Ports receipt provenance | Caller-bound record receipts, digest and clock reference | No hidden UUID, hash, or time |
 | CP7 | Merged | Persistence | Repositories, migrations, local transactions | Storage owns no policy |
-| CP7-Acceptance | In progress | PostgreSQL vertical evidence | Fake invocation, atomic commit, exact read-back | PostgreSQL pass required; skip is not evidence |
-| CP8 | Planned | Outbox | Delivery, idempotency, dead-letter, reconciliation | No external atomicity claim |
+| CP7-Acceptance | Merged | PostgreSQL vertical evidence | Fake invocation, atomic commit, exact read-back | PostgreSQL pass required; skip is not evidence |
+| CP8-Gate-Delivery-Contracts | Planned | Outbox governance | Effect identity, lifecycle, retry, dead-letter and reconciliation contracts | No storage or external delivery |
+| CP8 | Blocked | Outbox | Delivery, idempotency, dead-letter, reconciliation | Requires CP8 contract gate; no external atomicity claim |
 | CP9 | Planned | API | Authenticated transport | No direct adapter/repository access |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -256,24 +269,46 @@ reading is part of the database transaction, then publishes the receipt only aft
 
 ## 11. Outbox, idempotency and reconciliation
 
-CP8 is a fixed program stage, but package placement is Decision required. ADR-065 and ADR-071
-assign outbox protocols to Ports and storage implementations to Persistence; they do not approve
-an `app.runtime.outbox` package. An implementation ADR must decide whether CP8 extends those
-packages or uses a separately approved package. Delivery must not bypass the
-application/orchestration boundary or adapter ports.
+ADR-085 resolves R15-07 without creating `app.runtime.outbox`. Immutable delivery contracts and
+Protocols extend `app.runtime.ports`; PostgreSQL storage extends `app.runtime.persistence`; and
+governed delivery behavior extends the existing `app.runtime.orchestration` application boundary.
+Adapters remain the only Runtime implementations that perform approved external effects. Future
+CP10 Workers call Orchestration and never access Persistence, repositories, credential brokers, or
+adapters directly.
 
-- Write idempotency is scoped by tenant, organization, action, request, plan step and revision.
-- Identical replay may return the recorded result reference; mismatched reuse fails closed.
-- A successful business effect cannot be silently repeated.
-- Retry is bounded, explicit, action-eligible and uses a new governed attempt with fresh authority
-  and permit validation. Publication, deployment, destructive, quarantine and security-control
-  actions do not retry automatically.
-- Cancellation is a distinct action/state transition and is not rollback.
-- Compensation is a separately registered action with separate authorization and permit; it is
-  not guaranteed rollback.
-- Dead-letter records retain safe bounded failure and attempt references.
-- Reconciliation records ambiguity by comparing local state, delivery attempts, adapter result
-  references and authorized external observations; it never invents success.
+CP8 remains blocked until the separate `CP8-Gate-Delivery-Contracts` review unit merges with green
+CI. That gate defines effect identity, reference-only delivery envelopes, the closed lifecycle,
+claims, leases, attempts, retry decisions, dead-letter, reconciliation, Protocols, pure validation,
+and architecture tests. It creates no SQLAlchemy model, migration, dispatcher, queue, Worker, API,
+network call, retry loop, or external effect.
+
+- Effect-level idempotency uses one caller-supplied stable effect identity across attempts. Its
+  tenant, organization, request, plan step, action, destination, payload reference and digest,
+  classification, lineage, and idempotency key cannot change. Attempt identity is explicitly
+  excluded from effect-level uniqueness.
+- Identical replay may return the recorded effect or result reference; mismatched effect or
+  idempotency reuse fails closed.
+- The local initial enqueue, State, Audit, and attempt-level Idempotency facts commit atomically.
+  PostgreSQL uniqueness and optimistic revisions protect local effects and lifecycle facts.
+- External effects are not transactionally atomic with PostgreSQL. PolicyOS makes no global
+  exactly-once business-effect claim and uses no distributed or two-phase commit.
+- Delivery is evidence-aware. A definitely-not-delivered failure may enter a bounded governed
+  retry path; acknowledgement loss or unknown destination state becomes explicit ambiguity and
+  does not retry automatically.
+- Retry is explicit, action-eligible, attempt-bounded, eligible-time-bound, and uses a new governed
+  attempt with fresh authority, permit, cancellation, deadline, and credential validation.
+  Publication, deployment, destructive, quarantine, legal-hold, access-control, credential, and
+  security-control actions do not retry automatically.
+- One effect has at most one active unexpired local claim. A claim or lease is concurrency metadata
+  and grants no authority, permit, credential, retry, or effect permission.
+- Dead-letter records are terminal append-only facts with safe bounded failure and attempt
+  references. CP8 performs no automatic redrive.
+- Reconciliation records only confirmed delivered, confirmed not delivered, still ambiguous, or
+  observation unavailable. It compares authorized external observations with immutable local
+  evidence and never invents success.
+- Cancellation is a distinct action/state transition and is not rollback. Compensation is a
+  separately registered action with separate authorization and permit and is not guaranteed
+  rollback.
 
 ## 12. API and worker authority limits
 
@@ -354,9 +389,10 @@ decisions. ADR-065 remains canonical: Registry, Audit, and Ports are inputs to O
 Planning and Registry remain independent under ADR-076. Audit and Ports are separate prerequisite
 gates and each requires its own implementation ADR and merged PR.
 
-The exact Audit event surface, Ports protocol surface, and CP5 application-boundary contract still
-require their gate-specific implementation ADRs. CP8 package placement remains Decision required
-because existing ADRs approve outbox protocols and persistence responsibilities but not a
-dedicated package. CP9 routes remain in `app.api`, and workers remain external entry points unless
-superseding ADRs approve different placement. Roadmap documentation does not resolve or supersede
-those later decisions.
+ADR-078, ADR-079, and ADR-081 define the merged Audit, Ports, and Orchestration surfaces. ADR-085
+resolves CP8 package placement and external-effect semantics: Ports own contracts, Persistence owns
+storage, Orchestration owns governed delivery coordination, Adapters own exact effects, and no
+`app.runtime.outbox` package is approved. CP8 implementation remains blocked until
+`CP8-Gate-Delivery-Contracts` merges. CP9 routes remain in `app.api`, and Workers remain external
+entry points unless superseding ADRs approve different placement. Roadmap documentation does not
+resolve or supersede those later decisions.
