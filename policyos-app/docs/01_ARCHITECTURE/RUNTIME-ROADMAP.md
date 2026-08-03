@@ -100,7 +100,8 @@ grants permission or causes automatic execution.
 | CP5 | Merged | Orchestration | Pure governed coordination | Requires Registry, Audit, and Ports |
 | CP6 | Merged | Adapters | Deterministic fake and dry-run adapters | No external effect or credential resolution |
 | CP7-Gate-Commit-Facts | Merged | Ports receipt provenance | Caller-bound record receipts, digest and clock reference | No hidden UUID, hash, or time |
-| CP7 | In progress | Persistence | Repositories, migrations, local transactions | Storage owns no policy |
+| CP7 | Merged | Persistence | Repositories, migrations, local transactions | Storage owns no policy |
+| CP7-Acceptance | In progress | PostgreSQL vertical evidence | Fake invocation, atomic commit, exact read-back | PostgreSQL pass required; skip is not evidence |
 | CP8 | Planned | Outbox | Delivery, idempotency, dead-letter, reconciliation | No external atomicity claim |
 | CP9 | Planned | API | Authenticated transport | No direct adapter/repository access |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
