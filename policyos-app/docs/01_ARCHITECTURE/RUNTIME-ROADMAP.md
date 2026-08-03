@@ -99,8 +99,8 @@ grants permission or causes automatic execution.
 | CP5-Gate-Ports | Merged | Ports | Adapter/repository/outbox/clock/broker protocols | Protocols have no implementation |
 | CP5 | Merged | Orchestration | Pure governed coordination | Requires Registry, Audit, and Ports |
 | CP6 | Merged | Adapters | Deterministic fake and dry-run adapters | No external effect or credential resolution |
-| CP7-Gate-Commit-Facts | Required before CP7 | Ports receipt provenance | Caller-bound record receipts, digest and clock reference | No hidden UUID, hash, or time |
-| CP7 | Planned | Persistence | Repositories, migrations, local transactions | Storage owns no policy |
+| CP7-Gate-Commit-Facts | Merged | Ports receipt provenance | Caller-bound record receipts, digest and clock reference | No hidden UUID, hash, or time |
+| CP7 | In progress | Persistence | Repositories, migrations, local transactions | Storage owns no policy |
 | CP8 | Planned | Outbox | Delivery, idempotency, dead-letter, reconciliation | No external atomicity claim |
 | CP9 | Planned | API | Authenticated transport | No direct adapter/repository access |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
@@ -250,7 +250,8 @@ Repository write requests carry their exact receipt identifiers. Atomic write se
 record receipt facts, a transaction receipt identifier, a transaction digest reference, and an
 injected clock reference. Persistence echoes and stores those facts and observes commit time from
 the named clock Port; it does not invent identifiers, digests, State, Audit, Idempotency, or
-Outbox facts.
+Outbox facts. ADR-084 samples and validates that injected clock at the commit boundary so the exact
+reading is part of the database transaction, then publishes the receipt only after commit succeeds.
 
 ## 11. Outbox, idempotency and reconciliation
 

@@ -278,7 +278,7 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP7-Gate-Commit-Facts - Persistence receipt provenance
 
-- **Status:** Required CP7 prerequisite.
+- **Status:** Merged.
 - **Purpose:** Close the repository and transaction receipt-provenance gap before a production
   Persistence implementation can generate or infer hidden identifiers, digests, or time.
 - **Entry conditions:** CP6 fake/dry-run adapters merged; Ports and Orchestration contracts stable;
@@ -299,7 +299,7 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP7 - Runtime Persistence
 
-- **Status:** Planned.
+- **Status:** In progress.
 - **Purpose:** Implement approved repository ports and a local transaction boundary for validated
   runtime facts.
 - **Entry conditions:** CP7-Gate-Commit-Facts merged; CP5 ports stable; CP6 boundaries reviewed;
@@ -431,6 +431,7 @@ contradiction requires a superseding ADR; roadmap prose alone cannot supersede a
 | R15-06 | Deferred | Queue, lease, scheduling, and worker operational model are unspecified. | Decide before CP10 implementation. |
 | R15-07 | Decision required | CP8 is a fixed program stage, but no accepted ADR approves a dedicated outbox package. | Decide whether CP8 extends Ports/Persistence or uses a separately approved package before implementation. |
 | R15-08 | Resolved by ADR-083 | Repository and transaction outputs required receipt IDs, digest, and time that were absent from their inputs. | Carry exact caller-supplied receipt and digest facts in the Ports contracts and bind commit time to an injected clock reference. |
+| R15-09 | Resolved by ADR-084 | Sampling the injected clock only after commit could not persist the same timestamp atomically and could report failure after durable storage. | Validate and persist one injected-clock reading at the commit boundary; publish the receipt only after the database commit succeeds. |
 
 ## 11. Security and privacy baseline
 

@@ -12,6 +12,22 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    env:
+      POLICYOS_TEST_DATABASE_URL: postgresql+asyncpg://policyos_test:policyos_test@localhost:5432/policyos_test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: policyos_test
+          POSTGRES_PASSWORD: policyos_test
+          POSTGRES_USER: policyos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U policyos_test -d policyos_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: policyos-app

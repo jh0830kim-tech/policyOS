@@ -476,7 +476,11 @@ def test_bundle_rejects_orphan_admission_reference() -> None:
 
 def test_production_boundary_has_no_runtime_or_issuance_implementation() -> None:
     root = ROOT / "app" / "runtime"
-    sources = "\n".join(path.read_text(encoding="utf-8") for path in root.rglob("*.py"))
+    sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in root.rglob("*.py")
+        if "persistence" not in path.parts
+    )
     forbidden = (
         "datetime.now",
         "datetime.utcnow",
@@ -500,7 +504,6 @@ def test_production_boundary_has_no_runtime_or_issuance_implementation() -> None
     assert not any(
         (root / name).exists()
         for name in (
-            "persistence",
             "api",
             "workers",
             "scheduler",
