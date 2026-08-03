@@ -299,7 +299,7 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP7 - Runtime Persistence
 
-- **Status:** In progress.
+- **Status:** Merged.
 - **Purpose:** Implement approved repository ports and a local transaction boundary for validated
   runtime facts.
 - **Entry conditions:** CP7-Gate-Commit-Facts merged; CP5 ports stable; CP6 boundaries reviewed;
@@ -317,6 +317,24 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 - **Handoff:** CP8 may add transactional outbox and delivery/reconciliation machinery.
 - **Excluded:** External atomicity claims, outbox dispatch, adapters called from repositories,
   API, workers, automatic lifecycle progression, and cross-tenant fallback.
+
+### CP7 Runtime Acceptance Gate
+
+- **Status:** In progress.
+- **Purpose:** Prove the merged CP0-CP7 layers as one PostgreSQL-backed vertical slice before CP8.
+- **Entry conditions:** CP7 merged; PostgreSQL 16 integration environment available; production
+  Fake Adapter, Orchestration, repository, and transaction implementations unchanged.
+- **Allowed outputs:** PostgreSQL acceptance tests, test-only fixtures, operational evidence, and
+  narrow Program/Roadmap status updates.
+- **Security gates:** Exact tenant and classification scope; explicit State and Audit revisions;
+  no direct ORM seeding of governed heads in the success scenario; no external I/O; no hidden
+  identifier, digest, clock, authority, or lifecycle generation.
+- **Verification:** Request through Result read-back; wrong-tenant absence; exact injected-clock
+  counts; mid-transaction conflict rollback; CP0-CP7 regressions; full clean CI.
+- **Completion:** Both PostgreSQL acceptance tests pass without skip and the dedicated PR merges
+  with green CI.
+- **Excluded:** Production code changes, result atomicity claims, CP8 delivery, API, workers,
+  provider/model/MCP/connector calls, tags, releases, and version changes.
 
 ### CP8 - Runtime Outbox
 
