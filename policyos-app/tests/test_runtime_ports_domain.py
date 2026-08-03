@@ -64,12 +64,16 @@ from app.runtime.ports import (
     RuntimePortErrorCode,
     RuntimePortFailure,
     RuntimePortReferenceError,
+    RuntimePortRevisionError,
     RuntimePortScope,
     RuntimePortTransactionError,
     RuntimeRepositoryWriteReceipt,
     RuntimeRepositoryWriteRequest,
+    RuntimeTransactionCommitFacts,
     RuntimeTransactionPort,
     RuntimeTransactionReceipt,
+    RuntimeTransactionRecordReceiptFact,
+    RuntimeTransactionRecordType,
     validate_runtime_adapter_invocation_envelope,
     validate_runtime_adapter_invocation_result,
     validate_runtime_atomic_write_set,
@@ -280,6 +284,7 @@ def upstream_facts():
         registry_revision=4,
     )
     state = RuntimeExecutionStateRecord.model_construct(
+        runtime_execution_state_record_id=uid(15),
         scope=state_scope,
         initial_state=RuntimeExecutionState.REQUESTED,
         current_revision=8,
@@ -550,6 +555,7 @@ def test_adapter_result_is_bounded_and_exact() -> None:
 def test_repository_write_revision_and_receipt_are_exact() -> None:
     request = RuntimeRepositoryWriteRequest(
         runtime_repository_write_request_id=uid(90),
+        runtime_repository_write_receipt_id=uid(92),
         record_id=uid(91),
         tenant_id=uid(10),
         organization_id=uid(11),
@@ -571,6 +577,13 @@ def test_repository_write_revision_and_receipt_are_exact() -> None:
         stored_at=NOW + timedelta(seconds=1),
     )
     assert validate_runtime_repository_write_receipt(request, receipt) is receipt
+    with pytest.raises(RuntimePortRevisionError):
+        validate_runtime_repository_write_receipt(
+            request,
+            receipt.model_copy(
+                update={"runtime_repository_write_receipt_id": uid(93)}
+            ),
+        )
     with pytest.raises(ValidationError):
         RuntimeRepositoryWriteRequest(
             **{**request.model_dump(), "resulting_revision": 9}
@@ -675,14 +688,44 @@ def test_outbox_contract_is_enqueue_only_and_starts_at_revision_one() -> None:
 
 def test_atomic_write_set_and_transaction_receipt_are_exact() -> None:
     _, _, state, _, _, audit = upstream_facts()
+    item_reservation = reservation()
+    commit_facts = RuntimeTransactionCommitFacts(
+        runtime_transaction_receipt_id=uid(131),
+        record_receipts=(
+            RuntimeTransactionRecordReceiptFact(
+                record_type=RuntimeTransactionRecordType.EXECUTION_STATE,
+                record_id=state.runtime_execution_state_record_id,
+                runtime_repository_write_receipt_id=uid(132),
+                record_revision=state.current_revision,
+                record_digest_reference="state-record-digest",
+            ),
+            RuntimeTransactionRecordReceiptFact(
+                record_type=RuntimeTransactionRecordType.AUDIT_TRAIL,
+                record_id=audit.runtime_audit_trail_id,
+                runtime_repository_write_receipt_id=uid(133),
+                record_revision=audit.trail_revision,
+                record_digest_reference=audit.trail_digest_reference,
+            ),
+            RuntimeTransactionRecordReceiptFact(
+                record_type=RuntimeTransactionRecordType.IDEMPOTENCY_RESERVATION,
+                record_id=item_reservation.runtime_idempotency_reservation_id,
+                runtime_repository_write_receipt_id=uid(134),
+                record_revision=1,
+                record_digest_reference=item_reservation.reservation_digest_reference,
+            ),
+        ),
+        transaction_digest_reference="transaction-digest",
+        clock_reference="clock.persistence",
+    )
     write_set = RuntimeAtomicWriteSet(
         runtime_transaction_id=uid(130),
         contract_version=contract(),
         state_record=state,
         audit_trail=audit,
-        idempotency_reservation=reservation(),
+        idempotency_reservation=item_reservation,
         expected_state_revision=7,
         expected_audit_revision=1,
+        commit_facts=commit_facts,
         requested_at=NOW + timedelta(seconds=2),
     )
     assert validate_runtime_atomic_write_set(write_set) is write_set
@@ -692,14 +735,73 @@ def test_atomic_write_set_and_transaction_receipt_are_exact() -> None:
         state_record_revision=8,
         audit_trail_revision=2,
         idempotency_reservation_id=uid(70),
-        persisted_record_receipt_ids=(uid(132), uid(133)),
+        persisted_record_receipt_ids=(uid(132), uid(133), uid(134)),
         transaction_digest_reference="transaction-digest",
+        clock_reference="clock.persistence",
         committed_at=NOW + timedelta(seconds=3),
     )
     assert validate_runtime_transaction_receipt(write_set, receipt) is receipt
     with pytest.raises(RuntimePortTransactionError):
         validate_runtime_transaction_receipt(
             write_set, receipt.model_copy(update={"audit_trail_revision": 3})
+        )
+    with pytest.raises(RuntimePortTransactionError):
+        validate_runtime_transaction_receipt(
+            write_set, receipt.model_copy(update={"clock_reference": "clock.other"})
+        )
+    substituted = commit_facts.record_receipts[0].model_copy(
+        update={"record_id": uid(999)}
+    )
+    with pytest.raises(RuntimePortTransactionError):
+        validate_runtime_atomic_write_set(
+            write_set.model_copy(
+                update={
+                    "commit_facts": commit_facts.model_copy(
+                        update={
+                            "record_receipts": (
+                                substituted,
+                                *commit_facts.record_receipts[1:],
+                            )
+                        }
+                    )
+                }
+            )
+        )
+
+
+def test_transaction_commit_facts_reject_noncanonical_or_duplicate_bindings() -> None:
+    state_fact = RuntimeTransactionRecordReceiptFact(
+        record_type=RuntimeTransactionRecordType.EXECUTION_STATE,
+        record_id=uid(140),
+        runtime_repository_write_receipt_id=uid(142),
+        record_revision=1,
+        record_digest_reference="state-digest",
+    )
+    audit_fact = RuntimeTransactionRecordReceiptFact(
+        record_type=RuntimeTransactionRecordType.AUDIT_TRAIL,
+        record_id=uid(141),
+        runtime_repository_write_receipt_id=uid(143),
+        record_revision=1,
+        record_digest_reference="audit-digest",
+    )
+    with pytest.raises(ValidationError):
+        RuntimeTransactionCommitFacts(
+            runtime_transaction_receipt_id=uid(144),
+            record_receipts=(audit_fact, state_fact),
+            transaction_digest_reference="transaction-digest",
+            clock_reference="clock.persistence",
+        )
+    with pytest.raises(ValidationError):
+        RuntimeTransactionCommitFacts(
+            runtime_transaction_receipt_id=uid(144),
+            record_receipts=(
+                state_fact,
+                audit_fact.model_copy(
+                    update={"record_type": RuntimeTransactionRecordType.EXECUTION_STATE}
+                ),
+            ),
+            transaction_digest_reference="transaction-digest",
+            clock_reference="clock.persistence",
         )
 
 
@@ -756,6 +858,7 @@ def test_public_exports_are_explicit_immutable_tuple() -> None:
     assert isinstance(ports.__all__, tuple)
     assert len(ports.__all__) == len(set(ports.__all__))
     assert "RuntimeAdapterPort" in ports.__all__
+    assert "RuntimeTransactionCommitFacts" in ports.__all__
     assert "RuntimeTransactionPort" in ports.__all__
     assert "RuntimeOutboxRepository" in ports.__all__
 
@@ -799,6 +902,8 @@ def test_ports_have_no_downstream_or_infrastructure_imports_or_sensitive_fields(
             RuntimeCredentialLeaseReference,
             RuntimeInvocationPolicyBinding,
             RuntimeOutboxEnqueueRecord,
+            RuntimeTransactionCommitFacts,
+            RuntimeTransactionRecordReceiptFact,
         )
         for name in model.model_fields
     }

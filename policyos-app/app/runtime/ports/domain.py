@@ -42,6 +42,13 @@ class RuntimeInvocationStatus(StrEnum):
     AMBIGUOUS = "ambiguous"
 
 
+class RuntimeTransactionRecordType(StrEnum):
+    EXECUTION_STATE = "execution_state"
+    AUDIT_TRAIL = "audit_trail"
+    IDEMPOTENCY_RESERVATION = "idempotency_reservation"
+    OUTBOX_ENQUEUE = "outbox_enqueue"
+
+
 class RuntimePortErrorCode(StrEnum):
     UNAVAILABLE = "unavailable"
     CONFLICT = "conflict"
@@ -263,6 +270,7 @@ class RuntimeRepositoryReadRequest(RuntimePortModel):
 
 class RuntimeRepositoryWriteRequest(RuntimePortModel):
     runtime_repository_write_request_id: UUID
+    runtime_repository_write_receipt_id: UUID
     record_id: UUID
     tenant_id: UUID
     organization_id: UUID
@@ -358,6 +366,42 @@ class RuntimeOutboxEnqueueRecord(RuntimePortModel):
         return self
 
 
+class RuntimeTransactionRecordReceiptFact(RuntimePortModel):
+    record_type: RuntimeTransactionRecordType
+    record_id: UUID
+    runtime_repository_write_receipt_id: UUID
+    record_revision: PositiveInt
+    record_digest_reference: BoundedId
+
+
+class RuntimeTransactionCommitFacts(RuntimePortModel):
+    runtime_transaction_receipt_id: UUID
+    record_receipts: tuple[RuntimeTransactionRecordReceiptFact, ...]
+    transaction_digest_reference: BoundedId
+    clock_reference: BoundedId
+
+    @field_validator("record_receipts")
+    @classmethod
+    def canonical_record_receipts(
+        cls,
+        value: tuple[RuntimeTransactionRecordReceiptFact, ...],
+    ) -> tuple[RuntimeTransactionRecordReceiptFact, ...]:
+        if not value or not canonical(
+            value,
+            key=lambda item: str(item.runtime_repository_write_receipt_id),
+        ):
+            raise ValueError(
+                "transaction record receipts must be non-empty, unique, and canonical"
+            )
+        record_types = tuple(item.record_type for item in value)
+        record_ids = tuple(item.record_id for item in value)
+        if len(record_types) != len(set(record_types)) or len(record_ids) != len(
+            set(record_ids)
+        ):
+            raise ValueError("transaction record receipt bindings must be unique")
+        return value
+
+
 class RuntimeAtomicWriteSet(RuntimePortModel):
     runtime_transaction_id: UUID
     contract_version: RuntimePortContractVersion
@@ -367,6 +411,7 @@ class RuntimeAtomicWriteSet(RuntimePortModel):
     outbox_enqueue_record: RuntimeOutboxEnqueueRecord | None = None
     expected_state_revision: PositiveInt
     expected_audit_revision: PositiveInt
+    commit_facts: RuntimeTransactionCommitFacts
     requested_at: datetime
 
     @field_validator("requested_at")
@@ -384,6 +429,7 @@ class RuntimeTransactionReceipt(RuntimePortModel):
     outbox_enqueue_record_id: UUID | None = None
     persisted_record_receipt_ids: tuple[UUID, ...]
     transaction_digest_reference: BoundedId
+    clock_reference: BoundedId
     committed_at: datetime
 
     @field_validator("persisted_record_receipt_ids")

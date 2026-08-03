@@ -53,7 +53,10 @@ from app.runtime.ports import (
     RuntimeInvocationStatus,
     RuntimePortContractVersion,
     RuntimePortScope,
+    RuntimeTransactionCommitFacts,
     RuntimeTransactionReceipt,
+    RuntimeTransactionRecordReceiptFact,
+    RuntimeTransactionRecordType,
 )
 from app.runtime.registry import (
     RuntimeActionAdapterReference,
@@ -680,6 +683,34 @@ def commit_request(invocation, outcome):
         reservation_digest_reference="reservation-digest",
         reserved_at=success.occurred_at,
     )
+    commit_facts = RuntimeTransactionCommitFacts(
+        runtime_transaction_receipt_id=uid(99920),
+        record_receipts=(
+            RuntimeTransactionRecordReceiptFact(
+                record_type=RuntimeTransactionRecordType.EXECUTION_STATE,
+                record_id=final_state.runtime_execution_state_record_id,
+                runtime_repository_write_receipt_id=uid(99921),
+                record_revision=final_state.current_revision,
+                record_digest_reference="state-record-digest",
+            ),
+            RuntimeTransactionRecordReceiptFact(
+                record_type=RuntimeTransactionRecordType.AUDIT_TRAIL,
+                record_id=audit.runtime_audit_trail_id,
+                runtime_repository_write_receipt_id=uid(99922),
+                record_revision=audit.trail_revision,
+                record_digest_reference=audit.trail_digest_reference,
+            ),
+            RuntimeTransactionRecordReceiptFact(
+                record_type=RuntimeTransactionRecordType.IDEMPOTENCY_RESERVATION,
+                record_id=reservation.runtime_idempotency_reservation_id,
+                runtime_repository_write_receipt_id=uid(99923),
+                record_revision=1,
+                record_digest_reference=reservation.reservation_digest_reference,
+            ),
+        ),
+        transaction_digest_reference="transaction-digest",
+        clock_reference="clock.persistence",
+    )
     requested_at = success.occurred_at + timedelta(seconds=1)
     write_set = RuntimeAtomicWriteSet(
         runtime_transaction_id=uid(99902),
@@ -689,6 +720,7 @@ def commit_request(invocation, outcome):
         idempotency_reservation=reservation,
         expected_state_revision=invocation.state.current_revision,
         expected_audit_revision=invocation.audit_trail.trail_revision,
+        commit_facts=commit_facts,
         requested_at=requested_at,
     )
     return RuntimeOrchestrationCommitRequest(
@@ -831,15 +863,23 @@ async def test_caller_supplied_state_audit_and_idempotency_commit_atomically() -
     invocation, _, outcome = await invoke_successfully()
     request = commit_request(invocation, outcome)
     receipt = RuntimeTransactionReceipt(
-        runtime_transaction_receipt_id=uid(99920),
+        runtime_transaction_receipt_id=(
+            request.write_set.commit_facts.runtime_transaction_receipt_id
+        ),
         runtime_transaction_id=request.write_set.runtime_transaction_id,
         state_record_revision=request.write_set.state_record.current_revision,
         audit_trail_revision=request.write_set.audit_trail.trail_revision,
         idempotency_reservation_id=(
             request.write_set.idempotency_reservation.runtime_idempotency_reservation_id
         ),
-        persisted_record_receipt_ids=(uid(99921),),
-        transaction_digest_reference="transaction-digest",
+        persisted_record_receipt_ids=tuple(
+            item.runtime_repository_write_receipt_id
+            for item in request.write_set.commit_facts.record_receipts
+        ),
+        transaction_digest_reference=(
+            request.write_set.commit_facts.transaction_digest_reference
+        ),
+        clock_reference=request.write_set.commit_facts.clock_reference,
         committed_at=request.requested_at + timedelta(seconds=1),
     )
     transaction = FakeTransaction(receipt)

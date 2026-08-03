@@ -22,6 +22,7 @@ from app.runtime.ports.domain import (
     RuntimeRepositoryWriteReceipt,
     RuntimeRepositoryWriteRequest,
     RuntimeTransactionReceipt,
+    RuntimeTransactionRecordType,
 )
 from app.runtime.ports.errors import (
     RuntimePortAdapterError,
@@ -434,6 +435,7 @@ def validate_runtime_repository_write_receipt(
     receipt: RuntimeRepositoryWriteReceipt,
 ) -> RuntimeRepositoryWriteReceipt:
     if (
+        receipt.runtime_repository_write_receipt_id,
         receipt.runtime_repository_write_request_id,
         receipt.record_id,
         receipt.record_revision,
@@ -441,6 +443,7 @@ def validate_runtime_repository_write_receipt(
         receipt.tenant_id,
         receipt.organization_id,
     ) != (
+        request.runtime_repository_write_receipt_id,
         request.runtime_repository_write_request_id,
         request.record_id,
         request.resulting_revision,
@@ -642,7 +645,81 @@ def validate_runtime_atomic_write_set(write_set: RuntimeAtomicWriteSet) -> Runti
         times.append(outbox.enqueued_at)
     if write_set.requested_at < max(times):
         raise RuntimePortTimestampError("atomic write request predates contained facts")
+    _validate_runtime_transaction_commit_facts(write_set)
     return write_set
+
+
+def _validate_runtime_transaction_commit_facts(write_set: RuntimeAtomicWriteSet) -> None:
+    state = write_set.state_record
+    audit = write_set.audit_trail
+    reservation = write_set.idempotency_reservation
+    outbox = write_set.outbox_enqueue_record
+    records = {item.record_type: item for item in write_set.commit_facts.record_receipts}
+    expected_types = {
+        RuntimeTransactionRecordType.EXECUTION_STATE,
+        RuntimeTransactionRecordType.AUDIT_TRAIL,
+        RuntimeTransactionRecordType.IDEMPOTENCY_RESERVATION,
+    }
+    if outbox is not None:
+        expected_types.add(RuntimeTransactionRecordType.OUTBOX_ENQUEUE)
+    if set(records) != expected_types:
+        raise RuntimePortTransactionError(
+            "transaction commit facts do not bind the exact atomic record set"
+        )
+
+    state_receipt = records[RuntimeTransactionRecordType.EXECUTION_STATE]
+    if (state_receipt.record_id, state_receipt.record_revision) != (
+        state.runtime_execution_state_record_id,
+        state.current_revision,
+    ):
+        raise RuntimePortTransactionError(
+            "transaction state receipt fact differs from the atomic state record"
+        )
+
+    audit_receipt = records[RuntimeTransactionRecordType.AUDIT_TRAIL]
+    if (
+        audit_receipt.record_id,
+        audit_receipt.record_revision,
+        audit_receipt.record_digest_reference,
+    ) != (
+        audit.runtime_audit_trail_id,
+        audit.trail_revision,
+        audit.trail_digest_reference,
+    ):
+        raise RuntimePortTransactionError(
+            "transaction audit receipt fact differs from the atomic audit trail"
+        )
+
+    reservation_receipt = records[
+        RuntimeTransactionRecordType.IDEMPOTENCY_RESERVATION
+    ]
+    if (
+        reservation_receipt.record_id,
+        reservation_receipt.record_revision,
+        reservation_receipt.record_digest_reference,
+    ) != (
+        reservation.runtime_idempotency_reservation_id,
+        1,
+        reservation.reservation_digest_reference,
+    ):
+        raise RuntimePortTransactionError(
+            "transaction idempotency receipt fact differs from the reservation"
+        )
+
+    if outbox is not None:
+        outbox_receipt = records[RuntimeTransactionRecordType.OUTBOX_ENQUEUE]
+        if (
+            outbox_receipt.record_id,
+            outbox_receipt.record_revision,
+            outbox_receipt.record_digest_reference,
+        ) != (
+            outbox.runtime_outbox_enqueue_record_id,
+            outbox.outbox_revision,
+            outbox.enqueue_digest_reference,
+        ):
+            raise RuntimePortTransactionError(
+                "transaction outbox receipt fact differs from the enqueue record"
+            )
 
 
 def validate_runtime_transaction_receipt(
@@ -656,17 +733,28 @@ def validate_runtime_transaction_receipt(
         else None
     )
     if (
+        receipt.runtime_transaction_receipt_id,
         receipt.runtime_transaction_id,
         receipt.state_record_revision,
         receipt.audit_trail_revision,
         receipt.idempotency_reservation_id,
         receipt.outbox_enqueue_record_id,
+        receipt.persisted_record_receipt_ids,
+        receipt.transaction_digest_reference,
+        receipt.clock_reference,
     ) != (
+        write_set.commit_facts.runtime_transaction_receipt_id,
         write_set.runtime_transaction_id,
         write_set.state_record.current_revision,
         write_set.audit_trail.trail_revision,
         write_set.idempotency_reservation.runtime_idempotency_reservation_id,
         outbox_id,
+        tuple(
+            item.runtime_repository_write_receipt_id
+            for item in write_set.commit_facts.record_receipts
+        ),
+        write_set.commit_facts.transaction_digest_reference,
+        write_set.commit_facts.clock_reference,
     ):
         raise RuntimePortTransactionError("transaction receipt differs from atomic write set")
     if receipt.committed_at < write_set.requested_at:
