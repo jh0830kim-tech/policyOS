@@ -1,10 +1,11 @@
-"""Sprint 15 governed runtime layers through CP6 deterministic adapters."""
+"""Sprint 15 governed runtime layers through CP7 persistence."""
 
 from app.runtime import (
     adapters,
     audit,
     authority,
     orchestration,
+    persistence,
     planning,
     ports,
     registry,
@@ -16,6 +17,7 @@ __all__ = (
     "audit",
     "authority",
     "orchestration",
+    "persistence",
     "planning",
     "ports",
     "registry",

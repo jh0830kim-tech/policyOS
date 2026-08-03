@@ -30,14 +30,14 @@ def test_cp0_architecture_documents_exist() -> None:
     assert RULES.is_file()
 
 
-def test_cp7_commit_facts_gate_decision_exists_without_persistence_implementation() -> None:
+def test_cp7_commit_facts_gate_and_persistence_decisions_exist() -> None:
     decision = ADR / "ADR-083-CALLER-SUPPLIED-RUNTIME-PERSISTENCE-COMMIT-FACTS.md"
     assert decision.is_file()
     text = decision.read_text(encoding="utf-8")
     assert "CP7-Gate-Commit-Facts" in text
     assert "runtime_repository_write_receipt_id" in text
     assert "preservation-only" in text
-    assert not (ROOT / "app" / "runtime" / "persistence").exists()
+    assert (ADR / "ADR-084-POSTGRESQL-RUNTIME-PERSISTENCE-IMPLEMENTATION.md").is_file()
 
 
 def test_normative_runtime_boundaries_are_frozen() -> None:
@@ -65,7 +65,7 @@ def test_sprint14_packages_have_no_runtime_reverse_imports() -> None:
             assert "app.runtime" not in source.read_text(encoding="utf-8")
 
 
-def test_runtime_contains_only_layers_through_cp6_adapters() -> None:
+def test_runtime_contains_only_layers_through_cp7_persistence() -> None:
     runtime = ROOT / "app" / "runtime"
     assert (runtime / "authority").is_dir()
     assert (runtime / "planning").is_dir()
@@ -75,10 +75,10 @@ def test_runtime_contains_only_layers_through_cp6_adapters() -> None:
     assert (runtime / "ports").is_dir()
     assert (runtime / "orchestration").is_dir()
     assert (runtime / "adapters").is_dir()
+    assert (runtime / "persistence").is_dir()
     assert not any(
         (runtime / name).exists()
         for name in (
-            "persistence",
             "api",
             "workers",
             "scheduler",
