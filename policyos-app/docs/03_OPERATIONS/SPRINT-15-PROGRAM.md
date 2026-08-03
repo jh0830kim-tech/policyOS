@@ -6,7 +6,7 @@ This document is the operational control plane for the Sprint 15 Runtime program
 checkpoint work, defines evidence required to enter and complete each checkpoint, and prevents a
 later runtime layer from being implemented before its dependencies and governance decisions are
 ready. It does not supersede `AGENTS.md`, the normative Sprint 15 Runtime Architecture Rules, or
-ADR-065 through ADR-077. A conflict is recorded under Governance decisions and resolved
+ADR-065 through ADR-085. A conflict is recorded under Governance decisions and resolved
 before implementation through the appropriate governance change.
 
 Status terms are used precisely:
@@ -46,7 +46,7 @@ revalidated immediately before the effect.
 
 ## 4. Current baseline
 
-The baseline is `main` after merged PR #39.
+The baseline is `main` after merged CP7 Runtime Acceptance PR #48.
 
 | Checkpoint | Status | Evidence |
 | --- | --- | --- |
@@ -55,15 +55,22 @@ The baseline is `main` after merged PR #39.
 | CP2 Execution Planning | Merged | `app.runtime.planning`, ADR-074, focused planning tests. |
 | CP3 Execution State | Merged | `app.runtime.state`, ADR-075, PR #37, focused state tests. |
 | CP4 Runtime Registry | Merged | `app.runtime.registry`, ADR-076, PR #39, focused registry tests. |
-| CP5-Gate-Audit | Planned | Approved review unit; implementation not present. |
-| CP5-Gate-Ports | Blocked | Starts only after CP5-Gate-Audit merges. |
-| CP5 Runtime Orchestration | Blocked | Requires both prerequisite gates to merge. |
-| CP6 through CP10 | Planned | No corresponding runtime implementation is present. |
+| CP5-Gate-Audit | Merged | `app.runtime.audit`, ADR-078, focused audit tests. |
+| CP5-Gate-Ports | Merged | `app.runtime.ports`, ADR-079 and ADR-080, focused Ports tests. |
+| CP5 Runtime Orchestration | Merged | `app.runtime.orchestration`, ADR-081, focused Orchestration tests. |
+| CP6 Runtime Adapters | Merged | `app.runtime.adapters`, ADR-082, fake and dry-run tests. |
+| CP7-Gate-Commit-Facts | Merged | Caller-supplied receipt, digest, and clock facts, ADR-083. |
+| CP7 Runtime Persistence | Merged | `app.runtime.persistence`, ADR-084, PostgreSQL integration tests. |
+| CP7 Runtime Acceptance | Merged | PR #48 PostgreSQL vertical acceptance, no production-code change. |
+| CP8-Gate-Delivery-Contracts | Planned | ADR-085 governance approved; contract implementation pending. |
+| CP8 Runtime Outbox | Blocked | Starts only after CP8-Gate-Delivery-Contracts merges. |
+| CP9 and CP10 | Planned | Runtime API and Worker implementation are not present. |
 
-The current runtime is immutable metadata and pure validation only. It has Authority, Planning,
-State, and Registry packages. It has no runtime Audit package, Ports, Orchestration, adapter,
-persistence, outbox, runtime API, worker, live provider invocation, credential resolution, or
-external side effect.
+The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
+governed Orchestration; deterministic fake and dry-run Adapters; PostgreSQL Persistence; and a
+PostgreSQL vertical acceptance gate. It has initial outbox enqueue storage but no CP8 delivery
+lifecycle, claim, retry execution, dead-letter, reconciliation, real external adapter, runtime API,
+Worker, live credential resolution, or external side effect.
 
 ## 5. Program work structure
 
@@ -320,7 +327,7 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP7 Runtime Acceptance Gate
 
-- **Status:** In progress.
+- **Status:** Merged.
 - **Purpose:** Prove the merged CP0-CP7 layers as one PostgreSQL-backed vertical slice before CP8.
 - **Entry conditions:** CP7 merged; PostgreSQL 16 integration environment available; production
   Fake Adapter, Orchestration, repository, and transaction implementations unchanged.
@@ -336,30 +343,70 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 - **Excluded:** Production code changes, result atomicity claims, CP8 delivery, API, workers,
   provider/model/MCP/connector calls, tags, releases, and version changes.
 
-### CP8 - Runtime Outbox
+### CP8-Gate-Delivery-Contracts
 
 - **Status:** Planned.
-- **Package placement:** Decision required. CP8 is a fixed program stage, but accepted ADRs do not
-  approve an `app.runtime.outbox` package. An implementation ADR must decide whether CP8 extends
-  `app.runtime.ports` and `app.runtime.persistence` or uses a separately named package. CP8 must
-  not create `app.runtime.outbox` without that approval.
+- **Purpose:** Implement the ADR-085 immutable contract surface required to distinguish one stable
+  external effect from its claims and delivery attempts before CP8 storage or delivery behavior is
+  introduced.
+- **Entry conditions:** CP7 and CP7 Runtime Acceptance merged; ADR-085 accepted; existing Ports,
+  Persistence, Orchestration, and Adapter public contracts inventoried; no CP8 implementation
+  branch may be reused as the gate branch.
+- **Package placement:** Extend `app.runtime.ports` with immutable effect, envelope, lifecycle,
+  claim, lease, attempt, retry-decision, dead-letter, reconciliation, repository, observation, and
+  delivery Protocol contracts. Add only narrowly additive request/outcome contracts and validation
+  to the existing `app.runtime.orchestration` boundary. Do not create `app.runtime.outbox`.
+- **Allowed outputs:** Strict frozen contracts, Protocols, pure validation, explicit tuple exports,
+  focused contract tests, architecture guards, and narrow ADR, Roadmap, and Program corrections.
+- **Allowed scope:** Stable effect identity across attempts; effect fingerprint validation;
+  reference-only delivery envelope; closed append-only lifecycle; one active bounded claim;
+  caller-supplied lease and attempt facts; bounded retry decisions; explicit ambiguity;
+  dead-letter and reconciliation metadata.
+- **Security gates:** Attempt identity is excluded from effect-level uniqueness; no authority,
+  permit, credential, retry, success, lifecycle transition, identifier, digest, or timestamp is
+  inferred or generated; no raw payload or secret crosses the contracts.
+- **Verification:** Mismatched effect and idempotency reuse; lifecycle graph; active-claim conflict;
+  definitely-not-delivered retry eligibility; ambiguous no-retry; exhausted and prohibited retry;
+  terminal dead letter; bounded reconciliation outcomes; tenant, organization, classification,
+  lineage, and dependency-direction guards.
+- **Completion:** The gate merges independently with green CI and proves no database, migration,
+  queue, Worker, API, network, adapter call, global clock, hidden UUID/hash, or retry loop exists.
+- **Handoff:** CP8 may implement the approved Ports contracts in Persistence and extend the
+  existing Orchestration application boundary without redefining the gate contracts.
+- **Excluded:** SQLAlchemy models, Alembic migrations, PostgreSQL repositories, claim queries,
+  dispatchers, schedulers, broker clients, credential resolution, real adapters, external effects,
+  retry execution, Workers, API, tags, releases, and version changes.
+
+### CP8 - Runtime Outbox
+
+- **Status:** Blocked until `CP8-Gate-Delivery-Contracts` merges.
+- **Package placement:** Resolved by ADR-085. Immutable contracts and Protocols belong to
+  `app.runtime.ports`; PostgreSQL storage belongs to `app.runtime.persistence`; governed delivery
+  coordination belongs to the existing `app.runtime.orchestration` application boundary; exact
+  external effects remain Adapter Port implementations. `app.runtime.outbox` is prohibited.
 - **Purpose:** Add transactional outbox, effect-level idempotency, bounded retry, dead-letter facts,
   and reconciliation without claiming external atomicity.
-- **Entry conditions:** CP7 transaction boundary merged; outbox port stable; idempotency and
-  delivery state machine approved; adapter result references available.
+- **Entry conditions:** CP7 transaction boundary and Acceptance Gate merged;
+  `CP8-Gate-Delivery-Contracts` merged; effect identity, delivery envelope, lifecycle, claim,
+  retry, dead-letter, and reconciliation contracts stable; adapter result and observation
+  references available; implementation ADR and migration plan approved.
 - **Allowed outputs:** Outbox persistence and delivery contracts/implementation, bounded delivery
   attempts, dead-letter and reconciliation records, focused integration tests.
 - **Allowed scope:** Atomically commit local state/audit/idempotency/outbox facts, then deliver
   governed work through the application/orchestration boundary and adapter ports without
   bypassing either boundary.
-- **Security gates:** Revalidate time-sensitive authority before effects; no unrestricted payload,
-  credential, silent repeat, unbounded retry, hidden compensation, or invented success.
+- **Security gates:** Revalidate time-sensitive authority and permits before every effect;
+  preserve one stable effect identity across attempts; no unrestricted payload, credential,
+  silent repeat, unbounded retry, blind ambiguous retry, hidden compensation, or invented success.
 - **Verification:** Duplicate and mismatched idempotency, crash/replay, ambiguous acknowledgement,
-  retry eligibility, dead-letter, reconciliation, and tenant partition tests.
-- **Completion:** External uncertainty remains explicit and reconcilable.
+  cross-attempt effect uniqueness, concurrent claims, lease expiry before and after invocation,
+  retry eligibility, dead-letter, reconciliation, migration, rollback, and tenant partition tests.
+- **Completion:** Local atomicity and effect-level deduplication are proven while external
+  uncertainty remains explicit and reconcilable.
 - **Handoff:** CP9 may expose authenticated transport over the runtime application boundary.
 - **Excluded:** Exactly-once business-effect claims, direct API/worker repository access, policy in
-  delivery, automatic destructive retry, and API or worker implementation.
+  delivery, distributed/two-phase commit, automatic destructive retry, dead-letter redrive, and API
+  or Worker implementation.
 
 ### CP9 - Runtime API
 
@@ -446,10 +493,12 @@ contradiction requires a superseding ADR; roadmap prose alone cannot supersede a
 | R15-03 | Resolved by ADR-076 and CP4 | CP2 records opaque registry references before the registry implementation exists. | Field-level compatibility tests preserve CP2 semantics. |
 | R15-04 | Resolved for CP7 by ADR-083 | Physical partitioning and retention schedules were unspecified. | Use logical tenant partitioning and preservation-only retention; require a later approved operational schedule before any purge. |
 | R15-05 | Deferred | Real adapter families, credential broker, destination redirect policy, and provider enablement are not selected. | Separate CP6 adapter approvals and threat reviews. |
-| R15-06 | Deferred | Queue, lease, scheduling, and worker operational model are unspecified. | Decide before CP10 implementation. |
-| R15-07 | Decision required | CP8 is a fixed program stage, but no accepted ADR approves a dedicated outbox package. | Decide whether CP8 extends Ports/Persistence or uses a separately approved package before implementation. |
+| R15-06 | Deferred | Worker identity, queue or polling, scheduling, shutdown, and incident model are unspecified. | Decide before CP10 implementation; ADR-085 effect claims do not select a Worker model. |
+| R15-07 | Resolved by ADR-085 | CP8 package placement and ownership were unspecified. | Extend Ports, Persistence, and Orchestration in their existing directions; do not create `app.runtime.outbox`. |
 | R15-08 | Resolved by ADR-083 | Repository and transaction outputs required receipt IDs, digest, and time that were absent from their inputs. | Carry exact caller-supplied receipt and digest facts in the Ports contracts and bind commit time to an injected clock reference. |
 | R15-09 | Resolved by ADR-084 | Sampling the injected clock only after commit could not persist the same timestamp atomically and could report failure after durable storage. | Validate and persist one injected-clock reading at the commit boundary; publish the receipt only after the database commit succeeds. |
+| R15-10 | Resolved by ADR-085; contract gate pending | CP7 attempt-bound idempotency cannot prove one external effect across retries. | Add stable effect identity and fingerprint without `attempt_id` through `CP8-Gate-Delivery-Contracts`. |
+| R15-11 | Resolved in principle by ADR-085; implementation evidence pending | PostgreSQL cannot atomically prove an arbitrary external business effect or acknowledgement. | Guarantee local atomicity only; record ambiguity, prohibit blind retry, and reconcile through authorized observations. |
 
 ## 11. Security and privacy baseline
 
@@ -515,9 +564,15 @@ does not imply a Git tag, release publication, production enablement, or Sprint 
 3. Audit and Ports are required dependencies for CP5 but have no dedicated number in the fixed
    CP0-CP10 program. ADR-077 resolves their review structure as separate CP5-Gate-Audit and
    CP5-Gate-Ports PRs, in that order, without renumbering.
-4. CP8 is a fixed delivery stage, but ADR-065 and ADR-071 assign outbox protocols to Ports and
-   storage implementation to Persistence without approving a dedicated outbox package. Package
-   placement requires an implementation ADR before CP8 begins.
+4. ADR-085 resolves the fixed CP8 delivery-stage package decision. Ports own immutable effect and
+   delivery contracts, Persistence owns PostgreSQL storage and claim concurrency, Orchestration
+   owns governed delivery coordination, Adapters own exact external effects, and no
+   `app.runtime.outbox` package is approved. CP8 remains blocked until the separate
+   `CP8-Gate-Delivery-Contracts` review unit merges.
+5. CP8 permits one accepted local enqueue per stable effect identity and enforces effect-level
+   deduplication; it does not guarantee exactly-once external business effects. Ambiguous
+   acknowledgement is explicit, does not retry blindly, and requires bounded authorized
+   reconciliation evidence.
 
 ## 17. Open decisions
 
@@ -530,9 +585,10 @@ does not imply a Git tag, release publication, production enablement, or Sprint 
 - Implement the ADR-083 PostgreSQL mapping, explicit transaction ownership, logical tenant
   partitioning, and preservation-only retention in CP7; approve any destructive retention
   schedule separately before purge is enabled.
-- Define outbox delivery, dead-letter, and reconciliation state contracts before CP8.
-- Decide whether CP8 extends `app.runtime.ports` and `app.runtime.persistence` or receives a
-  separately approved package; do not create `app.runtime.outbox` implicitly.
+- Implement the ADR-085 stable effect identity, delivery lifecycle, claim, lease, retry decision,
+  dead-letter, and reconciliation contracts in `CP8-Gate-Delivery-Contracts` before CP8.
+- Decide the CP8 PostgreSQL lifecycle schema, optimistic append and claim query shape in its
+  implementation ADR after the contract gate merges; preserve the ADR-085 package direction.
 - Confirm CP9 routes remain in `app.api`; creating `app.runtime.api` requires a superseding ADR.
 - Define API authentication/RBAC mapping before CP9.
 - Decide CP10 worker package placement, queue, lease, identity, and scheduling model; workers
