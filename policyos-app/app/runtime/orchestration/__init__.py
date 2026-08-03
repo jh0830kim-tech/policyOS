@@ -1,5 +1,17 @@
 """Public governed runtime orchestration application boundary."""
 
+from app.runtime.orchestration.delivery_domain import (
+    RuntimeOrchestrationDeliveryOutcome,
+    RuntimeOrchestrationDeliveryRequest,
+    RuntimeOrchestrationReconciliationOutcome,
+    RuntimeOrchestrationReconciliationRequest,
+)
+from app.runtime.orchestration.delivery_validation import (
+    validate_runtime_orchestration_delivery_outcome,
+    validate_runtime_orchestration_delivery_request,
+    validate_runtime_orchestration_reconciliation_outcome,
+    validate_runtime_orchestration_reconciliation_request,
+)
 from app.runtime.orchestration.domain import (
     RuntimeOrchestrationCommitOutcome,
     RuntimeOrchestrationCommitRequest,
@@ -46,12 +58,16 @@ __all__ = (
     "RuntimeOrchestrationContractError",
     "RuntimeOrchestrationContractVersion",
     "RuntimeOrchestrationCredentialError",
+    "RuntimeOrchestrationDeliveryOutcome",
+    "RuntimeOrchestrationDeliveryRequest",
     "RuntimeOrchestrationError",
     "RuntimeOrchestrationInvocationOutcome",
     "RuntimeOrchestrationInvocationRequest",
     "RuntimeOrchestrationOutcomeError",
     "RuntimeOrchestrationPermitError",
     "RuntimeOrchestrationPreconditionError",
+    "RuntimeOrchestrationReconciliationOutcome",
+    "RuntimeOrchestrationReconciliationRequest",
     "RuntimeOrchestrationStateError",
     "RuntimeOrchestrationTimestampError",
     "RuntimeOrchestrationTransactionError",
@@ -62,6 +78,10 @@ __all__ = (
     "validate_runtime_orchestration_commit_outcome",
     "validate_runtime_orchestration_commit_request",
     "validate_runtime_orchestration_credential_lease",
+    "validate_runtime_orchestration_delivery_outcome",
+    "validate_runtime_orchestration_delivery_request",
     "validate_runtime_orchestration_invocation_outcome",
     "validate_runtime_orchestration_invocation_request",
+    "validate_runtime_orchestration_reconciliation_outcome",
+    "validate_runtime_orchestration_reconciliation_request",
 )

@@ -40,6 +40,20 @@ def test_cp7_commit_facts_gate_and_persistence_decisions_exist() -> None:
     assert (ADR / "ADR-084-POSTGRESQL-RUNTIME-PERSISTENCE-IMPLEMENTATION.md").is_file()
 
 
+def test_cp8_delivery_contract_gate_uses_existing_runtime_packages() -> None:
+    decision = (
+        ADR
+        / "ADR-085-CP8-OUTBOX-PACKAGE-PLACEMENT-AND-EFFECT-DELIVERY-SEMANTICS.md"
+    )
+    assert decision.is_file()
+    text = decision.read_text(encoding="utf-8")
+    normalized = " ".join(text.split())
+    assert "CP8-Gate-Delivery-Contracts" in text
+    assert "does not create `app.runtime.outbox`" in text
+    assert "exactly-once external business effect" in normalized
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()
+
+
 def test_normative_runtime_boundaries_are_frozen() -> None:
     text = RULES.read_text(encoding="utf-8")
     required = (

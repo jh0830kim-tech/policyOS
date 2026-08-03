@@ -41,6 +41,26 @@ class RuntimePortConflictError(RuntimePortRepositoryError):
     """A revision, uniqueness, or idempotency conflict occurred."""
 
 
+class RuntimePortEffectConflictError(RuntimePortConflictError):
+    """A stable effect identity or effect-level idempotency fact differs."""
+
+
+class RuntimePortLifecycleError(RuntimePortContractError):
+    """An effect-delivery lifecycle revision or transition is invalid."""
+
+
+class RuntimePortClaimError(RuntimePortConflictError):
+    """An effect claim or lease is stale, overlapping, or out of scope."""
+
+
+class RuntimePortRetryError(RuntimePortContractError):
+    """A bounded effect retry gate is absent or inconsistent."""
+
+
+class RuntimePortReconciliationError(RuntimePortContractError):
+    """A reconciliation request or observation is unsafe or inconsistent."""
+
+
 class RuntimePortNotFoundError(RuntimePortRepositoryError):
     """A tenant-scoped immutable record was not found."""
 
