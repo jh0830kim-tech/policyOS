@@ -63,15 +63,17 @@ The baseline is `main` after merged CP7 Runtime Acceptance PR #48.
 | CP7 Runtime Persistence | Merged | `app.runtime.persistence`, ADR-084, PostgreSQL integration tests. |
 | CP7 Runtime Acceptance | Merged | PR #48 PostgreSQL vertical acceptance, no production-code change. |
 | CP8-Gate-Delivery-Contracts | Merged in PR #50 | ADR-085 effect delivery contracts; no storage or external delivery. |
-| CP8-Gate-Delivery-Persistence-Contracts | Implemented, pending review | ADR-086 additive persistence-boundary contracts; green merge still required. |
-| CP8 Runtime Delivery | Blocked | Production implementation waits for ADR-086 and the new gate's green merge. |
+| CP8-Gate-Delivery-Persistence-Contracts | Merged in PR #52 | ADR-086 additive persistence-boundary contracts. |
+| CP8 PostgreSQL Delivery Persistence | Implemented, pending review | Four-table implementation on the dedicated branch; production PR not yet created. |
+| CP8 Runtime Delivery | In progress | Orchestration and the Runtime Delivery Acceptance Gate remain; final completion is blocked. |
 | CP9 and CP10 | Planned | Runtime API and Worker implementation are not present. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
-governed Orchestration; deterministic fake and dry-run Adapters; PostgreSQL Persistence; and a
-PostgreSQL vertical acceptance gate. It has initial outbox enqueue storage but no CP8 delivery
-lifecycle, claim, retry execution, dead-letter, reconciliation, real external adapter, runtime API,
-Worker, live credential resolution, or external side effect.
+governed CP7 Orchestration; deterministic fake and dry-run Adapters; and PostgreSQL Persistence.
+CP8 delivery Persistence now includes lifecycle, claim, retry, dead-letter, and reconciliation
+storage, but its production PR, Governed Delivery Orchestration service, and Runtime Delivery
+Acceptance Gate remain outstanding. No real external adapter, runtime API, Worker, queue, polling
+loop, scheduler, live credential resolution, or external side effect exists.
 
 ## 5. Program work structure
 
@@ -380,7 +382,7 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP8-Gate-Delivery-Persistence-Contracts
 
-- **Status:** Implemented, pending review; production remains blocked until green CI merge.
+- **Status:** Merged in PR #52.
 - **Purpose:** Define narrow additive Ports facts for initial stable effect, complete envelope, and
   `ENQUEUED` lifecycle storage in the CP7 atomic transaction, plus bounded due selection,
   optimistic lifecycle append, claims, identical replay, and exact receipts.
@@ -391,17 +393,18 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 - **Required semantics:** Caller-supplied facts; effect uniqueness without attempt identity; exact
   original-receipt replay for an identical fingerprint; typed conflict for a mismatched
   fingerprint; exact classification.
-- **Completion:** Merge independently with green CI while adding no SQLAlchemy model, repository
+- **Completion:** Merged independently in PR #52 with green CI and no SQLAlchemy model, repository
   implementation, migration, Orchestration service, adapter call, Worker, queue, scheduler, API,
   retry loop, or sleep.
-- **Handoff:** CP8 Persistence and Orchestration production implementation may then begin without
-  redefining approved effect or persistence-boundary contracts.
-- **Excluded:** Production implementation, migration `0016`, PostgreSQL claim queries, external
-  calls, polling, scheduling, automatic retry, tags, releases, and version changes.
+- **Handoff:** CP8 Persistence implementation began without redefining approved effect or
+  persistence-boundary contracts; Orchestration remains a separate implementation step.
+- **Excluded:** The gate itself added no production implementation, migration `0016`, PostgreSQL
+  claim query, external call, polling, scheduling, automatic retry, tag, release, or version change.
 
 ### CP8 - Runtime Outbox
 
-- **Status:** Blocked until ADR-086 and `CP8-Gate-Delivery-Persistence-Contracts` merge with green CI.
+- **Status:** In progress. PostgreSQL Delivery Persistence is implemented, pending review;
+  Governed Delivery Orchestration and the Runtime Delivery Acceptance Gate remain unimplemented.
 - **Package placement:** Resolved by ADR-085. Immutable contracts and Protocols belong to
   `app.runtime.ports`; PostgreSQL storage belongs to `app.runtime.persistence`; governed delivery
   coordination belongs to the existing `app.runtime.orchestration` application boundary; exact
@@ -409,9 +412,9 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 - **Purpose:** Add transactional outbox, effect-level idempotency, bounded retry, dead-letter facts,
   and reconciliation without claiming external atomicity.
 - **Entry conditions:** CP7 transaction boundary and Acceptance Gate merged; the delivery-contract
-  gate merged in PR #50; ADR-086 merged; `CP8-Gate-Delivery-Persistence-Contracts` merged with
-  green CI; effect, lifecycle, reconciliation, persistence-boundary, and receipt contracts stable;
-  adapter result and observation references available.
+  gate merged in PR #50; ADR-086 merged; `CP8-Gate-Delivery-Persistence-Contracts` merged in PR
+  #52 with green CI; effect, lifecycle, reconciliation, persistence-boundary, and receipt contracts
+  stable; adapter result and observation references available.
 - **Allowed outputs:** Outbox persistence and delivery contracts/implementation, bounded delivery
   attempts, dead-letter and reconciliation records, focused integration tests.
 - **Allowed scope:** Atomically commit local state/audit/idempotency/outbox facts, then deliver
@@ -420,11 +423,16 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 - **Security gates:** Revalidate time-sensitive authority and permits before every effect;
   preserve one stable effect identity across attempts; no unrestricted payload, credential,
   silent repeat, unbounded retry, blind ambiguous retry, hidden compensation, or invented success.
-- **Verification:** Duplicate and mismatched idempotency, crash/replay, ambiguous acknowledgement,
-  cross-attempt effect uniqueness, concurrent claims, lease expiry before and after invocation,
-  retry eligibility, dead-letter, reconciliation, migration, rollback, and tenant partition tests.
-- **Completion:** Local atomicity and effect-level deduplication are proven while external
-  uncertainty remains explicit and reconcilable.
+- **Persistence implementation:** Branch
+  `feature/sprint-15-cp8-runtime-delivery-persistence`; migration
+  `20260805_0016_runtime_effect_delivery.py`; exactly four tables; PostgreSQL 16.14 verified; no
+  production PR created yet.
+- **Verification:** Scenarios 12 passed; focused 2 passed; CP8 and CP7 PostgreSQL 22 passed; Ports,
+  Delivery, and Architecture 46 passed; order A 177 passed with skip 0; order B 177 passed with
+  skip 0; migration upgrade, downgrade, and parity passed.
+- **Completion:** Not complete. A green Persistence PR merge, separate Governed Delivery
+  Orchestration implementation, and PostgreSQL crash-window and vertical Acceptance Gate are
+  required before CP8 final completion. External uncertainty remains explicit and reconcilable.
 - **Handoff:** CP9 may expose authenticated transport over the runtime application boundary.
 - **Excluded:** Exactly-once business-effect claims, direct API/worker repository access, policy in
   delivery, distributed/two-phase commit, automatic destructive retry, dead-letter redrive, and API
@@ -519,8 +527,8 @@ contradiction requires a superseding ADR; roadmap prose alone cannot supersede a
 | R15-07 | Resolved by ADR-085 | CP8 package placement and ownership were unspecified. | Extend Ports, Persistence, and Orchestration in their existing directions; do not create `app.runtime.outbox`. |
 | R15-08 | Resolved by ADR-083 | Repository and transaction outputs required receipt IDs, digest, and time that were absent from their inputs. | Carry exact caller-supplied receipt and digest facts in the Ports contracts and bind commit time to an injected clock reference. |
 | R15-09 | Resolved by ADR-084 | Sampling the injected clock only after commit could not persist the same timestamp atomically and could report failure after durable storage. | Validate and persist one injected-clock reading at the commit boundary; publish the receipt only after the database commit succeeds. |
-| R15-10 | Contracts merged in PR #50; storage gate pending | CP7 attempt-bound idempotency cannot prove one external effect across retries. | ADR-086 enforces scoped effect-key uniqueness without `attempt_id`; identical fingerprint replay returns the original receipt and mismatch fails closed. |
-| R15-11 | Resolved in design by ADR-085 and ADR-086; implementation evidence pending | PostgreSQL cannot atomically prove an arbitrary external business effect or acknowledgement. | Guarantee local atomicity only; persist the invocation boundary, record ambiguity, prohibit blind retry, and reconcile through bounded authorized observations. |
+| R15-10 | Contracts merged in PR #50 and PR #52; Persistence pending review | CP7 attempt-bound idempotency cannot prove one external effect across retries. | ADR-086 and the implementation enforce scoped effect-key uniqueness without `attempt_id`; identical fingerprint replay returns the original receipt and mismatch fails closed. |
+| R15-11 | Persistence evidence passed; Orchestration and Acceptance pending | PostgreSQL cannot atomically prove an arbitrary external business effect or acknowledgement. | Guarantee local atomicity only; persist the invocation boundary, record ambiguity, prohibit blind retry, and require bounded authorized observations plus crash-window Acceptance evidence. |
 
 ## 11. Security and privacy baseline
 
@@ -596,9 +604,9 @@ does not imply a Git tag, release publication, production enablement, or Sprint 
    reconciliation evidence.
 6. ADR-086 fixes the four-table PostgreSQL baseline, optimistic lifecycle head, append-only
    history, bounded `SKIP LOCKED` selection, invocation crash boundary, and destructive `0016`
-   downgrade gate. Production implementation remains prohibited until ADR-086 and the separate
-   `CP8-Gate-Delivery-Persistence-Contracts` PR merge with green CI. Before that gate merges,
-   neither Persistence nor Orchestration delivery implementation may begin.
+   downgrade gate. `CP8-Gate-Delivery-Persistence-Contracts` merged in PR #52. PostgreSQL Delivery
+   Persistence is implemented, pending review; Orchestration remains prohibited until its separate
+   implementation step, and CP8 final completion remains blocked until the Acceptance Gate passes.
 
 ## 17. Open decisions
 
@@ -613,9 +621,10 @@ does not imply a Git tag, release publication, production enablement, or Sprint 
   schedule separately before purge is enabled.
 - Treat the ADR-085 stable effect identity, lifecycle, claim, lease, retry, dead-letter, and
   reconciliation contract action as completed by PR #50.
-- Merge ADR-086, then implement its additive persistence-boundary contracts in
-  `CP8-Gate-Delivery-Persistence-Contracts`; require green CI before any CP8 Persistence or
-  Orchestration production implementation or migration.
+- Treat the ADR-086 additive persistence-boundary contract gate as completed by PR #52.
+- Review and merge the CP8 PostgreSQL Delivery Persistence implementation with green CI, then
+  implement Governed Delivery Orchestration separately and pass the PostgreSQL crash-window and
+  vertical Acceptance Gate before marking CP8 complete.
 - Confirm CP9 routes remain in `app.api`; creating `app.runtime.api` requires a superseding ADR.
 - Define API authentication/RBAC mapping before CP9.
 - Decide CP10 worker package placement, queue, lease, identity, and scheduling model; workers
