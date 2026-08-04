@@ -2,6 +2,7 @@
 
 from app.runtime.ports import (
     RuntimePortConflictError,
+    RuntimePortEffectConflictError,
     RuntimePortRepositoryError,
     RuntimePortTransactionError,
 )
@@ -17,6 +18,12 @@ class RuntimePersistenceConflictError(
     """An optimistic revision or tenant-scoped uniqueness constraint conflicted."""
 
 
+class RuntimeEffectPersistenceConflictError(
+    RuntimePortEffectConflictError, RuntimePersistenceError
+):
+    """A scoped effect identity or immutable replay fact conflicted."""
+
+
 class RuntimePersistenceSerializationError(RuntimePersistenceError):
     """An allowlisted immutable runtime record could not be encoded or decoded."""
 
@@ -28,6 +35,7 @@ class RuntimePersistenceTransactionError(
 
 
 __all__ = (
+    "RuntimeEffectPersistenceConflictError",
     "RuntimePersistenceConflictError",
     "RuntimePersistenceError",
     "RuntimePersistenceSerializationError",
