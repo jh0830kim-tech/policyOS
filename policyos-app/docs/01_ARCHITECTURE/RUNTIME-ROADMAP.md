@@ -118,7 +118,7 @@ grants permission or causes automatic execution.
 | CP7 | Merged | Persistence | Repositories, migrations, local transactions | Storage owns no policy |
 | CP7-Acceptance | Merged | PostgreSQL vertical evidence | Fake invocation, atomic commit, exact read-back | PostgreSQL pass required; skip is not evidence |
 | CP8-Gate-Delivery-Contracts | Merged, PR #50 | Delivery contracts | Effect identity, lifecycle, retry, dead-letter and reconciliation contracts | No storage or external delivery |
-| CP8-Gate-Delivery-Persistence-Contracts | Required | Persistence boundary | Initial atomic effect facts, due selection and lifecycle receipts | Green CI merge required before implementation |
+| CP8-Gate-Delivery-Persistence-Contracts | Implemented, pending review | Persistence boundary | Initial atomic effect facts, due selection and lifecycle receipts | Green CI merge required before implementation |
 | CP8 | Blocked | Effect delivery | PostgreSQL delivery, idempotency, dead-letter and reconciliation | Requires persistence-contract gate; no external atomicity claim |
 | CP9 | Planned | API | Authenticated transport | No direct adapter/repository access |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |

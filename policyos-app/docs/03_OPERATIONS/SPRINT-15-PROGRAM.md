@@ -63,7 +63,7 @@ The baseline is `main` after merged CP7 Runtime Acceptance PR #48.
 | CP7 Runtime Persistence | Merged | `app.runtime.persistence`, ADR-084, PostgreSQL integration tests. |
 | CP7 Runtime Acceptance | Merged | PR #48 PostgreSQL vertical acceptance, no production-code change. |
 | CP8-Gate-Delivery-Contracts | Merged in PR #50 | ADR-085 effect delivery contracts; no storage or external delivery. |
-| CP8-Gate-Delivery-Persistence-Contracts | Required | ADR-086 additive persistence-boundary contract gate; green merge required. |
+| CP8-Gate-Delivery-Persistence-Contracts | Implemented, pending review | ADR-086 additive persistence-boundary contracts; green merge still required. |
 | CP8 Runtime Delivery | Blocked | Production implementation waits for ADR-086 and the new gate's green merge. |
 | CP9 and CP10 | Planned | Runtime API and Worker implementation are not present. |
 
@@ -380,7 +380,7 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP8-Gate-Delivery-Persistence-Contracts
 
-- **Status:** Required by ADR-086; not yet implemented.
+- **Status:** Implemented, pending review; production remains blocked until green CI merge.
 - **Purpose:** Define narrow additive Ports facts for initial stable effect, complete envelope, and
   `ENQUEUED` lifecycle storage in the CP7 atomic transaction, plus bounded due selection,
   optimistic lifecycle append, claims, identical replay, and exact receipts.

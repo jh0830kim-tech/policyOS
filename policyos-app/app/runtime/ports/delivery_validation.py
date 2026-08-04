@@ -227,6 +227,8 @@ def validate_runtime_effect_reconciliation(
 def validate_runtime_effect_lifecycle_transition(
     previous: RuntimeEffectLifecycleRecord,
     current: RuntimeEffectLifecycleRecord,
+    *,
+    definitely_not_invoked: bool = False,
 ) -> None:
     if current.runtime_effect_id != previous.runtime_effect_id:
         raise RuntimePortLifecycleError("lifecycle effect differs")
@@ -285,6 +287,7 @@ def validate_runtime_effect_lifecycle_transition(
     if (
         previous.status is RuntimeEffectLifecycleStatus.DELIVERING
         and current.status is RuntimeEffectLifecycleStatus.DEAD_LETTERED
+        and not definitely_not_invoked
         and (
             current.runtime_effect_delivery_attempt_id is None
             or current.runtime_effect_delivery_result_id is None
