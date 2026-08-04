@@ -38,7 +38,8 @@ state, and execution result is not a policy outcome.
 
 ### Target state - Planned
 
-The remaining target adds the ADR-085 delivery-contract gate, effect-level idempotency,
+The merged ADR-085 delivery-contract gate supplies stable effect and lifecycle contracts. The
+remaining target adds the ADR-086 persistence-contract gate, effect-level idempotency,
 transactional outbox lifecycle and reconciliation, separately approved real adapters and
 credential resolution, authenticated API transport, and governed Workers. Each remains
 independently reviewable and cannot own authority outside its accepted boundary.
@@ -65,7 +66,9 @@ CP5-Gate-Ports begins only after Audit merges. These gates do not renumber CP5 t
 ADR-083 adds a narrow CP7-Gate-Commit-Facts prerequisite without renumbering CP7. It supplies
 caller-bound receipt and digest facts and an injected-clock reference before Persistence begins.
 ADR-085 adds `CP8-Gate-Delivery-Contracts` without renumbering CP8. It resolves package placement
-and external-effect semantics before any delivery implementation or migration begins.
+and external-effect semantics before any delivery implementation or migration begins. That gate
+merged in PR #50. ADR-086 adds `CP8-Gate-Delivery-Persistence-Contracts` to define the remaining
+additive persistence-boundary contracts before any CP8 production implementation or migration.
 
 ## 4. Dependency view
 
@@ -114,8 +117,9 @@ grants permission or causes automatic execution.
 | CP7-Gate-Commit-Facts | Merged | Ports receipt provenance | Caller-bound record receipts, digest and clock reference | No hidden UUID, hash, or time |
 | CP7 | Merged | Persistence | Repositories, migrations, local transactions | Storage owns no policy |
 | CP7-Acceptance | Merged | PostgreSQL vertical evidence | Fake invocation, atomic commit, exact read-back | PostgreSQL pass required; skip is not evidence |
-| CP8-Gate-Delivery-Contracts | Planned | Outbox governance | Effect identity, lifecycle, retry, dead-letter and reconciliation contracts | No storage or external delivery |
-| CP8 | Blocked | Outbox | Delivery, idempotency, dead-letter, reconciliation | Requires CP8 contract gate; no external atomicity claim |
+| CP8-Gate-Delivery-Contracts | Merged, PR #50 | Delivery contracts | Effect identity, lifecycle, retry, dead-letter and reconciliation contracts | No storage or external delivery |
+| CP8-Gate-Delivery-Persistence-Contracts | Required | Persistence boundary | Initial atomic effect facts, due selection and lifecycle receipts | Green CI merge required before implementation |
+| CP8 | Blocked | Effect delivery | PostgreSQL delivery, idempotency, dead-letter and reconciliation | Requires persistence-contract gate; no external atomicity claim |
 | CP9 | Planned | API | Authenticated transport | No direct adapter/repository access |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -276,11 +280,17 @@ Adapters remain the only Runtime implementations that perform approved external 
 CP10 Workers call Orchestration and never access Persistence, repositories, credential brokers, or
 adapters directly.
 
-CP8 remains blocked until the separate `CP8-Gate-Delivery-Contracts` review unit merges with green
-CI. That gate defines effect identity, reference-only delivery envelopes, the closed lifecycle,
-claims, leases, attempts, retry decisions, dead-letter, reconciliation, Protocols, pure validation,
-and architecture tests. It creates no SQLAlchemy model, migration, dispatcher, queue, Worker, API,
-network call, retry loop, or external effect.
+`CP8-Gate-Delivery-Contracts` merged in PR #50 with the effect identity, reference-only delivery
+envelope, closed lifecycle, claim, lease, attempt, retry, dead-letter, reconciliation, Protocol,
+pure-validation, and architecture-test surface. It created no SQLAlchemy model, migration,
+dispatcher, queue, Worker, API, network call, retry loop, or external effect.
+
+ADR-086 fixes the PostgreSQL baseline. CP8 production implementation remains blocked until
+`CP8-Gate-Delivery-Persistence-Contracts` merges with green CI. The minimum physical design is
+`runtime_effects`, `runtime_effect_lifecycle_heads`, `runtime_effect_lifecycle_revisions`, and
+`runtime_effect_reconciliation_observations`. Dedicated claim, attempt, result, retry, and
+dead-letter tables remain deferred pending an approved independent lookup or retention need. No
+`app.runtime.outbox`, Worker, queue, scheduler, or API is introduced.
 
 - Effect-level idempotency uses one caller-supplied stable effect identity across attempts. Its
   tenant, organization, request, plan step, action, destination, payload reference and digest,
@@ -392,7 +402,8 @@ gates and each requires its own implementation ADR and merged PR.
 ADR-078, ADR-079, and ADR-081 define the merged Audit, Ports, and Orchestration surfaces. ADR-085
 resolves CP8 package placement and external-effect semantics: Ports own contracts, Persistence owns
 storage, Orchestration owns governed delivery coordination, Adapters own exact effects, and no
-`app.runtime.outbox` package is approved. CP8 implementation remains blocked until
-`CP8-Gate-Delivery-Contracts` merges. CP9 routes remain in `app.api`, and Workers remain external
-entry points unless superseding ADRs approve different placement. Roadmap documentation does not
-resolve or supersede those later decisions.
+`app.runtime.outbox` package is approved. The delivery-contract gate merged in PR #50. ADR-086
+blocks CP8 production implementation until `CP8-Gate-Delivery-Persistence-Contracts` merges with
+green CI. CP9 routes remain in `app.api`, and Workers remain external entry points unless
+superseding ADRs approve different placement. Roadmap documentation does not resolve or supersede
+those later decisions.
