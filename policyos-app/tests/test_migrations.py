@@ -118,6 +118,7 @@ def test_projection_cardinality_migration_contract_and_model_parity() -> None:
 
 def test_projection_cardinality_preserves_0016_migration() -> None:
     path = Path("alembic/versions/20260805_0016_runtime_effect_delivery.py")
-    assert hashlib.sha256(path.read_bytes()).hexdigest() == (
-        "a9f777846e603a32d3320a0cf28885e2d54aea48952aa74dec0398af1664ab01"
+    normalized = path.read_bytes().replace(b"\r\n", b"\n")
+    assert hashlib.sha256(normalized).hexdigest() == (
+        "7f385b7ca3acee299bbc9d4482da00dbc206854f2e082d935ac76d0ec21a31dd"
     )
