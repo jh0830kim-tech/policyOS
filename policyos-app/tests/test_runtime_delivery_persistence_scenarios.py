@@ -366,7 +366,7 @@ async def test_stale_append_and_expired_delivering_claim_are_rejected(
     )
     async with delivery_sessions() as session:
         with pytest.raises(RuntimePersistenceConflictError):
-            await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append_lifecycle(
+            await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(
                 stale
             )
 
@@ -485,7 +485,7 @@ async def test_not_invoked_retry_and_dead_letter_are_persisted_with_scalar_ids(
         ),
     )
     async with delivery_sessions() as session:
-        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append_lifecycle(
+        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(
             retry_request
         )
     async with delivery_sessions() as session:
@@ -533,12 +533,12 @@ async def test_not_invoked_dead_letter_is_terminal(
         ),
     )
     async with delivery_sessions() as session:
-        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append_lifecycle(
+        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(
             dead_request
         )
     async with delivery_sessions() as session:
         with pytest.raises(RuntimePortEffectConflictError):
-            await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append_lifecycle(
+            await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(
                 dead_request.model_copy(
                     update={
                         "runtime_effect_lifecycle_append_request_id": uid(6999)
@@ -584,7 +584,7 @@ async def test_reconciliation_outcomes_round_trip_without_automatic_progression(
         receipt_id=7001 + list(type(outcome)).index(outcome) * 10,
     )
     async with delivery_sessions() as session:
-        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append_lifecycle(
+        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(
             request
         )
     async with delivery_sessions() as session:

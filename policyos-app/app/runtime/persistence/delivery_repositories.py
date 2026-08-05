@@ -251,7 +251,7 @@ class SQLAlchemyRuntimeEffectLifecycleTransaction:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def append_lifecycle(
+    async def append(
         self, request: RuntimeEffectLifecycleAppendRequest
     ) -> RuntimeEffectLifecycleCommitResult:
         validate_runtime_effect_lifecycle_append_request(request)
