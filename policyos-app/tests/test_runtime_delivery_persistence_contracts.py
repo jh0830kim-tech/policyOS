@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.ai.privacy import DataClassification
+from app.runtime.persistence import SQLAlchemyRuntimeEffectLifecycleTransaction
 from app.runtime.ports import (
     RuntimeAtomicWriteSet,
     RuntimeEffectAtomicCommitResult,
@@ -648,6 +649,19 @@ def test_new_protocols_are_structural_and_nonconforming_fakes_fail() -> None:
     assert isinstance(Atomic(), RuntimeEffectAtomicTransactionPort)
     assert isinstance(Due(), RuntimeEffectDueRepository)
     assert isinstance(Lifecycle(), RuntimeEffectLifecycleTransactionPort)
+    concrete = SQLAlchemyRuntimeEffectLifecycleTransaction.__new__(
+        SQLAlchemyRuntimeEffectLifecycleTransaction
+    )
+    assert isinstance(concrete, RuntimeEffectLifecycleTransactionPort)
+    assert callable(concrete.append)
+    assert not hasattr(concrete, "append_lifecycle")
+    signature = inspect.signature(type(concrete).append)
+    assert tuple(signature.parameters) == ("self", "request")
+    assert (
+        signature.parameters["request"].annotation
+        is RuntimeEffectLifecycleAppendRequest
+    )
+    assert signature.return_annotation is RuntimeEffectLifecycleCommitResult
     assert not isinstance(Missing(), RuntimeEffectAtomicTransactionPort)
     assert not isinstance(Missing(), RuntimeEffectDueRepository)
     assert not isinstance(Missing(), RuntimeEffectLifecycleTransactionPort)
