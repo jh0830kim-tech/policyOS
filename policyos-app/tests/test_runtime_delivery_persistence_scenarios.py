@@ -5,11 +5,12 @@ from datetime import timedelta
 import pytest
 import pytest_asyncio
 from sqlalchemy import func, null, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from test_runtime_delivery_contracts import (
     NOW,
+    attempt,
     claim,
+    delivery_result,
     lifecycle,
     observation,
     retry_decision,
@@ -42,6 +43,7 @@ from app.runtime.persistence.errors import RuntimePersistenceConflictError
 from app.runtime.ports import (
     RuntimeClockReading,
     RuntimeEffectClaimRequest,
+    RuntimeEffectDeliveryCertainty,
     RuntimeEffectDueReason,
     RuntimeEffectLifecycleAppend,
     RuntimeEffectLifecycleAppendRequest,
@@ -52,6 +54,7 @@ from app.runtime.ports import (
     RuntimeEffectReconciliationOutcome,
     RuntimePortClaimError,
     RuntimePortEffectConflictError,
+    RuntimePortScopeError,
 )
 from tests.runtime_delivery_persistence_test_support import (
     runtime_delivery_session_factory,
@@ -607,19 +610,18 @@ async def test_reconciliation_outcomes_round_trip_without_automatic_progression(
 
 
 @pytest.mark.asyncio
-async def test_lease_id_is_unique_within_scope_and_independent_across_tenants(
+async def test_lease_id_can_repeat_across_effects_and_tenants(
     delivery_sessions: async_sessionmaker[AsyncSession],
 ) -> None:
     write_set = await _commit_initial(delivery_sessions)
     identity = write_set.initial_effect_enqueue.effect_identity
     async with delivery_sessions() as session:
-        original = (
-            await session.execute(
-                select(RuntimeEffect).where(
-                    RuntimeEffect.runtime_effect_id == identity.runtime_effect_id
-                )
+        original = await session.scalar(
+            select(RuntimeEffect).where(
+                RuntimeEffect.runtime_effect_id == identity.runtime_effect_id
             )
-        ).scalar_one()
+        )
+    assert original is not None
 
     def effect_row(number, tenant_id):
         return RuntimeEffect(
@@ -640,20 +642,18 @@ async def test_lease_id_is_unique_within_scope_and_independent_across_tenants(
             stored_at=original.stored_at,
         )
 
-    same_scope_effect = effect_row(8100, identity.tenant_id)
-    other_tenant_effect = effect_row(8200, uid(8206))
+    effects = (effect_row(8100, identity.tenant_id), effect_row(8200, uid(8206)))
     async with delivery_sessions() as session, session.begin():
-        session.add_all((same_scope_effect, other_tenant_effect))
-
+        session.add_all(effects)
     shared_lease_id = uid(8300)
 
-    def revision(number, effect_id, tenant_id):
+    def revision(number, effect):
         return RuntimeEffectLifecycleRevision(
             runtime_effect_lifecycle_receipt_id=uid(number),
-            tenant_id=tenant_id,
+            tenant_id=effect.tenant_id,
             organization_id=identity.organization_id,
             classification=identity.classification.value,
-            runtime_effect_id=effect_id,
+            runtime_effect_id=effect.runtime_effect_id,
             runtime_effect_lifecycle_record_id=uid(number + 1),
             lifecycle_revision=2,
             lifecycle_status=RuntimeEffectLifecycleStatus.CLAIMED.value,
@@ -668,24 +668,13 @@ async def test_lease_id_is_unique_within_scope_and_independent_across_tenants(
             stored_at=original.stored_at,
         )
 
-    first = revision(8400, identity.runtime_effect_id, identity.tenant_id)
     async with delivery_sessions() as session, session.begin():
-        session.add(first)
-
-    conflicting = revision(
-        8500, same_scope_effect.runtime_effect_id, identity.tenant_id
-    )
-    async with delivery_sessions() as session:
-        with pytest.raises(IntegrityError):
-            async with session.begin():
-                session.add(conflicting)
-
-    independent = revision(
-        8600, other_tenant_effect.runtime_effect_id, other_tenant_effect.tenant_id
-    )
-    async with delivery_sessions() as session, session.begin():
-        session.add(independent)
-
+        session.add_all(
+            tuple(
+                revision(8400 + index * 100, effect)
+                for index, effect in enumerate(effects)
+            )
+        )
 
 @pytest.mark.asyncio
 async def test_lifecycle_json_round_trip_and_unrelated_scalar_projections_are_null(
@@ -713,3 +702,341 @@ async def test_lifecycle_json_round_trip_and_unrelated_scalar_projections_are_nu
     assert revision.runtime_effect_dead_letter_record_id is None
     assert revision.runtime_effect_definitely_not_invoked_id is None
     assert revision.runtime_effect_reconciliation_observation_id is None
+
+async def _commit_claimed_delivering(factory):
+    write_set = await _commit_initial(factory)
+    identity = write_set.initial_effect_enqueue.effect_identity
+    claim_fact = claim()
+    claim_request = _claim_request(write_set, claim_fact, uid(8700), uid(8701))
+    async with factory() as session:
+        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).claim(claim_request)
+    attempt_fact = attempt()
+    previous = claim_request.claimed_lifecycle_record
+    delivering = lifecycle(
+        3,
+        RuntimeEffectLifecycleStatus.DELIVERING,
+        runtime_effect_id=identity.runtime_effect_id,
+        runtime_effect_claim_id=claim_fact.runtime_effect_claim_id,
+        runtime_effect_delivery_attempt_id=(
+            attempt_fact.runtime_effect_delivery_attempt_id
+        ),
+        previous_lifecycle_record_id=previous.runtime_effect_lifecycle_record_id,
+        previous_lifecycle_digest_reference=previous.lifecycle_digest_reference,
+        recorded_at=attempt_fact.requested_at,
+    )
+    delivering_request = _append(
+        write_set,
+        previous,
+        delivering,
+        claim_fact=claim_fact,
+        attempt_fact=attempt_fact,
+        request_id=8702,
+        receipt_id=8703,
+    )
+    async with factory() as session:
+        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(
+            delivering_request
+        )
+    return write_set, claim_fact, attempt_fact, delivering
+
+
+@pytest.mark.asyncio
+async def test_claimed_delivering_delivered_repeats_bound_lineage(
+    delivery_sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    write_set, claim_fact, attempt_fact, delivering = (
+        await _commit_claimed_delivering(delivery_sessions)
+    )
+    identity = write_set.initial_effect_enqueue.effect_identity
+    result_fact = delivery_result()
+    delivered = lifecycle(
+        4,
+        RuntimeEffectLifecycleStatus.DELIVERED,
+        runtime_effect_id=identity.runtime_effect_id,
+        runtime_effect_delivery_attempt_id=(
+            attempt_fact.runtime_effect_delivery_attempt_id
+        ),
+        runtime_effect_delivery_result_id=result_fact.runtime_effect_delivery_result_id,
+        previous_lifecycle_record_id=delivering.runtime_effect_lifecycle_record_id,
+        previous_lifecycle_digest_reference=delivering.lifecycle_digest_reference,
+        recorded_at=result_fact.completed_at,
+    )
+    request = _append(
+        write_set,
+        delivering,
+        delivered,
+        attempt_fact=attempt_fact,
+        request_id=8710,
+        receipt_id=8711,
+    ).model_copy(
+        update={
+            "append": _append(
+                write_set,
+                delivering,
+                delivered,
+                attempt_fact=attempt_fact,
+                request_id=8710,
+                receipt_id=8711,
+            ).append.model_copy(update={"result": result_fact})
+        }
+    )
+    async with delivery_sessions() as session:
+        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(request)
+    async with delivery_sessions() as session:
+        rows = (
+            await session.scalars(
+                select(RuntimeEffectLifecycleRevision)
+                .where(
+                    RuntimeEffectLifecycleRevision.tenant_id == identity.tenant_id,
+                    RuntimeEffectLifecycleRevision.organization_id
+                    == identity.organization_id,
+                    RuntimeEffectLifecycleRevision.runtime_effect_id
+                    == identity.runtime_effect_id,
+                )
+                .order_by(RuntimeEffectLifecycleRevision.lifecycle_revision)
+            )
+        ).all()
+        head = await session.get(
+            RuntimeEffectLifecycleHead,
+            (identity.tenant_id, identity.organization_id, identity.runtime_effect_id),
+        )
+    assert [row.lifecycle_revision for row in rows] == [1, 2, 3, 4]
+    assert rows[1].runtime_effect_claim_id == rows[2].runtime_effect_claim_id
+    assert rows[1].lease_id == rows[2].lease_id == claim_fact.lease_id
+    assert rows[2].runtime_effect_delivery_attempt_id == (
+        rows[3].runtime_effect_delivery_attempt_id
+    )
+    assert head is not None
+    assert head.current_status == RuntimeEffectLifecycleStatus.DELIVERED.value
+    assert head.current_lifecycle_revision == 4
+@pytest.mark.asyncio
+async def test_ambiguous_reconciliation_repeats_attempt_and_result(
+    delivery_sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    write_set, _, attempt_fact, delivering = await _commit_claimed_delivering(
+        delivery_sessions
+    )
+    identity = write_set.initial_effect_enqueue.effect_identity
+    result_fact = delivery_result(RuntimeEffectDeliveryCertainty.AMBIGUOUS)
+    ambiguous = lifecycle(
+        4,
+        RuntimeEffectLifecycleStatus.AMBIGUOUS,
+        runtime_effect_id=identity.runtime_effect_id,
+        runtime_effect_delivery_attempt_id=(
+            attempt_fact.runtime_effect_delivery_attempt_id
+        ),
+        runtime_effect_delivery_result_id=result_fact.runtime_effect_delivery_result_id,
+        previous_lifecycle_record_id=delivering.runtime_effect_lifecycle_record_id,
+        previous_lifecycle_digest_reference=delivering.lifecycle_digest_reference,
+        recorded_at=result_fact.completed_at,
+    )
+    ambiguous_request = _append(
+        write_set,
+        delivering,
+        ambiguous,
+        attempt_fact=attempt_fact,
+        request_id=8720,
+        receipt_id=8721,
+    )
+    ambiguous_request = ambiguous_request.model_copy(
+        update={
+            "append": ambiguous_request.append.model_copy(
+                update={"result": result_fact}
+            )
+        }
+    )
+    async with delivery_sessions() as session:
+        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(
+            ambiguous_request
+        )
+    observed = observation(RuntimeEffectReconciliationOutcome.CONFIRMED_DELIVERED)
+    observed = observed.model_copy(
+        update={
+            "runtime_effect_id": identity.runtime_effect_id,
+            "tenant_id": identity.tenant_id,
+            "organization_id": identity.organization_id,
+            "classification": identity.classification,
+        }
+    )
+    delivered = lifecycle(
+        5,
+        RuntimeEffectLifecycleStatus.DELIVERED,
+        runtime_effect_id=identity.runtime_effect_id,
+        runtime_effect_delivery_attempt_id=(
+            attempt_fact.runtime_effect_delivery_attempt_id
+        ),
+        runtime_effect_delivery_result_id=result_fact.runtime_effect_delivery_result_id,
+        runtime_effect_reconciliation_observation_id=(
+            observed.runtime_effect_reconciliation_observation_id
+        ),
+        previous_lifecycle_record_id=ambiguous.runtime_effect_lifecycle_record_id,
+        previous_lifecycle_digest_reference=ambiguous.lifecycle_digest_reference,
+        recorded_at=observed.observed_at,
+    )
+    delivered_request = _append(
+        write_set,
+        ambiguous,
+        delivered,
+        attempt_fact=attempt_fact,
+        observation_fact=observed,
+        request_id=8722,
+        receipt_id=8723,
+    )
+    delivered_request = delivered_request.model_copy(
+        update={
+            "append": delivered_request.append.model_copy(
+                update={"result": result_fact}
+            )
+        }
+    )
+    async with delivery_sessions() as session:
+        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(
+            delivered_request
+        )
+    async with delivery_sessions() as session:
+        rows = (
+            await session.scalars(
+                select(RuntimeEffectLifecycleRevision)
+                .where(
+                    RuntimeEffectLifecycleRevision.runtime_effect_id
+                    == identity.runtime_effect_id
+                )
+                .order_by(RuntimeEffectLifecycleRevision.lifecycle_revision)
+            )
+        ).all()
+    assert [row.lifecycle_revision for row in rows] == [1, 2, 3, 4, 5]
+    assert (
+        rows[2].runtime_effect_delivery_attempt_id
+        == rows[3].runtime_effect_delivery_attempt_id
+        == rows[4].runtime_effect_delivery_attempt_id
+    )
+    assert rows[3].runtime_effect_delivery_result_id == (
+        rows[4].runtime_effect_delivery_result_id
+    )
+    assert rows[4].runtime_effect_reconciliation_observation_id == (
+        observed.runtime_effect_reconciliation_observation_id
+    )
+@pytest.mark.asyncio
+async def test_cross_effect_projection_substitution_fails_before_storage(
+    delivery_sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    write_set = await _commit_initial(delivery_sessions)
+    identity = write_set.initial_effect_enqueue.effect_identity
+    claim_fact = claim()
+    claim_request = _claim_request(write_set, claim_fact, uid(8730), uid(8731))
+    async with delivery_sessions() as session:
+        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).claim(claim_request)
+    attempt_fact = attempt()
+    previous = claim_request.claimed_lifecycle_record
+    delivering = lifecycle(
+        3,
+        RuntimeEffectLifecycleStatus.DELIVERING,
+        runtime_effect_id=identity.runtime_effect_id,
+        runtime_effect_claim_id=claim_fact.runtime_effect_claim_id,
+        runtime_effect_delivery_attempt_id=(
+            attempt_fact.runtime_effect_delivery_attempt_id
+        ),
+        previous_lifecycle_record_id=previous.runtime_effect_lifecycle_record_id,
+        previous_lifecycle_digest_reference=previous.lifecycle_digest_reference,
+        recorded_at=attempt_fact.requested_at,
+    )
+    base = _append(
+        write_set,
+        previous,
+        delivering,
+        claim_fact=claim_fact,
+        attempt_fact=attempt_fact,
+        request_id=8732,
+        receipt_id=8733,
+    )
+    other_effect = uid(8799)
+    substituted = (
+        base.model_copy(
+            update={
+                "append": base.append.model_copy(
+                    update={
+                        "claim": claim_fact.model_copy(
+                            update={"runtime_effect_id": other_effect}
+                        )
+                    }
+                )
+            }
+        ),
+        base.model_copy(
+            update={
+                "append": base.append.model_copy(
+                    update={
+                        "claim": claim_fact.model_copy(
+                            update={
+                                "runtime_effect_id": other_effect,
+                                "lease_id": uid(8798),
+                            }
+                        )
+                    }
+                )
+            }
+        ),
+        base.model_copy(
+            update={
+                "append": base.append.model_copy(
+                    update={
+                        "attempt": attempt_fact.model_copy(
+                            update={"runtime_effect_id": other_effect}
+                        )
+                    }
+                )
+            }
+        ),
+    )
+    for request in substituted:
+        async with delivery_sessions() as session:
+            with pytest.raises(RuntimePortScopeError):
+                await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(request)
+    async with delivery_sessions() as session:
+        await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(base)
+
+    result_fact = delivery_result(RuntimeEffectDeliveryCertainty.AMBIGUOUS)
+    ambiguous = lifecycle(
+        4,
+        RuntimeEffectLifecycleStatus.AMBIGUOUS,
+        runtime_effect_id=identity.runtime_effect_id,
+        runtime_effect_delivery_attempt_id=(
+            attempt_fact.runtime_effect_delivery_attempt_id
+        ),
+        runtime_effect_delivery_result_id=result_fact.runtime_effect_delivery_result_id,
+        previous_lifecycle_record_id=delivering.runtime_effect_lifecycle_record_id,
+        previous_lifecycle_digest_reference=delivering.lifecycle_digest_reference,
+        recorded_at=result_fact.completed_at,
+    )
+    result_request = _append(
+        write_set,
+        delivering,
+        ambiguous,
+        attempt_fact=attempt_fact,
+        request_id=8734,
+        receipt_id=8735,
+    )
+    result_request = result_request.model_copy(
+        update={
+            "append": result_request.append.model_copy(
+                update={
+                    "result": result_fact.model_copy(
+                        update={"runtime_effect_id": other_effect}
+                    )
+                }
+            )
+        }
+    )
+    async with delivery_sessions() as session:
+        with pytest.raises(RuntimePortScopeError):
+            await SQLAlchemyRuntimeEffectLifecycleTransaction(session).append(
+                result_request
+            )
+    async with delivery_sessions() as session:
+        count = await session.scalar(
+            select(func.count(RuntimeEffectLifecycleRevision.runtime_effect_id)).where(
+                RuntimeEffectLifecycleRevision.runtime_effect_id
+                == identity.runtime_effect_id
+            )
+        )
+    assert count == 3

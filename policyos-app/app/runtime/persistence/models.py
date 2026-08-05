@@ -251,10 +251,12 @@ class RuntimeEffectLifecycleHead(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
-_PROJECTIONS = (
+_REPEATED_PROJECTIONS = (
     ("claim", "runtime_effect_claim_id"),
     ("attempt", "runtime_effect_delivery_attempt_id"),
     ("result", "runtime_effect_delivery_result_id"),
+)
+_ONE_SHOT_PROJECTIONS = (
     ("retry", "runtime_effect_retry_decision_id"),
     ("dead_letter", "runtime_effect_dead_letter_record_id"),
     ("not_invoked", "runtime_effect_definitely_not_invoked_id"),
@@ -295,12 +297,21 @@ class RuntimeEffectLifecycleRevision(Base):
             postgresql_where=text("claim_request_id IS NOT NULL"),
         ),
         Index(
-            "uq_runtime_effect_revision_lease",
+            "ix_runtime_effect_revision_lease",
             "tenant_id",
             "organization_id",
+            "runtime_effect_id",
             "lease_id",
-            unique=True,
+            unique=False,
             postgresql_where=text("lease_id IS NOT NULL"),
+        ),
+        *(
+            Index(
+                f"ix_runtime_effect_revision_{name}", "tenant_id",
+                "organization_id", "runtime_effect_id", column, unique=False,
+                postgresql_where=text(f"{column} IS NOT NULL"),
+            )
+            for name, column in _REPEATED_PROJECTIONS
         ),
         *(
             Index(
@@ -308,7 +319,7 @@ class RuntimeEffectLifecycleRevision(Base):
                 "organization_id", "runtime_effect_id", column, unique=True,
                 postgresql_where=text(f"{column} IS NOT NULL"),
             )
-            for name, column in _PROJECTIONS
+            for name, column in _ONE_SHOT_PROJECTIONS
         ),
     )
     runtime_effect_lifecycle_receipt_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
