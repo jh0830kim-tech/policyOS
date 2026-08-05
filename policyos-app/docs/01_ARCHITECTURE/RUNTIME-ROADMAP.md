@@ -13,7 +13,7 @@ state, and execution result is not a policy outcome.
 
 ## 2. Current and target state
 
-### Current state - CP8 PostgreSQL Delivery Persistence implemented, pending review
+### Current state - CP8 Runtime Delivery Orchestration implemented, pending review
 
 - `app.runtime.authority`: immutable request, authority reference, permit reference, admission,
   revocation, bundle, audit-metadata, and pure validation contracts.
@@ -33,11 +33,10 @@ state, and execution result is not a policy outcome.
   and local atomic State, Audit, Idempotency, and optional enqueue commit.
 - CP7 Acceptance proves the Request-to-read-back vertical slice with the production Fake Adapter
   and PostgreSQL without changing production behavior.
-- CP8 PostgreSQL Delivery Persistence is implemented on
-  `feature/sprint-15-cp8-runtime-delivery-persistence`, pending review and without a production PR.
-  Migration `20260805_0016_runtime_effect_delivery.py` creates exactly four delivery tables and was
-  verified with PostgreSQL 16.14.
-- Governed Delivery Orchestration and the CP8 Runtime Delivery Acceptance Gate are not implemented.
+- CP8 PostgreSQL Delivery Persistence merged in PR #53, and Lifecycle Port conformance merged in
+  PR #54. Migration `20260805_0016_runtime_effect_delivery.py` creates exactly four delivery tables.
+- Governed Delivery Orchestration is implemented on its dedicated branch, pending review. The CP8
+  Runtime Delivery Acceptance Gate is not started.
   No real external adapter, runtime API, Worker, queue, polling loop, scheduler, live credential
   resolver, or external effect exists.
 
@@ -124,7 +123,10 @@ grants permission or causes automatic execution.
 | CP7-Acceptance | Merged | PostgreSQL vertical evidence | Fake invocation, atomic commit, exact read-back | PostgreSQL pass required; skip is not evidence |
 | CP8-Gate-Delivery-Contracts | Merged, PR #50 | Delivery contracts | Effect identity, lifecycle, retry, dead-letter and reconciliation contracts | No storage or external delivery |
 | CP8-Gate-Delivery-Persistence-Contracts | Merged, PR #52 | Persistence boundary | Initial atomic effect facts, due selection and lifecycle receipts | Contracts merged before implementation |
-| CP8 PostgreSQL Delivery Persistence | Implemented, pending review | Persistence | Four-table storage, replay, due selection, lifecycle CAS and reconciliation | Production PR not yet created |
+| CP8 PostgreSQL Delivery Persistence | Merged, PR #53 | Persistence | Four-table storage, replay, due selection, lifecycle CAS and reconciliation | Storage owns no policy |
+| CP8 Lifecycle Port conformance | Merged, PR #54 | Persistence conformance | `append(request)` alignment | No schema change |
+| CP8 Runtime Delivery Orchestration | Implemented, pending review | Orchestration | Governed one-call delivery and reconciliation | Ports only |
+| CP8 Runtime Delivery Acceptance Gate | Not started | Vertical evidence | PostgreSQL crash-window scenarios | Required before completion |
 | CP8 | In progress | Effect delivery | Governed Delivery Orchestration and Acceptance evidence remain | No external exactly-once claim; final completion blocked |
 | CP9 | Planned | API | Authenticated transport | No direct adapter/repository access |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |

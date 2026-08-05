@@ -17,8 +17,20 @@ from app.runtime.orchestration.errors import (
     RuntimeOrchestrationTimestampError,
 )
 from app.runtime.ports import (
+    RuntimeCancellationObservation,
     RuntimeCancellationStatus,
+    RuntimeCredentialLeaseReference,
     RuntimeCredentialLeaseStatus,
+    RuntimeEffectClaimRequest,
+    RuntimeEffectDueCandidate,
+    RuntimeEffectLifecycleAppendRequest,
+    RuntimeEffectLifecycleCommitResult,
+    RuntimeEffectLifecycleStatus,
+    RuntimeEffectNotInvokedReason,
+)
+from app.runtime.ports.delivery_persistence_validation import (
+    validate_runtime_effect_claim_request,
+    validate_runtime_effect_lifecycle_append_request,
 )
 from app.runtime.ports.delivery_validation import (
     validate_runtime_effect_delivery_attempt,
@@ -48,8 +60,7 @@ def _validate_current_authority(request: RuntimeOrchestrationDeliveryRequest) ->
     if authority.classification != identity.classification:
         raise RuntimeOrchestrationBindingError("delivery classification differs")
     if authority.root_lineage_id != identity.root_lineage_id or (
-        authority.root_lineage_digest_reference
-        != identity.root_lineage_digest_reference
+        authority.root_lineage_digest_reference != identity.root_lineage_digest_reference
     ):
         raise RuntimeOrchestrationBindingError("delivery root lineage differs")
     if authority.execution_request.runtime_execution_request_id != (
@@ -62,9 +73,7 @@ def _validate_current_authority(request: RuntimeOrchestrationDeliveryRequest) ->
         raise RuntimeOrchestrationBindingError("delivery authority revision differs")
     if authority.registry_revision != attempt.registry_revision:
         raise RuntimeOrchestrationBindingError("delivery registry revision differs")
-    permit_ids = tuple(
-        permit.runtime_permit_reference_id for permit in authority.permit_references
-    )
+    permit_ids = tuple(permit.runtime_permit_reference_id for permit in authority.permit_references)
     if permit_ids != attempt.permit_reference_ids:
         raise RuntimeOrchestrationPermitError("delivery permit references differ")
     for permit in authority.permit_references:
@@ -169,24 +178,18 @@ def validate_runtime_orchestration_reconciliation_request(
         RuntimeAuthorityDecisionStatus.ADMITTED
     ):
         raise RuntimeOrchestrationAuthorityError("reconciliation requires current admission")
-    if authority.tenant_id != fact.tenant_id or (
-        authority.organization_id != fact.organization_id
-    ):
+    if authority.tenant_id != fact.tenant_id or (authority.organization_id != fact.organization_id):
         raise RuntimeOrchestrationBindingError("reconciliation scope differs")
     if authority.classification != fact.classification:
         raise RuntimeOrchestrationBindingError("reconciliation classification differs")
-    permit_ids = tuple(
-        permit.runtime_permit_reference_id for permit in authority.permit_references
-    )
+    permit_ids = tuple(permit.runtime_permit_reference_id for permit in authority.permit_references)
     if permit_ids != fact.permit_reference_ids:
         raise RuntimeOrchestrationPermitError("reconciliation permits differ")
     for permit in authority.permit_references:
         if permit.permit_status is not RuntimePermitStatus.ACTIVE:
             raise RuntimeOrchestrationPermitError("reconciliation permit is not active")
         if not (permit.valid_from <= request.requested_at < permit.expires_at):
-            raise RuntimeOrchestrationPermitError(
-                "reconciliation permit is outside its validity"
-            )
+            raise RuntimeOrchestrationPermitError("reconciliation permit is outside its validity")
         if permit.remaining_invocations < 1 or permit.remaining_attempts < 1:
             raise RuntimeOrchestrationPermitError("reconciliation permit bound is exhausted")
     if request.clock_reference != fact.clock_reference:
@@ -206,3 +209,129 @@ def validate_runtime_orchestration_reconciliation_outcome(
         request.reconciliation_request,
         outcome.observation,
     )
+
+
+def validate_runtime_orchestration_candidate_claim(
+    candidate: RuntimeEffectDueCandidate, request: RuntimeEffectClaimRequest
+) -> None:
+    validate_runtime_effect_claim_request(request)
+    if (
+        request.effect_identity != candidate.effect_identity
+        or request.previous_lifecycle_record != candidate.current_lifecycle_record
+        or request.previous_claim != candidate.previous_claim
+    ):
+        raise RuntimeOrchestrationBindingError("delivery candidate claim differs")
+
+
+def validate_runtime_orchestration_delivering_append(
+    request: RuntimeOrchestrationDeliveryRequest,
+    lifecycle_result: RuntimeEffectLifecycleCommitResult,
+    append_request: RuntimeEffectLifecycleAppendRequest,
+    *,
+    expected_lifecycle_record,
+) -> None:
+    validate_runtime_effect_lifecycle_append_request(append_request)
+    append = append_request.append
+    identity = append.effect_identity
+    fact = lifecycle_result.receipt.receipt_fact
+    if (
+        fact.tenant_id != identity.tenant_id
+        or fact.organization_id != identity.organization_id
+        or fact.classification is not identity.classification
+        or fact.runtime_effect_id != expected_lifecycle_record.runtime_effect_id
+        or fact.runtime_effect_lifecycle_record_id
+        != expected_lifecycle_record.runtime_effect_lifecycle_record_id
+        or fact.lifecycle_revision != expected_lifecycle_record.lifecycle_revision
+        or fact.lifecycle_status is not expected_lifecycle_record.status
+        or fact.lifecycle_digest_reference
+        != expected_lifecycle_record.lifecycle_digest_reference
+        or expected_lifecycle_record.runtime_effect_claim_id
+        != request.claim.runtime_effect_claim_id
+        or (
+            expected_lifecycle_record.runtime_effect_delivery_attempt_id is not None
+            and expected_lifecycle_record.runtime_effect_delivery_attempt_id
+            != request.attempt.runtime_effect_delivery_attempt_id
+        )
+        or request.claim.lease_id != request.attempt.lease_id
+    ):
+        raise RuntimeOrchestrationBindingError("expected lifecycle receipt differs")
+    if (
+        append.effect_identity != request.envelope.effect_identity
+        or append.claim != request.claim
+        or append.attempt != request.attempt
+        or append.lifecycle_record.status is not RuntimeEffectLifecycleStatus.DELIVERING
+    ):
+        raise RuntimeOrchestrationBindingError("delivering append differs")
+
+
+def validate_runtime_orchestration_cancellation_observation(
+    request: RuntimeOrchestrationDeliveryRequest,
+    observation: RuntimeCancellationObservation,
+    observed_at,
+) -> None:
+    reference = request.cancellation_reference
+    identity = request.envelope.effect_identity
+    if (
+        reference is None
+        or observation.runtime_cancellation_reference_id
+        != reference.runtime_cancellation_reference_id
+        or observation.runtime_execution_request_id != identity.runtime_execution_request_id
+        or observation.attempt_id != request.attempt.runtime_effect_delivery_attempt_id
+        or observation.tenant_id != identity.tenant_id
+        or observation.organization_id != identity.organization_id
+        or observation.classification is not identity.classification
+    ):
+        raise RuntimeOrchestrationBindingError("cancellation observation differs")
+    if observation.observed_at > observed_at:
+        raise RuntimeOrchestrationTimestampError("cancellation observation is from the future")
+
+
+def validate_runtime_orchestration_delivery_credential(
+    request: RuntimeOrchestrationDeliveryRequest,
+    lease: RuntimeCredentialLeaseReference,
+    observed_at,
+) -> None:
+    supplied = request.credential_lease_request
+    identity = request.envelope.effect_identity
+    if (
+        supplied is None
+        or supplied.adapter_reference != request.envelope.adapter_reference
+        or lease.runtime_credential_lease_request_id != supplied.runtime_credential_lease_request_id
+        or lease.credential_reference != supplied.credential_reference
+        or lease.tenant_id != identity.tenant_id
+        or lease.organization_id != identity.organization_id
+        or lease.actor_id != request.envelope.actor_id
+        or lease.attempt_id != request.attempt.runtime_effect_delivery_attempt_id
+        or lease.classification is not identity.classification
+    ):
+        raise RuntimeOrchestrationBindingError("credential lease differs")
+    if lease.issued_at > observed_at:
+        raise RuntimeOrchestrationTimestampError("credential lease is not yet issued")
+
+
+def validate_runtime_orchestration_not_invoked_append(
+    request: RuntimeOrchestrationDeliveryRequest,
+    delivering_request: RuntimeEffectLifecycleAppendRequest,
+    append_request: RuntimeEffectLifecycleAppendRequest,
+    reason: RuntimeEffectNotInvokedReason,
+    cancellation_observation: RuntimeCancellationObservation | None,
+    observed_at,
+) -> None:
+    validate_runtime_effect_lifecycle_append_request(append_request)
+    append = append_request.append
+    fact = append.definitely_not_invoked
+    cancellation_id = (
+        None
+        if cancellation_observation is None
+        else cancellation_observation.runtime_cancellation_reference_id
+    )
+    if (
+        fact is None
+        or fact.reason is not reason
+        or append.previous_lifecycle_record != delivering_request.append.lifecycle_record
+        or append.claim != request.claim
+        or append.attempt != request.attempt
+        or fact.observed_at != observed_at
+        or fact.cancellation_observation_id != cancellation_id
+    ):
+        raise RuntimeOrchestrationBindingError("definitely-not-invoked append differs")
