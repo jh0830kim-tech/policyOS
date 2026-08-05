@@ -170,7 +170,10 @@ def upgrade() -> None:
             RETURN NEW;
         END;
         $$ LANGUAGE plpgsql;
-
+        """
+    )
+    op.execute(
+        """
         CREATE TRIGGER trg_knowledge_version_immutable
         BEFORE UPDATE ON knowledge_document_versions
         FOR EACH ROW EXECUTE FUNCTION prevent_knowledge_version_overwrite();
