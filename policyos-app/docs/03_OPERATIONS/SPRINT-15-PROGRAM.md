@@ -64,15 +64,18 @@ The baseline is `main` after merged CP7 Runtime Acceptance PR #48.
 | CP7 Runtime Acceptance | Merged | PR #48 PostgreSQL vertical acceptance, no production-code change. |
 | CP8-Gate-Delivery-Contracts | Merged in PR #50 | ADR-085 effect delivery contracts; no storage or external delivery. |
 | CP8-Gate-Delivery-Persistence-Contracts | Merged in PR #52 | ADR-086 additive persistence-boundary contracts. |
-| CP8 PostgreSQL Delivery Persistence | Implemented, pending review | Four-table implementation on the dedicated branch; production PR not yet created. |
-| CP8 Runtime Delivery | In progress | Orchestration and the Runtime Delivery Acceptance Gate remain; final completion is blocked. |
+| CP8 PostgreSQL Delivery Persistence | Merged in PR #53 | Four-table PostgreSQL implementation and migration 0016. |
+| CP8 Lifecycle Port conformance | Merged in PR #54 | Persistence implements `append(request)` exactly. |
+| CP8 Runtime Delivery Orchestration | Implemented, pending review | Port-only governed delivery and reconciliation coordination. |
+| CP8 Runtime Delivery Acceptance Gate | Not started | PostgreSQL crash-window evidence remains. |
+| CP8 Runtime Delivery | In progress | Acceptance remains; final completion is blocked. |
 | CP9 and CP10 | Planned | Runtime API and Worker implementation are not present. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
 governed CP7 Orchestration; deterministic fake and dry-run Adapters; and PostgreSQL Persistence.
 CP8 delivery Persistence now includes lifecycle, claim, retry, dead-letter, and reconciliation
-storage, but its production PR, Governed Delivery Orchestration service, and Runtime Delivery
-Acceptance Gate remain outstanding. No real external adapter, runtime API, Worker, queue, polling
+storage. Persistence PR #53 and Lifecycle Port conformance PR #54 are merged, and Governed
+Delivery Orchestration is implemented pending review. The Runtime Delivery Acceptance Gate remains. No real external adapter, runtime API, Worker, queue, polling
 loop, scheduler, live credential resolution, or external side effect exists.
 
 ## 5. Program work structure

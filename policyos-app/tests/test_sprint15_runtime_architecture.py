@@ -79,6 +79,16 @@ def test_sprint14_packages_have_no_runtime_reverse_imports() -> None:
             assert "app.runtime" not in source.read_text(encoding="utf-8")
 
 
+def test_cp8_delivery_orchestration_stays_in_existing_boundary() -> None:
+    source = (
+        ROOT / "app" / "runtime" / "orchestration" / "delivery_service.py"
+    ).read_text(encoding="utf-8")
+    assert "app.runtime.persistence" not in source
+    assert "sqlalchemy" not in source
+    assert "app.runtime.outbox" not in source
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()
+
+
 def test_runtime_contains_only_layers_through_cp7_persistence() -> None:
     runtime = ROOT / "app" / "runtime"
     assert (runtime / "authority").is_dir()
