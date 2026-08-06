@@ -1,5 +1,6 @@
 """Focused, network-free guards for the Sprint 15 CP0 architecture freeze."""
 
+import ast
 import tomllib
 from pathlib import Path
 
@@ -182,3 +183,68 @@ def test_cp9_runtime_api_governance_precedes_production_routes() -> None:
     assert "| CP10 | Planned |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
+def test_cp9_api_contract_gate_has_no_production_implementation() -> None:
+    modules = (
+        ROOT / "app" / "schemas" / "runtime_api.py",
+        ROOT / "app" / "services" / "runtime_api_contracts.py",
+        ROOT / "app" / "services" / "runtime_api_protocols.py",
+        ROOT / "app" / "services" / "runtime_api_validation.py",
+    )
+    assert all(path.is_file() for path in modules)
+    assert (ROOT / "tests" / "test_runtime_api_contracts.py").is_file()
+    forbidden = (
+        "fastapi",
+        "sqlalchemy",
+        "app.runtime.persistence",
+        "app.runtime.adapters",
+    )
+    for path in modules:
+        source = path.read_text(encoding="utf-8").lower()
+        assert not any(item in source for item in forbidden)
+
+    for path in (ROOT / "app" / "runtime").rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        imported_modules = {
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        }
+        imported_modules.update(
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module is not None
+        )
+        assert not any(
+            module == "app.services.runtime_api"
+            or module.startswith("app.services.runtime_api.")
+            or module.startswith("app.services.runtime_api_")
+            for module in imported_modules
+        )
+    combined = "\n".join(path.read_text(encoding="utf-8") for path in modules)
+    for permission in ("runtime.read", "runtime.invoke", "runtime.reconcile"):
+        assert permission in combined
+
+    roadmap = (
+        ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md"
+    ).read_text(encoding="utf-8")
+    program = (
+        ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md"
+    ).read_text(encoding="utf-8")
+    for blocker in (
+        "issuer/audience",
+        "Tenant-Organization",
+        "permission",
+        "idempotency persistence",
+        "facade implementation",
+    ):
+        assert blocker in roadmap or blocker in program
+    assert "Implemented, pending review" in roadmap
+    assert "external business-effect exactly-once" in roadmap
+    assert "| CP9 | Planned / Blocked |" in roadmap
+    assert "| CP10 | Planned |" in roadmap
+    assert not (ROOT / "app" / "runtime" / "api").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "app" / "runtime" / "workers").exists()
+    assert not (ROOT / "app" / "runtime" / "scheduler").exists()

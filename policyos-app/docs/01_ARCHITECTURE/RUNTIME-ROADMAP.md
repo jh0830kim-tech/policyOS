@@ -132,11 +132,11 @@ grants permission or causes automatic execution.
 | CP8 closeout | Merged, PR #59 | Governance closeout | CP8 completion evidence | No Worker, queue, API, or `app.runtime.outbox` |
 | CP8 | Merged | Effect delivery | Local atomic delivery and reconciliation boundary | External exactly-once is not guaranteed |
 | CP9 Governance / ADR-087 | Proposed | API boundary | Principal, RBAC, threat and placement decisions | No production route |
-| CP9-Gate-API-Contracts | Blocked on ADR-087 merge | API contracts | Principal, facade and safe mapping | Green merge required before production API |
+| CP9-Gate-API-Contracts | Implemented, pending review | API contracts | Immutable principal, scope, facade, idempotency and safe error contracts | Green merge required before production API |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires issuer/audience, Tenant-Organization binding and stable facade |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
-CP9 routes remain in `app.api`, schemas in `app.schemas`, and call only the trusted application facade. `app.runtime.api` is prohibited. Production API work is blocked until ADR-087 and `CP9-Gate-API-Contracts` merge with green CI and issuer/audience validation, persisted/configured Tenant-Organization binding, and stable facade contracts exist. External business-effect exactly-once remains unguaranteed.
+CP9 contracts are implemented pending review, but no production Runtime route or facade implementation exists. Routes remain in `app.api`, schemas in `app.schemas`, and `app.runtime.api` is prohibited. Production remains blocked on green contract-gate merge, issuer/audience implementation, persisted/configured Tenant-Organization binding and migration, exact permission seeds and grant operations, transport idempotency persistence, and the trusted facade implementation. CP10 remains Planned, and external business-effect exactly-once remains unguaranteed.
 ## 6. Boundary input and output contracts
 
 ### Authority
