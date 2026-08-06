@@ -119,3 +119,12 @@ HTTPS, normalized-origin allowlisting, and rejection of URL userinfo, fragments,
 
 ## Knowledge provider trust boundary
 Provider selection is organization-scoped and capability allowlisted. Restricted data cannot use external providers; confidential external transmission requires explicit authorization. API callers cannot choose adapter classes, MCP servers/tools, commands, endpoints, or transports. Provider instructions are treated as untrusted data.
+## Sprint 15 CP9 Runtime API transport
+
+Every Runtime request binds an authenticated principal, active user or service principal, active membership, exact organization, and persisted/configured `Tenant-Organization` relationship. Trusted JWT issuer and audience validation and exact `runtime.read`, `runtime.invoke`, or `runtime.reconcile` permission are production entry requirements. Organization ID is never inferred to be tenant ID.
+
+All body, header, query, and path values are untrusted. Clients cannot supply Authority, Permit, Plan, State, Registry, Audit, Adapter, Persistence, credential, lifecycle, claim, retry, dead-letter, timestamp, digest, or receipt facts. Routes in `app.api` validate strict `app.schemas` contracts and call only the trusted application facade, which resolves server-side facts and invokes Runtime Orchestration. Direct ORM, Persistence, or Adapter access is prohibited.
+
+Invocation mutations require a bounded `Idempotency-Key` scoped to tenant, organization, principal, operation, and command version. Body size, collection size, content type, headers, rate, timeout, cancellation, and public errors are bounded. No raw credential, body, provider response, internal exception, SQL detail, or cross-tenant existence is exposed.
+
+Internal due, claim, lease, `DELIVERING`, lifecycle append, retry, and dead-letter operations are not public endpoints. External business-effect exactly-once is not guaranteed. Real provider/MCP/connector Adapters and Worker, queue, polling loop, and scheduler behavior remain excluded; Workers are CP10 scope. Production routes remain blocked until `CP9-Gate-API-Contracts` merges with green CI.
