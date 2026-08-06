@@ -13,7 +13,7 @@ state, and execution result is not a policy outcome.
 
 ## 2. Current and target state
 
-### Current state - CP8 Runtime Delivery Orchestration implemented, pending review
+### Current state - CP8 Runtime Delivery Acceptance implemented, pending review
 
 - `app.runtime.authority`: immutable request, authority reference, permit reference, admission,
   revocation, bundle, audit-metadata, and pure validation contracts.
@@ -33,20 +33,22 @@ state, and execution result is not a policy outcome.
   and local atomic State, Audit, Idempotency, and optional enqueue commit.
 - CP7 Acceptance proves the Request-to-read-back vertical slice with the production Fake Adapter
   and PostgreSQL without changing production behavior.
-- CP8 PostgreSQL Delivery Persistence merged in PR #53, and Lifecycle Port conformance merged in
-  PR #54. Migration `20260805_0016_runtime_effect_delivery.py` creates exactly four delivery tables.
-- Governed Delivery Orchestration is implemented on its dedicated branch, pending review. The CP8
-  Runtime Delivery Acceptance Gate is not started.
+- CP8 PostgreSQL Delivery Persistence merged in PR #53, Lifecycle Port conformance in PR #54,
+  and governed Delivery Orchestration in PR #55.
+- PR #56 corrected Alembic 0007 asyncpg execution, and PR #57 corrected repeated lifecycle
+  projection cardinality. The migration head is `20260805_0017`.
+- The CP8 Runtime Delivery Acceptance Gate is implemented, pending review. CP8 remains in progress
+  until this Acceptance change has green CI and is merged.
   No real external adapter, runtime API, Worker, queue, polling loop, scheduler, live credential
   resolver, or external effect exists.
 
 ### Target state - Planned
 
-The ADR-085 delivery-contract gate and ADR-086 persistence-contract gate are merged. The current
-Persistence implementation awaits review; the remaining CP8 target is a separately reviewed
-Governed Delivery Orchestration service followed by PostgreSQL crash-window and vertical
-Acceptance evidence. Real adapters, credential resolution, authenticated API transport, and
-Workers remain separate future work and cannot own authority outside their accepted boundaries.
+The ADR-085 delivery-contract gate, ADR-086 persistence-contract gate, Persistence, and governed
+Delivery Orchestration are merged. The remaining CP8 target is review and green merge of the
+PostgreSQL crash-window and vertical Acceptance evidence. Real adapters, credential resolution,
+authenticated API transport, and Workers remain separate future work and cannot own authority
+outside their accepted boundaries. CP9 must not start before CP8 completion.
 
 ## 3. Program sequence versus dependency order
 
@@ -125,9 +127,9 @@ grants permission or causes automatic execution.
 | CP8-Gate-Delivery-Persistence-Contracts | Merged, PR #52 | Persistence boundary | Initial atomic effect facts, due selection and lifecycle receipts | Contracts merged before implementation |
 | CP8 PostgreSQL Delivery Persistence | Merged, PR #53 | Persistence | Four-table storage, replay, due selection, lifecycle CAS and reconciliation | Storage owns no policy |
 | CP8 Lifecycle Port conformance | Merged, PR #54 | Persistence conformance | `append(request)` alignment | No schema change |
-| CP8 Runtime Delivery Orchestration | Implemented, pending review | Orchestration | Governed one-call delivery and reconciliation | Ports only |
-| CP8 Runtime Delivery Acceptance Gate | Not started | Vertical evidence | PostgreSQL crash-window scenarios | Required before completion |
-| CP8 | In progress | Effect delivery | Governed Delivery Orchestration and Acceptance evidence remain | No external exactly-once claim; final completion blocked |
+| CP8 Runtime Delivery Orchestration | Merged, PR #55 | Orchestration | Governed one-call delivery and reconciliation | Ports only |
+| CP8 Runtime Delivery Acceptance Gate | Implemented, pending review | Vertical evidence | PostgreSQL crash-window scenarios | Required before completion |
+| CP8 | In progress | Effect delivery | Acceptance review and green merge remain | No external exactly-once claim; final completion blocked |
 | CP9 | Planned | API | Authenticated transport | No direct adapter/repository access |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 

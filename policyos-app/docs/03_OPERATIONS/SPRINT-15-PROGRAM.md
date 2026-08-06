@@ -66,16 +66,19 @@ The baseline is `main` after merged CP7 Runtime Acceptance PR #48.
 | CP8-Gate-Delivery-Persistence-Contracts | Merged in PR #52 | ADR-086 additive persistence-boundary contracts. |
 | CP8 PostgreSQL Delivery Persistence | Merged in PR #53 | Four-table PostgreSQL implementation and migration 0016. |
 | CP8 Lifecycle Port conformance | Merged in PR #54 | Persistence implements `append(request)` exactly. |
-| CP8 Runtime Delivery Orchestration | Implemented, pending review | Port-only governed delivery and reconciliation coordination. |
-| CP8 Runtime Delivery Acceptance Gate | Not started | PostgreSQL crash-window evidence remains. |
-| CP8 Runtime Delivery | In progress | Acceptance remains; final completion is blocked. |
+| CP8 Runtime Delivery Orchestration | Merged in PR #55 | Port-only governed delivery and reconciliation coordination. |
+| CP8 Alembic asyncpg blocker | Merged in PR #56 | Migration 0007 executes function and trigger commands separately. |
+| CP8 Lifecycle projection cardinality blocker | Merged in PR #57 | Repeated claim, lease, attempt, and result projections use scoped lookup indexes. |
+| CP8 Runtime Delivery Acceptance Gate | Implemented, pending review | PostgreSQL crash-window evidence awaits review and green merge. |
+| CP8 Runtime Delivery | In progress | Acceptance review and green merge remain; final completion is blocked. |
 | CP9 and CP10 | Planned | Runtime API and Worker implementation are not present. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
 governed CP7 Orchestration; deterministic fake and dry-run Adapters; and PostgreSQL Persistence.
 CP8 delivery Persistence now includes lifecycle, claim, retry, dead-letter, and reconciliation
-storage. Persistence PR #53 and Lifecycle Port conformance PR #54 are merged, and Governed
-Delivery Orchestration is implemented pending review. The Runtime Delivery Acceptance Gate remains. No real external adapter, runtime API, Worker, queue, polling
+storage. Persistence PR #53, Lifecycle Port conformance PR #54, Governed Delivery Orchestration PR #55,
+Alembic blocker PR #56, and projection-cardinality blocker PR #57 are merged. Migration head
+is `20260805_0017`. The Runtime Delivery Acceptance Gate is implemented, pending review. No real external adapter, runtime API, Worker, queue, polling
 loop, scheduler, live credential resolution, or external side effect exists.
 
 ## 5. Program work structure
@@ -406,8 +409,8 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP8 - Runtime Outbox
 
-- **Status:** In progress. PostgreSQL Delivery Persistence is implemented, pending review;
-  Governed Delivery Orchestration and the Runtime Delivery Acceptance Gate remain unimplemented.
+- **Status:** In progress. Persistence, Orchestration, and both blocker fixes are merged; the
+  Runtime Delivery Acceptance Gate is implemented, pending review and green merge.
 - **Package placement:** Resolved by ADR-085. Immutable contracts and Protocols belong to
   `app.runtime.ports`; PostgreSQL storage belongs to `app.runtime.persistence`; governed delivery
   coordination belongs to the existing `app.runtime.orchestration` application boundary; exact

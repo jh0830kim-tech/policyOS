@@ -54,6 +54,26 @@ def test_cp8_delivery_contract_gate_uses_existing_runtime_packages() -> None:
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
 
 
+def test_cp8_delivery_acceptance_checkpoint_is_documented() -> None:
+    gate = (
+        ROOT
+        / "docs"
+        / "03_OPERATIONS"
+        / "SPRINT-15-CP8-RUNTIME-DELIVERY-ACCEPTANCE-GATE.md"
+    )
+    assert gate.is_file()
+    text = gate.read_text(encoding="utf-8")
+    assert "external exactly-once" in text
+    assert "policyos.test.scope=cp8-delivery-acceptance" in text
+    assert "PR #55 merged" in text
+    assert "PR #56 corrected" in text
+    assert "PR #57 corrected" in text
+    assert "20260805_0017" in text
+    assert "implemented, pending review" in text
+    assert "CP8 remains in progress" in text
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()
+
+
 def test_normative_runtime_boundaries_are_frozen() -> None:
     text = RULES.read_text(encoding="utf-8")
     required = (
