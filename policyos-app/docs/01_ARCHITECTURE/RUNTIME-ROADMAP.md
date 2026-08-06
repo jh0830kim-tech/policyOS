@@ -120,19 +120,23 @@ grants permission or causes automatic execution.
 | CP5-Gate-Ports | Merged | Ports | Adapter/repository/outbox/clock/broker protocols | Protocols have no implementation |
 | CP5 | Merged | Orchestration | Pure governed coordination | Requires Registry, Audit, and Ports |
 | CP6 | Merged | Adapters | Deterministic fake and dry-run adapters | No external effect or credential resolution |
-| CP7-Gate-Commit-Facts | Merged | Ports receipt provenance | Caller-bound record receipts, digest and clock reference | No hidden UUID, hash, or time |
+| CP7-Gate-Commit-Facts | Merged | Ports receipt provenance | Caller-bound receipts, digest and clock reference | No hidden generation |
 | CP7 | Merged | Persistence | Repositories, migrations, local transactions | Storage owns no policy |
-| CP7-Acceptance | Merged | PostgreSQL vertical evidence | Fake invocation, atomic commit, exact read-back | PostgreSQL pass required; skip is not evidence |
-| CP8-Gate-Delivery-Contracts | Merged, PR #50 | Delivery contracts | Effect identity, lifecycle, retry, dead-letter and reconciliation contracts | No storage or external delivery |
-| CP8-Gate-Delivery-Persistence-Contracts | Merged, PR #52 | Persistence boundary | Initial atomic effect facts, due selection and lifecycle receipts | Contracts merged before implementation |
-| CP8 PostgreSQL Delivery Persistence | Merged, PR #53 | Persistence | Four-table storage, replay, due selection, lifecycle CAS and reconciliation | Storage owns no policy |
+| CP7-Acceptance | Merged | PostgreSQL vertical evidence | Atomic commit and exact read-back | PostgreSQL pass required |
+| CP8-Gate-Delivery-Contracts | Merged, PR #50 | Delivery contracts | Effect lifecycle and reconciliation contracts | No external delivery |
+| CP8-Gate-Delivery-Persistence-Contracts | Merged, PR #52 | Persistence boundary | Atomic effect facts and lifecycle receipts | Contracts precede implementation |
+| CP8 PostgreSQL Delivery Persistence | Merged, PR #53 | Persistence | Four-table storage, replay, due selection and lifecycle CAS | Storage owns no policy |
 | CP8 Lifecycle Port conformance | Merged, PR #54 | Persistence conformance | `append(request)` alignment | No schema change |
-| CP8 Runtime Delivery Orchestration | Merged, PR #55 | Orchestration | Governed one-call delivery and reconciliation | Ports only |
-| CP8 Runtime Delivery Acceptance Gate | Merged, PR #58 | Vertical evidence | PostgreSQL crash-window scenarios | Green PostgreSQL evidence; no external exactly-once claim |
-| CP8 | Merged | Effect delivery | Local atomic delivery and reconciliation boundary | No external exactly-once claim; no Worker, queue, API, or `app.runtime.outbox` |
-| CP9 | Planned | API | Authenticated transport | No direct adapter/repository access |
+| CP8 Runtime Delivery Orchestration | Merged, PR #55 | Orchestration | Governed delivery and reconciliation | Ports only |
+| CP8 Runtime Delivery Acceptance Gate | Merged, PR #58 | Vertical evidence | PostgreSQL crash-window scenarios | No external exactly-once claim |
+| CP8 closeout | Merged, PR #59 | Governance closeout | CP8 completion evidence | No Worker, queue, API, or `app.runtime.outbox` |
+| CP8 | Merged | Effect delivery | Local atomic delivery and reconciliation boundary | External exactly-once is not guaranteed |
+| CP9 Governance / ADR-087 | Proposed | API boundary | Principal, RBAC, threat and placement decisions | No production route |
+| CP9-Gate-API-Contracts | Blocked on ADR-087 merge | API contracts | Principal, facade and safe mapping | Green merge required before production API |
+| CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires issuer/audience, Tenant-Organization binding and stable facade |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
+CP9 routes remain in `app.api`, schemas in `app.schemas`, and call only the trusted application facade. `app.runtime.api` is prohibited. Production API work is blocked until ADR-087 and `CP9-Gate-API-Contracts` merge with green CI and issuer/audience validation, persisted/configured Tenant-Organization binding, and stable facade contracts exist. External business-effect exactly-once remains unguaranteed.
 ## 6. Boundary input and output contracts
 
 ### Authority

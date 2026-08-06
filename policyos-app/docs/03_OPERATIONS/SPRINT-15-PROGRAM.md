@@ -6,7 +6,7 @@ This document is the operational control plane for the Sprint 15 Runtime program
 checkpoint work, defines evidence required to enter and complete each checkpoint, and prevents a
 later runtime layer from being implemented before its dependencies and governance decisions are
 ready. It does not supersede `AGENTS.md`, the normative Sprint 15 Runtime Architecture Rules, or
-ADR-065 through ADR-086. A conflict is recorded under Governance decisions and resolved
+ADR-065 through ADR-087. A conflict is recorded under Governance decisions and resolved
 before implementation through the appropriate governance change.
 
 Status terms are used precisely:
@@ -46,7 +46,7 @@ revalidated immediately before the effect.
 
 ## 4. Current baseline
 
-The baseline is `main` after merged CP8 Runtime Delivery Acceptance PR #58.
+The baseline is `main` after merged CP8 Runtime Delivery closeout PR #59.
 
 | Checkpoint | Status | Evidence |
 | --- | --- | --- |
@@ -71,6 +71,8 @@ The baseline is `main` after merged CP8 Runtime Delivery Acceptance PR #58.
 | CP8 Lifecycle projection cardinality blocker | Merged in PR #57 | Repeated claim, lease, attempt, and result projections use scoped lookup indexes. |
 | CP8 Runtime Delivery Acceptance Gate | Merged in PR #58 | PostgreSQL crash-window evidence passed with green CI. |
 | CP8 Runtime Delivery | Merged | Approved local delivery, ambiguity, and reconciliation boundary complete. |
+| CP9 Governance / ADR-087 | Proposed | Transport, principal, application-facade, threat, and error decisions. |
+| CP9-Gate-API-Contracts | Blocked on ADR-087 merge | Green contract-gate merge is required before production API implementation. |
 | CP9 and CP10 | Planned | Runtime API and Worker implementation are not present. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
@@ -449,26 +451,14 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP9 - Runtime API
 
-- **Status:** Planned.
-- **Purpose:** Expose authenticated, organization-scoped transport schemas over the approved
-  runtime application/orchestration boundary.
-- **Entry conditions:** CP8 merged; authentication/RBAC and transport threat model reviewed;
-  stable application commands/results; audit and error mapping approved.
-- **Allowed outputs:** Runtime API routes, request/response schemas, dependencies, authorization and
-  transport tests.
-- **Package placement:** Routes belong in the existing `app.api` layer. CP9 must not create
-  `app.runtime.api` without a separately approved superseding ADR.
-- **Allowed scope:** Authenticate, validate transport, invoke the application boundary, and return
-  bounded safe references/status.
-- **Security gates:** API owns no authority, state, action selection, repository mutation, adapter
-  invocation, credential, provider payload, or cross-tenant fallback.
-- **Verification:** Authentication/RBAC, tenant isolation, schema strictness, safe error mapping,
-  replay/idempotency handling, rate/size controls, and no direct infrastructure bypass.
-- **Completion:** API is a thin governed transport with all decisions downstream.
-- **Handoff:** CP10 may consume persisted governed work through the same boundary.
-- **Excluded:** Anonymous runtime access, direct adapter/repository calls, raw secrets or outputs,
-  worker behavior, and policy decisions in routes.
-
+- **Status:** Planned / Blocked. No Runtime production route exists. Implementation is blocked until ADR-087 and `CP9-Gate-API-Contracts` merge with green CI.
+- **Purpose:** Expose authenticated, organization-scoped transport schemas over the approved trusted application facade and Runtime Orchestration boundary.
+- **Entry conditions:** CP8 and closeout PR #59 merged; trusted JWT issuer and audience validation; persisted/configured Tenant-Organization binding; authenticated principal with active user or service principal and membership; exact `runtime.read`, `runtime.invoke`, and `runtime.reconcile` permissions; stable facade commands/results; approved idempotency, threat, audit, and safe-error contracts.
+- **Allowed outputs:** After the contracts gate, bounded routes in `app.api`, strict schemas in `app.schemas`, trusted application-facade integration, dependencies, and transport tests.
+- **Package placement:** Routes belong in `app.api`, schemas in `app.schemas`, and the trusted facade sits between API and Runtime Orchestration. `app.runtime.api` is prohibited.
+- **Allowed scope:** Authenticate, validate untrusted transport, resolve trusted server-side facts, invoke only the application facade, and return bounded safe results.
+- **Security gates:** Exact tenant, organization, principal, membership, actor, optional agent and represented-user binding; no client-supplied Authority, Permit, Plan, State, Registry, Audit, Adapter, or Persistence facts; explicit `Idempotency-Key`; bounded body, header, media type, rate, timeout, and error controls.
+- **Excluded:** Direct ORM, Persistence, Adapter, provider, MCP, or connector calls; public due, claim, lease, `DELIVERING`, lifecycle append, retry, or dead-letter endpoints; external exactly-once guarantees; Worker, queue, polling loop, scheduler, and CP10 implementation.
 ### CP10 - Runtime Workers
 
 - **Status:** Planned.

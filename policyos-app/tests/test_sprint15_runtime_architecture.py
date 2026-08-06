@@ -143,3 +143,42 @@ def test_version_and_deferred_decision_remain_unchanged() -> None:
         ROOT / "docs" / "03_OPERATIONS" / "SPRINT-14-RELEASE-VERSION-DECISION.md"
     ).read_text(encoding="utf-8")
     assert "VERSION DECISION DEFERRED" in decision
+
+def test_cp9_runtime_api_governance_precedes_production_routes() -> None:
+    decision = (
+        ADR
+        / "ADR-087-CP9-RUNTIME-API-TRANSPORT-PRINCIPAL-AND-APPLICATION-BOUNDARY.md"
+    )
+    roadmap = (
+        ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md"
+    ).read_text(encoding="utf-8")
+    program = (
+        ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md"
+    ).read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert decision.is_file()
+    text = decision.read_text(encoding="utf-8")
+    assert "**Status:** Proposed" in text
+    for phrase in (
+        "runtime.read",
+        "runtime.invoke",
+        "runtime.reconcile",
+        "issuer",
+        "audience",
+        "Tenant-Organization",
+        "trusted application facade",
+        "Idempotency-Key",
+        "external business-effect exactly-once",
+    ):
+        assert phrase in text
+    assert "CP9-Gate-API-Contracts" in roadmap
+    assert "CP9-Gate-API-Contracts" in program
+    assert "## Sprint 15 CP9 Runtime API transport" in security
+    assert "| CP8 | Merged |" in roadmap
+    assert "| CP9 | Planned / Blocked |" in roadmap
+    assert "| CP10 | Planned |" in roadmap
+    assert not (ROOT / "app" / "runtime" / "api").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
