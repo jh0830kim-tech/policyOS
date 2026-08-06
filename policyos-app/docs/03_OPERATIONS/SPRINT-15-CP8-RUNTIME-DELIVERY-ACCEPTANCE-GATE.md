@@ -1,5 +1,7 @@
 # Sprint 15 CP8 Runtime Delivery Acceptance Gate
 
+Status: Merged, PR #58
+
 ## Purpose and scope
 
 This gate supplies PostgreSQL-backed vertical and crash-window evidence for the merged CP8 delivery contracts, Persistence, and Orchestration. It changes no production contract or implementation. The gate uses caller-supplied immutable identity, time, digest, lifecycle, and receipt facts.
@@ -37,7 +39,7 @@ Acceptance fails closed for tenant, organization, classification, effect, envelo
 
 ## Merged prerequisites
 
-PR #55 merged governed Delivery Orchestration, PR #56 corrected the Alembic 0007 asyncpg command boundary, and PR #57 corrected repeated lifecycle projection cardinality. The migration head is `20260805_0017`. The Runtime Delivery Acceptance Gate is implemented, pending review; CP8 remains in progress until this Acceptance change has green CI and is merged.
+PR #55 merged governed Delivery Orchestration, PR #56 corrected the Alembic 0007 asyncpg command boundary, and PR #57 corrected repeated lifecycle projection cardinality. PR #58 merged this Runtime Delivery Acceptance Gate with green CI. The migration head is `20260805_0017`, and the CP8 Runtime Delivery completion condition is satisfied.
 ## Verification
 
 The gate requires focused Acceptance tests with PostgreSQL skips equal to zero, CP7 and CP8 vertical regression, Persistence and Orchestration regression, migration head `20260805_0017`, collection-order independence, Ruff, compile, import, dependency, diff, and file-format checks. The exact commands and pass counts are recorded in the pull request evidence.
@@ -48,8 +50,8 @@ The test run records the created container ID and label, stops only that exact c
 
 ## Exclusions
 
-There is no worker, queue, polling loop, scheduler, API, real adapter, provider, MCP, connector, process-kill recovery, retry loop, or `app.runtime.outbox` package. CP9 remains blocked.
+There is no worker, queue, polling loop, scheduler, API, real adapter, provider, MCP, connector, process-kill recovery, retry loop, or `app.runtime.outbox` package. CP9 is not implemented by this gate and may begin only under its own authentication/RBAC and transport-security entry conditions.
 
 ## Completion condition
 
-CP8 remains in progress until this Acceptance Gate is reviewed with green CI and merged. External uncertainty remains explicit and reconcilable after completion.
+PR #58 completed review, green CI, and merge of this Acceptance Gate. CP8 Runtime Delivery is complete. External uncertainty remains explicit and reconcilable, and external business-effect exactly-once remains unguaranteed.
