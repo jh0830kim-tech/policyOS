@@ -68,9 +68,15 @@ def test_cp8_delivery_acceptance_checkpoint_is_documented() -> None:
     assert "PR #55 merged" in text
     assert "PR #56 corrected" in text
     assert "PR #57 corrected" in text
+    assert "PR #58 merged" in text
+    assert "Merged" in text
     assert "20260805_0017" in text
-    assert "implemented, pending review" in text
-    assert "CP8 remains in progress" in text
+    assert "CP8 Runtime Delivery" in text
+    assert "CP9 is not implemented by this gate" in text
+    assert "authentication/RBAC" in text
+    assert "external business-effect exactly-once remains unguaranteed" in text
+    assert "implemented, pending review" not in text.lower()
+    assert "cp8 remains in progress" not in text.lower()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
 
 
