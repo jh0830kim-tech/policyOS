@@ -1,9 +1,17 @@
-﻿from typing import Annotated
+import os
+from typing import Annotated
 
 from fastapi import Depends
 
-from app.api.deps import OrganizationContext, require_permission
-from app.main import app
+os.environ.setdefault("JWT_ISSUER", "https://issuer.policyos.test")
+os.environ.setdefault("JWT_AUDIENCES", '["policyos-api-test"]')
+
+from app.api.deps import OrganizationContext, require_permission  # noqa: E402
+from app.core.config import get_settings  # noqa: E402
+from app.main import app  # noqa: E402
+
+get_settings.cache_clear()
+
 
 PROTECTED_TEST_PATH = "/_test/organizations/{organization_id}/policy-read"
 

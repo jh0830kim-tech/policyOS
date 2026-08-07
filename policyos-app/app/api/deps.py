@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import decode_access_token
+from app.core.security import decode_verified_access_token
 from app.db.session import get_db
 from app.models.identity import (
     Membership,
@@ -60,13 +60,12 @@ async def get_current_user(
     if token is None:
         raise _authentication_error()
 
-    payload = decode_access_token(token)
-    if payload is None:
+    claims = decode_verified_access_token(token)
+    if claims is None:
         raise _authentication_error()
 
-    subject = payload.get("sub")
     try:
-        user_id = uuid.UUID(subject) if isinstance(subject, str) else None
+        user_id = uuid.UUID(claims.subject)
     except ValueError:
         user_id = None
     if user_id is None:

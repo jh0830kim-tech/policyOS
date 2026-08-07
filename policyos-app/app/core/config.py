@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,7 +17,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://policyos:policyos@localhost:5432/policyos"
     redis_url: str = "redis://localhost:6379/0"
     secret_key: str = _DEVELOPMENT_SECRET
-    jwt_algorithm: str = "HS256"
+    jwt_algorithm: Literal["HS256"] = "HS256"
+    jwt_issuer: str
+    jwt_audiences: tuple[str, ...]
     access_token_expire_minutes: int = 30
     ai_provider: str = "fake"
     openai_api_key: str | None = None
@@ -126,6 +128,20 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def reject_unsafe_production_settings(self) -> Self:
+        if (
+            not self.jwt_issuer
+            or self.jwt_issuer != self.jwt_issuer.strip()
+            or len(self.jwt_issuer) > 200
+        ):
+            raise ValueError(
+                "JWT_ISSUER must be non-empty, bounded, and have no surrounding whitespace"
+            )
+        if not 1 <= len(self.jwt_audiences) <= 8:
+            raise ValueError("JWT_AUDIENCES must contain between 1 and 8 audiences")
+        if len(set(self.jwt_audiences)) != len(self.jwt_audiences):
+            raise ValueError("JWT_AUDIENCES must not contain duplicates")
+        if any(not item or item != item.strip() or len(item) > 200 for item in self.jwt_audiences):
+            raise ValueError("JWT_AUDIENCES entries must be non-empty, bounded, and trimmed")
         is_production = self.app_env.lower() not in {"development", "test", "testing", "local"}
         if is_production and (
             len(self.secret_key.encode()) < _MINIMUM_SECRET_LENGTH

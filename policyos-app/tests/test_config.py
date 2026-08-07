@@ -72,3 +72,79 @@ def test_chunking_settings_reject_inconsistent_sizes() -> None:
             knowledge_chunk_max_characters=100,
             knowledge_chunk_overlap_characters=100,
         )
+
+
+def test_jwt_issuer_and_audiences_are_required_without_insecure_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert Settings.model_fields["jwt_issuer"].is_required()
+    assert Settings.model_fields["jwt_audiences"].is_required()
+    monkeypatch.delenv("JWT_ISSUER", raising=False)
+    monkeypatch.delenv("JWT_AUDIENCES", raising=False)
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, jwt_audiences=("policyos-api-test",))
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, jwt_issuer="https://issuer.policyos.test")
+
+
+def test_valid_jwt_trust_settings_use_an_immutable_audience_tuple() -> None:
+    settings = Settings(
+        _env_file=None,
+        jwt_issuer="https://issuer.policyos.test",
+        jwt_audiences=("policyos-api-test", "policyos-admin-test"),
+    )
+
+    assert settings.jwt_issuer == "https://issuer.policyos.test"
+    assert settings.jwt_audiences == ("policyos-api-test", "policyos-admin-test")
+    assert isinstance(settings.jwt_audiences, tuple)
+
+
+@pytest.mark.parametrize(
+    "issuer",
+    ["", " https://issuer.policyos.test", "https://issuer.policyos.test ", "x" * 201],
+)
+def test_jwt_issuer_rejects_empty_whitespace_and_unbounded_values(issuer: str) -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            jwt_issuer=issuer,
+            jwt_audiences=("policyos-api-test",),
+        )
+
+
+@pytest.mark.parametrize(
+    "audiences",
+    [
+        (),
+        tuple(f"audience-{index}" for index in range(9)),
+        ("",),
+        (" policyos-api-test",),
+        ("policyos-api-test ",),
+        ("policyos-api-test", "policyos-api-test"),
+        ("x" * 201,),
+    ],
+)
+def test_jwt_audiences_reject_invalid_values(audiences: tuple[str, ...]) -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            jwt_issuer="https://issuer.policyos.test",
+            jwt_audiences=audiences,
+        )
+
+
+def test_jwt_algorithm_is_hs256_only() -> None:
+    settings = Settings(
+        _env_file=None,
+        jwt_issuer="https://issuer.policyos.test",
+        jwt_audiences=("policyos-api-test",),
+    )
+    assert settings.jwt_algorithm == "HS256"
+
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            jwt_algorithm="RS256",
+            jwt_issuer="https://issuer.policyos.test",
+            jwt_audiences=("policyos-api-test",),
+        )

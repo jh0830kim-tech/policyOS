@@ -42,10 +42,7 @@ def test_cp7_commit_facts_gate_and_persistence_decisions_exist() -> None:
 
 
 def test_cp8_delivery_contract_gate_uses_existing_runtime_packages() -> None:
-    decision = (
-        ADR
-        / "ADR-085-CP8-OUTBOX-PACKAGE-PLACEMENT-AND-EFFECT-DELIVERY-SEMANTICS.md"
-    )
+    decision = ADR / "ADR-085-CP8-OUTBOX-PACKAGE-PLACEMENT-AND-EFFECT-DELIVERY-SEMANTICS.md"
     assert decision.is_file()
     text = decision.read_text(encoding="utf-8")
     normalized = " ".join(text.split())
@@ -56,12 +53,7 @@ def test_cp8_delivery_contract_gate_uses_existing_runtime_packages() -> None:
 
 
 def test_cp8_delivery_acceptance_checkpoint_is_documented() -> None:
-    gate = (
-        ROOT
-        / "docs"
-        / "03_OPERATIONS"
-        / "SPRINT-15-CP8-RUNTIME-DELIVERY-ACCEPTANCE-GATE.md"
-    )
+    gate = ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-CP8-RUNTIME-DELIVERY-ACCEPTANCE-GATE.md"
     assert gate.is_file()
     text = gate.read_text(encoding="utf-8")
     assert "external exactly-once" in text
@@ -107,9 +99,9 @@ def test_sprint14_packages_have_no_runtime_reverse_imports() -> None:
 
 
 def test_cp8_delivery_orchestration_stays_in_existing_boundary() -> None:
-    source = (
-        ROOT / "app" / "runtime" / "orchestration" / "delivery_service.py"
-    ).read_text(encoding="utf-8")
+    source = (ROOT / "app" / "runtime" / "orchestration" / "delivery_service.py").read_text(
+        encoding="utf-8"
+    )
     assert "app.runtime.persistence" not in source
     assert "sqlalchemy" not in source
     assert "app.runtime.outbox" not in source
@@ -145,20 +137,12 @@ def test_version_and_deferred_decision_remain_unchanged() -> None:
     ).read_text(encoding="utf-8")
     assert "VERSION DECISION DEFERRED" in decision
 
+
 def test_cp9_runtime_api_governance_precedes_production_routes() -> None:
-    decision = (
-        ADR
-        / "ADR-087-CP9-RUNTIME-API-TRANSPORT-PRINCIPAL-AND-APPLICATION-BOUNDARY.md"
-    )
-    roadmap = (
-        ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md"
-    ).read_text(encoding="utf-8")
-    program = (
-        ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md"
-    ).read_text(encoding="utf-8")
-    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(
-        encoding="utf-8"
-    )
+    decision = ADR / "ADR-087-CP9-RUNTIME-API-TRANSPORT-PRINCIPAL-AND-APPLICATION-BOUNDARY.md"
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
 
     assert decision.is_file()
     text = decision.read_text(encoding="utf-8")
@@ -183,6 +167,7 @@ def test_cp9_runtime_api_governance_precedes_production_routes() -> None:
     assert "| CP10 | Planned |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
 
 def test_cp9_api_contract_gate_has_no_production_implementation() -> None:
     modules = (
@@ -226,12 +211,8 @@ def test_cp9_api_contract_gate_has_no_production_implementation() -> None:
     for permission in ("runtime.read", "runtime.invoke", "runtime.reconcile"):
         assert permission in combined
 
-    roadmap = (
-        ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md"
-    ).read_text(encoding="utf-8")
-    program = (
-        ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md"
-    ).read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
     for blocker in (
         "issuer/audience",
         "Tenant-Organization",
@@ -248,3 +229,82 @@ def test_cp9_api_contract_gate_has_no_production_implementation() -> None:
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "workers").exists()
     assert not (ROOT / "app" / "runtime" / "scheduler").exists()
+
+
+def test_cp9_auth_claims_gate_is_typed_and_documented_without_runtime_routes() -> None:
+    claims_path = ROOT / "app" / "core" / "auth_claims.py"
+    assert claims_path.is_file()
+    tree = ast.parse(claims_path.read_text(encoding="utf-8"), filename=str(claims_path))
+    contract = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "VerifiedAccessTokenClaims"
+    )
+    fields = {
+        node.target.id
+        for node in contract.body
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
+    }
+    assert fields == {
+        "subject",
+        "jti_reference",
+        "verified_issuer",
+        "verified_audiences",
+        "issued_at",
+        "expires_at",
+    }
+    model_config = next(
+        node
+        for node in contract.body
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "model_config" for target in node.targets
+        )
+    )
+    assert isinstance(model_config.value, ast.Call)
+    config_keywords = {
+        keyword.arg: keyword.value.value
+        for keyword in model_config.value.keywords
+        if keyword.arg is not None and isinstance(keyword.value, ast.Constant)
+    }
+    assert config_keywords == {"extra": "forbid", "frozen": True, "strict": True}
+
+    imported_modules = {
+        alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+    imported_modules.update(
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module is not None
+    )
+    assert not any(module.startswith("app.runtime") for module in imported_modules)
+
+    env = (ROOT / ".env.example").read_text(encoding="utf-8")
+    jwt_policy = (ROOT / "docs" / "04_SECURITY" / "JWT.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+
+    assert "JWT_ISSUER=" in env
+    assert "JWT_AUDIENCES=" in env
+    for phrase in (
+        "HS256 only",
+        "zero leeway",
+        "legacy four-claim token",
+        "generic `401`",
+        "raw bearer token",
+    ):
+        assert phrase in jwt_policy
+    assert "verified claims" in security
+    assert "ADR-087 | Merged, PR #60" in roadmap
+    assert "CP9-Gate-API-Contracts | Merged, PR #61" in roadmap
+    assert "CP9-Gate-Auth-Claims | Implemented, pending review" in roadmap
+    assert "CP9-Gate-Auth-Claims | Implemented, pending review" in program
+    assert "| CP9 | Planned / Blocked |" in roadmap
+    assert "| CP10 | Planned |" in roadmap
+    assert not (ROOT / "app" / "runtime" / "api").exists()
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
