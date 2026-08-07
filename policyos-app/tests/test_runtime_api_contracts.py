@@ -1,6 +1,7 @@
 """Focused CP9 Runtime API contract-gate tests."""
 
 from datetime import UTC, datetime
+from inspect import signature
 from uuid import UUID
 
 import pytest
@@ -28,6 +29,7 @@ from app.services.runtime_api_contracts import (
 from app.services.runtime_api_protocols import (
     RuntimeApiApplicationFacade,
     RuntimeApiIdempotencyTransactionPort,
+    RuntimeApiTrustedContextResolver,
 )
 from app.services.runtime_api_validation import (
     validate_runtime_api_commit_result,
@@ -242,3 +244,14 @@ def test_explicit_immutable_exports() -> None:
         assert isinstance(module.__all__, tuple)
         assert len(module.__all__) == len(set(module.__all__))
         assert all(hasattr(module, name) for name in module.__all__)
+
+
+def test_trusted_context_protocol_remains_transport_tenant_free() -> None:
+    assert tuple(signature(RuntimeApiTrustedContextResolver.resolve_principal).parameters) == (
+        "self",
+    )
+    assert tuple(signature(RuntimeApiTrustedContextResolver.resolve_scope).parameters) == (
+        "self",
+        "principal",
+    )
+    assert "tenant_id" not in signature(RuntimeApiTrustedContextResolver.resolve_scope).parameters

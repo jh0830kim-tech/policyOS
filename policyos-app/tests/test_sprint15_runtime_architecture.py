@@ -310,7 +310,7 @@ def test_cp9_auth_claims_gate_is_typed_and_documented_without_runtime_routes() -
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
-def test_cp9_tenant_organization_binding_governance_is_accepted_without_production() -> None:
+def test_cp9_tenant_organization_binding_gate_is_implemented_without_runtime_routes() -> None:
     decision = ADR / "ADR-087-CP9-RUNTIME-API-TRANSPORT-PRINCIPAL-AND-APPLICATION-BOUNDARY.md"
     roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
     program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
@@ -335,9 +335,9 @@ def test_cp9_tenant_organization_binding_governance_is_accepted_without_producti
     assert "| CP10 | Planned |" in roadmap
 
     assert not (ROOT / "app" / "models" / "tenant_organization_binding.py").exists()
-    assert not (ROOT / "app" / "services" / "runtime_tenant_binding.py").exists()
+    assert (ROOT / "app" / "services" / "runtime_tenant_binding.py").is_file()
     migration_names = {path.name for path in (ROOT / "alembic" / "versions").glob("*.py")}
-    assert not any("tenant_organization_binding" in name for name in migration_names)
+    assert "20260807_0018_tenant_organization_binding.py" in migration_names
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()

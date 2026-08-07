@@ -74,8 +74,8 @@ The baseline is `main` after merged CP8 Runtime Delivery closeout PR #59.
 | CP9 Governance / ADR-087 | Merged, PR #60 | Transport, principal, application-facade, threat, and error decisions. |
 | CP9-Gate-API-Contracts | Merged, PR #61 | Immutable API/application contracts; no production implementation. |
 | CP9-Gate-Auth-Claims | Merged, PR #62 | Required issuer/audience settings, issued trust claims, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection, generic bearer failures, and focused authentication regression. |
-| CP9-Gate-Tenant-Organization-Binding-Governance | Implemented, pending review | ADR-087 amendment fixes lifetime one-to-one binding and fail-closed provisioning, lifecycle, classification, bypass, and downgrade policy. |
-| CP9-Gate-Tenant-Organization-Binding | Planned / Blocked until governance green merge | Production model, migration, resolver, and PostgreSQL acceptance cannot begin before the amendment merges. |
+| CP9-Gate-Tenant-Organization-Binding-Governance | Merged, PR #63 | ADR-087 amendment fixes lifetime one-to-one binding and fail-closed provisioning, lifecycle, classification, bypass, and downgrade policy. |
+| CP9-Gate-Tenant-Organization-Binding | Implemented, pending review | Lifetime one-to-one model, explicit persistence, self-contained migration `20260807_0018`, fail-closed downgrade, trusted resolver, and PostgreSQL 16 verification. |
 | CP9 Runtime API | Planned / Blocked | Production routes remain blocked on Tenant-Organization binding, Runtime permission persistence and grants, transport idempotency persistence, and the trusted application facade. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
@@ -84,7 +84,7 @@ governed CP7 Orchestration; deterministic fake and dry-run Adapters; and Postgre
 CP8 delivery Persistence now includes lifecycle, claim, retry, dead-letter, and reconciliation
 storage. Persistence PR #53, Lifecycle Port conformance PR #54, Governed Delivery Orchestration PR #55,
 Alembic blocker PR #56, projection-cardinality blocker PR #57, and Runtime Delivery Acceptance
-PR #58 are merged. Migration head is `20260805_0017`, and CP8 Runtime Delivery is complete. No real external adapter, runtime API, Worker, queue, polling
+PR #58 are merged. Migration head is `20260807_0018`, and CP8 Runtime Delivery is complete. No real external adapter, runtime API, Worker, queue, polling
 loop, scheduler, live credential resolution, or external side effect exists.
 
 ## 5. Program work structure
@@ -455,9 +455,9 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP9 - Runtime API
 
-- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` is merged in PR #61, `CP9-Gate-Auth-Claims` is merged in PR #62, and `CP9-Gate-Tenant-Organization-Binding-Governance` is implemented pending review. No Runtime production route or facade implementation exists.
+- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` is merged in PR #61, `CP9-Gate-Auth-Claims` is merged in PR #62, and `CP9-Gate-Tenant-Organization-Binding-Governance` is merged in PR #63, and `CP9-Gate-Tenant-Organization-Binding` is implemented pending review. No Runtime production route or facade implementation exists.
 - **Purpose:** Expose authenticated, organization-scoped transport schemas over the approved trusted application facade and Runtime Orchestration boundary.
-- **Entry conditions:** The ADR-087 binding amendment must green-merge before production binding implementation. Sprint 15 uses a lifetime one-to-one binding, explicit administrative provisioning, no automatic backfill, no transport tenant-ID input, no privileged bypass, an immutable persisted classification ceiling, fail-closed organizations without bindings, and fail-closed downgrade when binding rows exist. Runtime permission persistence and grants, transport idempotency persistence, and a stable trusted application facade remain production blockers.
+- **Entry conditions:** The ADR-087 binding amendment is merged in PR #63, and the binding implementation gate supplies the persisted lifetime binding and trusted resolver. Sprint 15 uses a lifetime one-to-one binding, explicit administrative provisioning, no automatic backfill, no transport tenant-ID input, no privileged bypass, an immutable persisted classification ceiling, fail-closed organizations without bindings, and fail-closed downgrade when binding rows exist. Runtime permission persistence and grants, transport idempotency persistence, and a stable trusted application facade remain production blockers.
 - **Binding implementation acceptance:** Model/migration parity; PostgreSQL 16 fresh and existing upgrade; lifetime 1:1 uniqueness; concurrent provisioning conflict; missing, inactive, and revoked binding rejection; exact trusted-scope equality; cross-tenant and cross-organization non-disclosure; and no route, facade, or permission expansion.
 - **Allowed outputs:** After the contracts gate, bounded routes in `app.api`, strict schemas in `app.schemas`, trusted application-facade integration, dependencies, and transport tests.
 - **Package placement:** Routes belong in `app.api`, schemas in `app.schemas`, and the trusted facade sits between API and Runtime Orchestration. `app.runtime.api` is prohibited.
