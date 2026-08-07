@@ -71,9 +71,11 @@ The baseline is `main` after merged CP8 Runtime Delivery closeout PR #59.
 | CP8 Lifecycle projection cardinality blocker | Merged in PR #57 | Repeated claim, lease, attempt, and result projections use scoped lookup indexes. |
 | CP8 Runtime Delivery Acceptance Gate | Merged in PR #58 | PostgreSQL crash-window evidence passed with green CI. |
 | CP8 Runtime Delivery | Merged | Approved local delivery, ambiguity, and reconciliation boundary complete. |
-| CP9 Governance / ADR-087 | Proposed | Transport, principal, application-facade, threat, and error decisions. |
-| CP9-Gate-API-Contracts | Implemented, pending review | Immutable API/application contracts exist; green merge is required before production implementation. |
-| CP9 and CP10 | Planned | Runtime API and Worker implementation are not present. |
+| CP9 Governance / ADR-087 | Merged, PR #60 | Transport, principal, application-facade, threat, and error decisions. |
+| CP9-Gate-API-Contracts | Merged, PR #61 | Immutable API/application contracts; no production implementation. |
+| CP9-Gate-Auth-Claims | Implemented, pending review | Required issuer/audience settings, issued trust claims, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection, generic bearer failures, and focused authentication regression. |
+| CP9 Runtime API | Planned / Blocked | Production routes remain blocked on Tenant-Organization binding, Runtime permission persistence and grants, transport idempotency persistence, and the trusted application facade. |
+| CP10 Workers | Planned | Worker implementation is not present. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
 governed CP7 Orchestration; deterministic fake and dry-run Adapters; and PostgreSQL Persistence.
@@ -451,9 +453,9 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP9 - Runtime API
 
-- **Status:** Planned / Blocked. Contracts are implemented pending review, but no Runtime production route or facade implementation exists. Production remains blocked until `CP9-Gate-API-Contracts` merges with green CI.
+- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` is merged in PR #61, and `CP9-Gate-Auth-Claims` is implemented pending review. No Runtime production route or facade implementation exists.
 - **Purpose:** Expose authenticated, organization-scoped transport schemas over the approved trusted application facade and Runtime Orchestration boundary.
-- **Entry conditions:** Green API-contract gate; implemented trusted JWT issuer/audience validation; persisted/configured Tenant-Organization binding and migration; authenticated principal and active membership; exact permission seeds plus explicit grant operations; transport idempotency persistence; and a stable trusted facade implementation. These prerequisites remain pending.
+- **Entry conditions:** Required JWT issuer/audience settings, issued `iss`/`aud`, HS256-only zero-leeway verification, immutable typed verified claims, legacy-token rejection, generic bearer failures, and focused authentication regression are implemented. Persisted/configured Tenant-Organization binding, Runtime permission persistence and grants, transport idempotency persistence, and a stable trusted application facade remain production blockers.
 - **Allowed outputs:** After the contracts gate, bounded routes in `app.api`, strict schemas in `app.schemas`, trusted application-facade integration, dependencies, and transport tests.
 - **Package placement:** Routes belong in `app.api`, schemas in `app.schemas`, and the trusted facade sits between API and Runtime Orchestration. `app.runtime.api` is prohibited.
 - **Allowed scope:** Authenticate, validate untrusted transport, resolve trusted server-side facts, invoke only the application facade, and return bounded safe results.

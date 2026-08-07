@@ -1,4 +1,4 @@
-﻿import uuid
+import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
@@ -242,3 +242,94 @@ def test_login_failure_writes_generic_safe_audit_event() -> None:
     assert "unknown@example.com" not in repr(event.__dict__)
     assert "not-the-password" not in repr(event.__dict__)
     db.commit.assert_awaited_once()
+
+
+def _encode_bearer_claims(**overrides: object) -> str:
+    settings = get_settings()
+    now = datetime.now(UTC)
+    payload: dict[str, object] = {
+        "sub": str(uuid.uuid4()),
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(minutes=5)).timestamp()),
+        "jti": str(uuid.uuid4()),
+        "iss": settings.jwt_issuer,
+        "aud": list(settings.jwt_audiences),
+    }
+    payload.update(overrides)
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+
+
+def _encode_bearer_without(claim: str) -> str:
+    settings = get_settings()
+    payload = jwt.decode(
+        _encode_bearer_claims(),
+        settings.secret_key,
+        algorithms=[settings.jwt_algorithm],
+        options={"verify_aud": False},
+    )
+    payload.pop(claim)
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+
+
+def _legacy_four_claim_token() -> str:
+    settings = get_settings()
+    now = datetime.now(UTC)
+    return jwt.encode(
+        {
+            "sub": str(uuid.uuid4()),
+            "iat": now,
+            "exp": now + timedelta(minutes=5),
+            "jti": str(uuid.uuid4()),
+        },
+        settings.secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+
+
+def test_login_access_token_has_configured_issuer_and_audience() -> None:
+    user = make_user()
+    with client_for_user(user) as client:
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": user.email, "password": PASSWORD},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    payload = decode_access_token(body["access_token"])
+    settings = get_settings()
+    assert payload is not None
+    assert payload["iss"] == settings.jwt_issuer
+    assert tuple(payload["aud"]) == settings.jwt_audiences
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        _encode_bearer_claims(iss="https://unknown-issuer.policyos.test"),
+        _encode_bearer_claims(aud=["unknown-audience"]),
+        _encode_bearer_without("iss"),
+        _encode_bearer_without("aud"),
+        _legacy_four_claim_token(),
+        "malformed-bearer-token",
+    ],
+    ids=[
+        "invalid-issuer",
+        "invalid-audience",
+        "missing-issuer",
+        "missing-audience",
+        "legacy-four-claim",
+        "malformed",
+    ],
+)
+def test_bearer_trust_failures_are_generic_unauthorized(token: str) -> None:
+    with client_for_user(None) as client:
+        response = client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert_unauthorized(response)
+    assert response.status_code != 403
+    assert token not in response.text
+    assert get_settings().secret_key not in response.text

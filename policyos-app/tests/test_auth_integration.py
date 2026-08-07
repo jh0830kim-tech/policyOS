@@ -1,4 +1,4 @@
-﻿import uuid
+import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
@@ -46,6 +46,48 @@ def client_with_db(db: AsyncSession) -> TestClient:
     return TestClient(app)
 
 
+def encode_trust_claims(**overrides: object) -> str:
+    settings = get_settings()
+    now = datetime.now(UTC)
+    payload: dict[str, object] = {
+        "sub": str(uuid.uuid4()),
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(minutes=5)).timestamp()),
+        "jti": str(uuid.uuid4()),
+        "iss": settings.jwt_issuer,
+        "aud": list(settings.jwt_audiences),
+    }
+    payload.update(overrides)
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+
+
+def encode_without_trust_claim(claim: str) -> str:
+    settings = get_settings()
+    payload = jwt.decode(
+        encode_trust_claims(),
+        settings.secret_key,
+        algorithms=[settings.jwt_algorithm],
+        options={"verify_aud": False},
+    )
+    payload.pop(claim)
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+
+
+def encode_legacy_four_claim_token() -> str:
+    settings = get_settings()
+    now = datetime.now(UTC)
+    return jwt.encode(
+        {
+            "sub": str(uuid.uuid4()),
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(minutes=5)).timestamp()),
+            "jti": str(uuid.uuid4()),
+        },
+        settings.secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+
+
 @pytest.fixture(autouse=True)
 def clear_overrides() -> AsyncIterator[None]:
     yield
@@ -87,10 +129,8 @@ def test_login_to_organization_authorization_end_to_end() -> None:
 
     db = AsyncMock(spec=AsyncSession)
     db.scalar.side_effect = scalar
-    db.get.side_effect = (
-        lambda model, identifier: user
-        if model is User and identifier == user.id
-        else None
+    db.get.side_effect = lambda model, identifier: (
+        user if model is User and identifier == user.id else None
     )
 
     with client_with_db(db) as client:
@@ -101,8 +141,12 @@ def test_login_to_organization_authorization_end_to_end() -> None:
         assert login_response.status_code == 200
         token = login_response.json()["access_token"]
         payload = decode_access_token(token)
+        settings = get_settings()
         assert payload is not None
         assert payload["sub"] == str(user.id)
+        assert payload["iss"] == settings.jwt_issuer
+        assert tuple(payload["aud"]) == settings.jwt_audiences
+        assert {"sub", "iat", "exp", "jti", "iss", "aud"} <= set(payload)
 
         headers = {"Authorization": f"Bearer {token}"}
         me_response = client.get("/api/v1/auth/me", headers=headers)
@@ -126,6 +170,7 @@ def test_login_to_organization_authorization_end_to_end() -> None:
     all_responses = login_response.text + me_response.text + granted_response.text
     assert user.password_hash not in all_responses
     assert PASSWORD not in all_responses
+    assert settings.secret_key not in all_responses
     assert any("FROM memberships" in str(statement) for statement in statements)
     permission_statements = [
         statement for statement in statements if "FROM membership_roles" in str(statement)
@@ -152,21 +197,39 @@ def test_login_to_organization_authorization_end_to_end() -> None:
             "integration-invalid-signature-key-at-least-32-bytes",
             algorithm=get_settings().jwt_algorithm,
         ),
+        encode_trust_claims(iss="https://unknown-issuer.policyos.test"),
+        encode_trust_claims(aud=["unknown-audience"]),
+        encode_without_trust_claim("iss"),
+        encode_without_trust_claim("aud"),
+        encode_legacy_four_claim_token(),
     ],
-    ids=["missing", "malformed", "expired", "invalid-signature"],
+    ids=[
+        "missing",
+        "malformed",
+        "expired",
+        "invalid-signature",
+        "issuer-mismatch",
+        "audience-mismatch",
+        "missing-issuer",
+        "missing-audience",
+        "legacy-four-claim",
+    ],
 )
 def test_protected_api_rejects_invalid_authentication(token: str | None) -> None:
     db = AsyncMock(spec=AsyncSession)
     headers = {"Authorization": f"Bearer {token}"} if token is not None else {}
 
     with client_with_db(db) as client:
-        response = client.get(
-            PROTECTED_PATH.format(organization_id=uuid.uuid4()), headers=headers
-        )
+        response = client.get(PROTECTED_PATH.format(organization_id=uuid.uuid4()), headers=headers)
 
     assert response.status_code == 401
     assert response.json() == UNAUTHORIZED_BODY
     assert response.headers["www-authenticate"] == "Bearer"
+    assert not any(
+        detail in response.text.lower()
+        for detail in ("issuer", "audience", "claim", "signature", "secret")
+    )
+    assert get_settings().secret_key not in response.text
     db.scalar.assert_not_awaited()
 
 
@@ -191,6 +254,8 @@ def test_unknown_user_and_wrong_password_are_publicly_indistinguishable() -> Non
         )
 
     assert unknown_response.status_code == wrong_password_response.status_code == 401
-    assert unknown_response.json() == wrong_password_response.json() == {
-        "detail": "Invalid credentials"
-    }
+    assert (
+        unknown_response.json()
+        == wrong_password_response.json()
+        == {"detail": "Invalid credentials"}
+    )
