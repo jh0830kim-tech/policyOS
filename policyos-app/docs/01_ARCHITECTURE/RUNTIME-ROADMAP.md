@@ -36,7 +36,7 @@ state, and execution result is not a policy outcome.
 - CP8 PostgreSQL Delivery Persistence merged in PR #53, Lifecycle Port conformance in PR #54,
   and governed Delivery Orchestration in PR #55.
 - PR #56 corrected Alembic 0007 asyncpg execution, and PR #57 corrected repeated lifecycle
-  projection cardinality. The migration head is `20260805_0017`.
+  projection cardinality. The migration head is `20260807_0018`.
 - The CP8 Runtime Delivery Acceptance Gate passed PostgreSQL 16 verification and green CI and
   merged in PR #58. CP8 Runtime Delivery is complete within its approved local delivery boundary.
   No real external adapter, runtime API, Worker, queue, polling loop, scheduler, live credential
@@ -134,22 +134,22 @@ grants permission or causes automatic execution.
 | CP9 Governance / ADR-087 | Merged, PR #60 | API boundary | Principal, RBAC, threat and placement decisions | No production route |
 | CP9-Gate-API-Contracts | Merged, PR #61 | API contracts | Immutable principal, scope, facade, idempotency and safe error contracts | Contracts do not create a production API |
 | CP9-Gate-Auth-Claims | Merged, PR #62 | Authentication trust | Required issuer/audience, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection and generic bearer failures | Focused authentication regression complete |
-| CP9-Gate-Tenant-Organization-Binding-Governance | Implemented, pending review | Binding governance | Lifetime one-to-one cardinality, explicit provisioning, immutable classification ceiling, no rebinding or privileged bypass, and fail-closed downgrade | No production binding implementation |
-| CP9-Gate-Tenant-Organization-Binding | Planned / Blocked until governance green merge | Binding persistence | Model, migration, resolver, exact trusted scope, and PostgreSQL acceptance | Governance amendment must merge first |
+| CP9-Gate-Tenant-Organization-Binding-Governance | Merged, PR #63 | Binding governance | Lifetime one-to-one cardinality, explicit provisioning, immutable classification ceiling, no rebinding or privileged bypass, and fail-closed downgrade | Governance baseline only |
+| CP9-Gate-Tenant-Organization-Binding | Implemented, pending review | Binding persistence | Lifetime one-to-one model, explicit persistence, self-contained migration `20260807_0018`, fail-closed downgrade, trusted resolver, and PostgreSQL 16 verification | No production Runtime route or provisioning surface |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires binding, Runtime permissions, transport idempotency, and stable facade |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
-CP9 Governance / ADR-087 is merged in PR #60, `CP9-Gate-API-Contracts` is merged in PR #61, and `CP9-Gate-Auth-Claims` is merged in PR #62. `CP9-Gate-Tenant-Organization-Binding-Governance` is implemented pending review, while production binding remains Planned / Blocked until that governance gate has a green merge. No production Runtime route or facade implementation exists. Routes remain in `app.api`, schemas in `app.schemas`, and `app.runtime.api` is prohibited. CP9 production remains Planned / Blocked. CP10 remains Planned, and external business-effect exactly-once remains unguaranteed.
+CP9 Governance / ADR-087 is merged in PR #60, `CP9-Gate-API-Contracts` is merged in PR #61, and `CP9-Gate-Auth-Claims` is merged in PR #62. `CP9-Gate-Tenant-Organization-Binding-Governance` is merged in PR #63, while `CP9-Gate-Tenant-Organization-Binding` is implemented pending review. No production Runtime route or facade implementation exists. Routes remain in `app.api`, schemas in `app.schemas`, and `app.runtime.api` is prohibited. CP9 production remains Planned / Blocked. CP10 remains Planned, and external business-effect exactly-once remains unguaranteed.
 
 The required implementation order is:
 
-1. Binding Governance green merge.
-2. Tenant-Organization Binding model, migration, and resolver.
-3. Runtime permission persistence and grants.
-4. Transport idempotency persistence.
-5. Trusted application facade.
-6. Production Runtime routes.
-7. CP10 Workers.
+1. Runtime permission persistence and grants.
+2. Transport idempotency persistence.
+3. Trusted application facade.
+4. Production Runtime routes.
+5. CP10 Workers.
+
+
 ## 6. Boundary input and output contracts
 
 ### Authority
@@ -325,7 +325,7 @@ PostgreSQL 22 passed; Ports, Delivery, and Architecture 46 passed; order A 177 p
 order B 177 passed with skip 0; and migration upgrade, downgrade, and parity checks passed.
 
 PR #56 corrected Alembic 0007 asyncpg execution, PR #57 added lifecycle projection cardinality,
-and corrective migration `20260805_0017` is the current head. PR #58 merged the PostgreSQL
+and binding migration `20260807_0018` is the current head. PR #58 merged the PostgreSQL
 crash-window and vertical Acceptance Gate with green CI, completing CP8 Runtime Delivery. No
 `app.runtime.outbox`, Worker, queue, polling loop, scheduler, or API is introduced, and external
 exactly-once business effects are not guaranteed.

@@ -14,6 +14,7 @@ from app.models.identity import (
     Permission,
     Role,
     RolePermission,
+    TenantOrganizationBinding,
     User,
 )
 from app.models.knowledge import (
@@ -63,6 +64,7 @@ __all__ = [
     "ReclassificationRequest",
     "Role",
     "RolePermission",
+    "TenantOrganizationBinding",
     "UnifiedAuditEvent",
     "User",
     "WorkPackageRecord",

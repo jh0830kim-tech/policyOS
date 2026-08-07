@@ -3,6 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -46,6 +47,41 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     memberships: Mapped[list["Membership"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+
+
+class TenantOrganizationBinding(Base):
+    __tablename__ = "tenant_organization_bindings"
+    __table_args__ = (
+        UniqueConstraint("organization_id", name="uq_tenant_org_binding_organization"),
+        UniqueConstraint("runtime_tenant_id", name="uq_tenant_org_binding_tenant"),
+        CheckConstraint(
+            "status IN ('active', 'inactive', 'revoked')",
+            name="ck_tenant_org_binding_status",
+        ),
+        CheckConstraint(
+            "classification_ceiling IN ('public', 'internal', 'confidential', 'restricted')",
+            name="ck_tenant_org_binding_classification",
+        ),
+        CheckConstraint(
+            "char_length(provisioning_reference) BETWEEN 1 AND 200 "
+            "AND provisioning_reference = btrim(provisioning_reference)",
+            name="ck_tenant_org_binding_provisioning_reference",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="RESTRICT"), nullable=False
+    )
+    runtime_tenant_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    classification_ceiling: Mapped[str] = mapped_column(String(20), nullable=False)
+    provisioning_reference: Mapped[str] = mapped_column(String(200), nullable=False)
+    provisioned_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status_changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class Membership(UUIDPrimaryKeyMixin, TimestampMixin, Base):

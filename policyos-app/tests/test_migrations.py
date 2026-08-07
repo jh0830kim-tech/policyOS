@@ -10,7 +10,7 @@ from alembic.script import ScriptDirectory
 def test_alembic_has_single_head() -> None:
     config = Config("alembic.ini")
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["20260805_0017"]
+    assert scripts.get_heads() == ["20260807_0018"]
 
 
 def test_initial_migration_contains_foundation_tables() -> None:
@@ -26,6 +26,7 @@ def test_initial_migration_contains_foundation_tables() -> None:
         "audit_events",
     ):
         assert f'"{table_name}"' in migration
+
 
 def test_knowledge_migration_uses_single_command_execute_calls() -> None:
     path = Path("alembic/versions/20260720_0007_knowledge_domain.py")
@@ -59,10 +60,9 @@ def test_knowledge_migration_uses_single_command_execute_calls() -> None:
     assert assignments["revision"] == "20260720_0007"
     assert assignments["down_revision"] == "20260720_0006"
 
+
 def _load_projection_cardinality_migration():
-    path = Path(
-        "alembic/versions/20260805_0017_runtime_effect_projection_cardinality.py"
-    )
+    path = Path("alembic/versions/20260805_0017_runtime_effect_projection_cardinality.py")
     spec = importlib.util.spec_from_file_location("projection_cardinality_0017", path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -122,3 +122,55 @@ def test_projection_cardinality_preserves_0016_migration() -> None:
     assert hashlib.sha256(normalized).hexdigest() == (
         "7f385b7ca3acee299bbc9d4482da00dbc206854f2e082d935ac76d0ec21a31dd"
     )
+
+
+def test_tenant_organization_binding_migration_is_self_contained_and_fail_closed() -> None:
+    path = Path("alembic/versions/20260807_0018_tenant_organization_binding.py")
+    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    assignments = {
+        node.target.id: node.value.value
+        for node in tree.body
+        if isinstance(node, ast.AnnAssign)
+        and isinstance(node.target, ast.Name)
+        and isinstance(node.value, ast.Constant)
+    }
+    assert assignments["revision"] == "20260807_0018"
+    assert assignments["down_revision"] == "20260805_0017"
+    assert source.count("op.create_table(") == 1
+    assert '"tenant_organization_bindings"' in source
+    assert not any(
+        isinstance(node, (ast.Import, ast.ImportFrom))
+        and (
+            any(alias.name.startswith("app.") for alias in node.names)
+            if isinstance(node, ast.Import)
+            else (node.module or "").startswith("app.")
+        )
+        for node in ast.walk(tree)
+    )
+    assert "Base.metadata" not in source
+    assert ".create(" not in source
+    assert ".drop(" not in source
+    assert all(token not in source.upper() for token in ("INSERT ", "UPDATE ", "DELETE "))
+    assert "uuid4" not in source
+
+    downgrade = source.index("def downgrade")
+    assert source.index("SELECT 1", downgrade) < source.index("op.drop_table", downgrade)
+    assert source.index("raise RuntimeError", downgrade) < source.index("op.drop_table", downgrade)
+
+
+def test_tenant_organization_binding_migration_declares_required_invariants() -> None:
+    source = Path("alembic/versions/20260807_0018_tenant_organization_binding.py").read_text(
+        encoding="utf-8"
+    )
+    for name in (
+        "uq_tenant_org_binding_organization",
+        "uq_tenant_org_binding_tenant",
+        "ck_tenant_org_binding_status",
+        "ck_tenant_org_binding_classification",
+        "ck_tenant_org_binding_provisioning_reference",
+        "fk_tenant_org_binding_organization",
+        "fk_tenant_org_binding_provisioned_by_user",
+    ):
+        assert name in source
+    assert source.count('ondelete="RESTRICT"') == 2

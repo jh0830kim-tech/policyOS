@@ -8,6 +8,7 @@ from app.models import (
     Organization,
     Permission,
     Role,
+    TenantOrganizationBinding,
     User,
     WorkPackageRecord,
 )
@@ -48,3 +49,49 @@ def test_identity_model_table_names() -> None:
 def test_membership_has_unique_org_user_constraint() -> None:
     constraint_names = {constraint.name for constraint in Membership.__table__.constraints}
     assert "uq_memberships_org_user" in constraint_names
+
+
+def test_tenant_organization_binding_schema_is_fail_closed() -> None:
+    table = TenantOrganizationBinding.__table__
+    assert table.name == "tenant_organization_bindings"
+    assert set(table.columns) == {
+        table.c.id,
+        table.c.organization_id,
+        table.c.runtime_tenant_id,
+        table.c.status,
+        table.c.classification_ceiling,
+        table.c.provisioning_reference,
+        table.c.provisioned_by_user_id,
+        table.c.created_at,
+        table.c.status_changed_at,
+    }
+    assert all(not column.nullable for column in table.columns)
+    assert table.c.id.default is None
+    assert table.c.runtime_tenant_id.default is None
+    assert table.c.created_at.default is None
+    assert table.c.status_changed_at.default is None
+
+    constraint_names = {constraint.name for constraint in table.constraints}
+    assert {
+        "uq_tenant_org_binding_organization",
+        "uq_tenant_org_binding_tenant",
+        "ck_tenant_org_binding_status",
+        "ck_tenant_org_binding_classification",
+        "ck_tenant_org_binding_provisioning_reference",
+    }.issubset(constraint_names)
+
+    foreign_keys = {
+        (foreign_key.parent.name, foreign_key.target_fullname, foreign_key.ondelete)
+        for foreign_key in table.foreign_keys
+    }
+    assert foreign_keys == {
+        ("organization_id", "organizations.id", "RESTRICT"),
+        ("provisioned_by_user_id", "users.id", "RESTRICT"),
+    }
+
+
+def test_tenant_organization_binding_has_no_sensitive_payload_columns() -> None:
+    column_names = set(TenantOrganizationBinding.__table__.columns)
+    assert not column_names.intersection(
+        {"raw_token", "token", "secret", "provider_body", "payload", "metadata"}
+    )
