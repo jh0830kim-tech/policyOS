@@ -133,11 +133,23 @@ grants permission or causes automatic execution.
 | CP8 | Merged | Effect delivery | Local atomic delivery and reconciliation boundary | External exactly-once is not guaranteed |
 | CP9 Governance / ADR-087 | Merged, PR #60 | API boundary | Principal, RBAC, threat and placement decisions | No production route |
 | CP9-Gate-API-Contracts | Merged, PR #61 | API contracts | Immutable principal, scope, facade, idempotency and safe error contracts | Contracts do not create a production API |
-| CP9-Gate-Auth-Claims | Implemented, pending review | Authentication trust | Required issuer/audience, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection and generic bearer failures | Focused authentication regression complete |
-| CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires issuer/audience, Tenant-Organization binding and stable facade |
+| CP9-Gate-Auth-Claims | Merged, PR #62 | Authentication trust | Required issuer/audience, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection and generic bearer failures | Focused authentication regression complete |
+| CP9-Gate-Tenant-Organization-Binding-Governance | Implemented, pending review | Binding governance | Lifetime one-to-one cardinality, explicit provisioning, immutable classification ceiling, no rebinding or privileged bypass, and fail-closed downgrade | No production binding implementation |
+| CP9-Gate-Tenant-Organization-Binding | Planned / Blocked until governance green merge | Binding persistence | Model, migration, resolver, exact trusted scope, and PostgreSQL acceptance | Governance amendment must merge first |
+| CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires binding, Runtime permissions, transport idempotency, and stable facade |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
-CP9 Governance is merged in PR #60 and `CP9-Gate-API-Contracts` is merged in PR #61. `CP9-Gate-Auth-Claims` is implemented pending review with required issuer/audience settings, issued `iss`/`aud`, HS256-only zero-leeway verification, immutable typed verified claims, legacy-token rejection, generic bearer failures, and focused authentication regression. No production Runtime route or facade implementation exists. Routes remain in `app.api`, schemas in `app.schemas`, and `app.runtime.api` is prohibited. CP9 production remains Planned / Blocked on persisted/configured Tenant-Organization binding, Runtime permission persistence and grants, transport idempotency persistence, and the trusted application facade. CP10 remains Planned, and external business-effect exactly-once remains unguaranteed.
+CP9 Governance / ADR-087 is merged in PR #60, `CP9-Gate-API-Contracts` is merged in PR #61, and `CP9-Gate-Auth-Claims` is merged in PR #62. `CP9-Gate-Tenant-Organization-Binding-Governance` is implemented pending review, while production binding remains Planned / Blocked until that governance gate has a green merge. No production Runtime route or facade implementation exists. Routes remain in `app.api`, schemas in `app.schemas`, and `app.runtime.api` is prohibited. CP9 production remains Planned / Blocked. CP10 remains Planned, and external business-effect exactly-once remains unguaranteed.
+
+The required implementation order is:
+
+1. Binding Governance green merge.
+2. Tenant-Organization Binding model, migration, and resolver.
+3. Runtime permission persistence and grants.
+4. Transport idempotency persistence.
+5. Trusted application facade.
+6. Production Runtime routes.
+7. CP10 Workers.
 ## 6. Boundary input and output contracts
 
 ### Authority

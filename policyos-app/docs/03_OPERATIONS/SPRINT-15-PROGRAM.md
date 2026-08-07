@@ -73,7 +73,9 @@ The baseline is `main` after merged CP8 Runtime Delivery closeout PR #59.
 | CP8 Runtime Delivery | Merged | Approved local delivery, ambiguity, and reconciliation boundary complete. |
 | CP9 Governance / ADR-087 | Merged, PR #60 | Transport, principal, application-facade, threat, and error decisions. |
 | CP9-Gate-API-Contracts | Merged, PR #61 | Immutable API/application contracts; no production implementation. |
-| CP9-Gate-Auth-Claims | Implemented, pending review | Required issuer/audience settings, issued trust claims, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection, generic bearer failures, and focused authentication regression. |
+| CP9-Gate-Auth-Claims | Merged, PR #62 | Required issuer/audience settings, issued trust claims, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection, generic bearer failures, and focused authentication regression. |
+| CP9-Gate-Tenant-Organization-Binding-Governance | Implemented, pending review | ADR-087 amendment fixes lifetime one-to-one binding and fail-closed provisioning, lifecycle, classification, bypass, and downgrade policy. |
+| CP9-Gate-Tenant-Organization-Binding | Planned / Blocked until governance green merge | Production model, migration, resolver, and PostgreSQL acceptance cannot begin before the amendment merges. |
 | CP9 Runtime API | Planned / Blocked | Production routes remain blocked on Tenant-Organization binding, Runtime permission persistence and grants, transport idempotency persistence, and the trusted application facade. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
@@ -453,9 +455,10 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP9 - Runtime API
 
-- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` is merged in PR #61, and `CP9-Gate-Auth-Claims` is implemented pending review. No Runtime production route or facade implementation exists.
+- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` is merged in PR #61, `CP9-Gate-Auth-Claims` is merged in PR #62, and `CP9-Gate-Tenant-Organization-Binding-Governance` is implemented pending review. No Runtime production route or facade implementation exists.
 - **Purpose:** Expose authenticated, organization-scoped transport schemas over the approved trusted application facade and Runtime Orchestration boundary.
-- **Entry conditions:** Required JWT issuer/audience settings, issued `iss`/`aud`, HS256-only zero-leeway verification, immutable typed verified claims, legacy-token rejection, generic bearer failures, and focused authentication regression are implemented. Persisted/configured Tenant-Organization binding, Runtime permission persistence and grants, transport idempotency persistence, and a stable trusted application facade remain production blockers.
+- **Entry conditions:** The ADR-087 binding amendment must green-merge before production binding implementation. Sprint 15 uses a lifetime one-to-one binding, explicit administrative provisioning, no automatic backfill, no transport tenant-ID input, no privileged bypass, an immutable persisted classification ceiling, fail-closed organizations without bindings, and fail-closed downgrade when binding rows exist. Runtime permission persistence and grants, transport idempotency persistence, and a stable trusted application facade remain production blockers.
+- **Binding implementation acceptance:** Model/migration parity; PostgreSQL 16 fresh and existing upgrade; lifetime 1:1 uniqueness; concurrent provisioning conflict; missing, inactive, and revoked binding rejection; exact trusted-scope equality; cross-tenant and cross-organization non-disclosure; and no route, facade, or permission expansion.
 - **Allowed outputs:** After the contracts gate, bounded routes in `app.api`, strict schemas in `app.schemas`, trusted application-facade integration, dependencies, and transport tests.
 - **Package placement:** Routes belong in `app.api`, schemas in `app.schemas`, and the trusted facade sits between API and Runtime Orchestration. `app.runtime.api` is prohibited.
 - **Allowed scope:** Authenticate, validate untrusted transport, resolve trusted server-side facts, invoke only the application facade, and return bounded safe results.

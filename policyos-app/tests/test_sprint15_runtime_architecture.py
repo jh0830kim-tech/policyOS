@@ -146,7 +146,7 @@ def test_cp9_runtime_api_governance_precedes_production_routes() -> None:
 
     assert decision.is_file()
     text = decision.read_text(encoding="utf-8")
-    assert "**Status:** Proposed" in text
+    assert "**Status:** Accepted" in text
     for phrase in (
         "runtime.read",
         "runtime.invoke",
@@ -301,10 +301,43 @@ def test_cp9_auth_claims_gate_is_typed_and_documented_without_runtime_routes() -
     assert "verified claims" in security
     assert "ADR-087 | Merged, PR #60" in roadmap
     assert "CP9-Gate-API-Contracts | Merged, PR #61" in roadmap
-    assert "CP9-Gate-Auth-Claims | Implemented, pending review" in roadmap
-    assert "CP9-Gate-Auth-Claims | Implemented, pending review" in program
+    assert "CP9-Gate-Auth-Claims | Merged, PR #62" in roadmap
+    assert "CP9-Gate-Auth-Claims | Merged, PR #62" in program
     assert "| CP9 | Planned / Blocked |" in roadmap
     assert "| CP10 | Planned |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
+
+def test_cp9_tenant_organization_binding_governance_is_accepted_without_production() -> None:
+    decision = ADR / "ADR-087-CP9-RUNTIME-API-TRANSPORT-PRINCIPAL-AND-APPLICATION-BOUNDARY.md"
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
+    text = decision.read_text(encoding="utf-8")
+    normalized = " ".join(text.split()).lower()
+
+    assert "**Status:** Accepted" in text
+    assert "2026-08-07 Tenant-Organization Binding amendment" in text
+    assert "lifetime one-to-one cardinality" in text
+    assert "Organization ID must not be reused as tenant ID" in text
+    assert "path, header, query, or body values cannot select it" in normalized
+    assert "automatic backfill" in text
+    assert "hidden generation" in text
+    assert "Revocation does not permit rebinding" in " ".join(text.split())
+    assert "There is no superuser" in text
+    assert "CP9-Gate-Tenant-Organization-Binding-Governance" in roadmap
+    assert "CP9-Gate-Tenant-Organization-Binding-Governance" in program
+    assert "lifetime one-to-one" in program
+    assert "lifetime one-to-one" in security
+    assert "| CP9 | Planned / Blocked |" in roadmap
+    assert "| CP10 | Planned |" in roadmap
+
+    assert not (ROOT / "app" / "models" / "tenant_organization_binding.py").exists()
+    assert not (ROOT / "app" / "services" / "runtime_tenant_binding.py").exists()
+    migration_names = {path.name for path in (ROOT / "alembic" / "versions").glob("*.py")}
+    assert not any("tenant_organization_binding" in name for name in migration_names)
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "app" / "runtime" / "api").exists()
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()
