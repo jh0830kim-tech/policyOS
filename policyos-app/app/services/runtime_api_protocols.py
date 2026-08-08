@@ -6,6 +6,8 @@ from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
     RuntimeApiIdempotencyCommitResult,
     RuntimeApiInvocationQuery,
+    RuntimeApiPermission,
+    RuntimeApiPermissionFact,
     RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationResult,
     RuntimeApiSafeResult,
@@ -42,6 +44,16 @@ class RuntimeApiTrustedContextResolver(Protocol):
 
 
 @runtime_checkable
+class RuntimeApiPermissionFactResolver(Protocol):
+    async def resolve_permission_fact(
+        self,
+        principal: RuntimeApiTrustedPrincipal,
+        scope: RuntimeApiTrustedScope,
+        permission: RuntimeApiPermission,
+    ) -> RuntimeApiPermissionFact: ...
+
+
+@runtime_checkable
 class RuntimeApiIdempotencyTransactionPort(Protocol):
     async def commit(
         self,
@@ -53,5 +65,6 @@ class RuntimeApiIdempotencyTransactionPort(Protocol):
 __all__ = (
     "RuntimeApiApplicationFacade",
     "RuntimeApiIdempotencyTransactionPort",
+    "RuntimeApiPermissionFactResolver",
     "RuntimeApiTrustedContextResolver",
 )

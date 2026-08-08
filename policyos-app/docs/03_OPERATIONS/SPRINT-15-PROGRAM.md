@@ -80,6 +80,7 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9-Gate-Runtime-Grant-Governance | Merged in PR #66 | ADR-088 fixes `runtime.grant.manage`, append-only evidence, replay, scope, bootstrap, and atomic transaction policy. |
 | CP9-Gate-Runtime-Grant-Provisioning | Merged in PR #67 | Governed projection and ledger persistence, exact replay, scoped authority revalidation, fail-closed migration, concurrency, and PostgreSQL 16 evidence. |
 | CP9-Gate-Runtime-Permission-Fact-Resolver-Governance | Implemented, pending review | ADR-089 fixes exact server-owned permission mapping, live projection resolution, non-disclosure, transaction use, and revocation linearization. |
+| CP9-Gate-Runtime-Permission-Fact-Resolver | Implemented, pending review | Caller-owned transaction, fixed lock order, exact live `RolePermission`, no cache or ledger authority. |
 | CP9 Runtime API | Planned / Blocked | Production routes remain blocked on the Runtime permission-fact resolver, transport idempotency persistence, and the trusted application facade. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
@@ -665,7 +666,8 @@ Positive and negative permission results are not cached. Resolution and the boun
 application read or commit share one database transaction so grant/revoke races linearize without
 a stale permission fact crossing requests. Missing, inactive, revoked, cross-scope, wildcard,
 prefix, substring, and permission-substitution cases fail closed without role, grant, tenant, or
-SQL disclosure. This governance gate adds no resolver, migration, facade, route, Worker, or queue.
+SQL disclosure. The production resolver implements this governance without adding a migration,
+facade, route, Worker, queue, cache, or transaction ownership. It remains pending review.
 
 ### CP9 governed Runtime permission provisioning
 

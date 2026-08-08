@@ -197,4 +197,8 @@ Missing, inactive, revoked, mismatched, or cross-scope facts fail closed. Authen
 generic `401`, trusted scope failures remain non-disclosing `404`, and missing permission maps to a
 bounded `403` without membership, binding, role, grant, tenant, or database details. The governance
 gate adds no production resolver, migration, facade, route, Worker, queue, polling loop, scheduler,
-`app.runtime.api`, or `app.runtime.outbox`. CP9 remains Planned / Blocked.
+`app.runtime.api`, or `app.runtime.outbox`. The production permission-fact resolver now requires a
+caller-owned transaction and locks active user, organization, membership, binding,
+organization-scoped roles, exact permission, and `RolePermission` facts in fixed order. It neither
+queries the grant ledger nor caches allow or deny outcomes. This resolver is implemented, pending
+review; CP9 remains Planned / Blocked on idempotency persistence, facade, and routes.
