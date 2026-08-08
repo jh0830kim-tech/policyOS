@@ -55,18 +55,24 @@ class RuntimeApiPermissionFactResolver(Protocol):
 
 
 @runtime_checkable
+class RuntimeApiLocalMutation(Protocol):
+    async def __call__(self) -> RuntimeApiSafeResult: ...
+
+
+@runtime_checkable
 class RuntimeApiIdempotencyTransactionPort(Protocol):
     async def commit(
         self,
         identity: RuntimeApiCommandIdentity,
-        result: RuntimeApiSafeResult,
         facts: RuntimeApiIdempotencyCommitFacts,
+        mutation: RuntimeApiLocalMutation,
     ) -> RuntimeApiIdempotencyCommitResult: ...
 
 
 __all__ = (
     "RuntimeApiApplicationFacade",
     "RuntimeApiIdempotencyTransactionPort",
+    "RuntimeApiLocalMutation",
     "RuntimeApiPermissionFactResolver",
     "RuntimeApiTrustedContextResolver",
 )
