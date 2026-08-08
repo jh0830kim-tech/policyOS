@@ -8,8 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.privacy import DataClassification
 from app.core.auth_claims import VerifiedAccessTokenClaims
 from app.models.identity import Membership, Organization, TenantOrganizationBinding, User
-from app.runtime.ports.clock import RuntimeClockPort
-from app.services.runtime_api_contracts import RuntimeApiTrustedPrincipal, RuntimeApiTrustedScope
+from app.services.runtime_api_contracts import (
+    RuntimeApiTrustedContextFacts,
+    RuntimeApiTrustedPrincipal,
+    RuntimeApiTrustedScope,
+)
 
 
 class RuntimeTenantBindingError(ValueError):
@@ -35,16 +38,12 @@ class SQLAlchemyRuntimeApiTrustedContextResolver:
         *,
         claims: VerifiedAccessTokenClaims,
         organization_id: UUID,
-        clock: RuntimeClockPort,
-        authentication_reference: str,
-        validation_reference: str,
+        facts: RuntimeApiTrustedContextFacts,
     ) -> None:
         self._session = session
         self._claims = claims
         self._organization_id = organization_id
-        self._clock = clock
-        self._authentication_reference = authentication_reference
-        self._validation_reference = validation_reference
+        self._facts = facts
 
     async def resolve_principal(self) -> RuntimeApiTrustedPrincipal:
         try:
@@ -58,7 +57,6 @@ class SQLAlchemyRuntimeApiTrustedContextResolver:
         if user is None or user.id != user_id or not user.is_active:
             raise RuntimePrincipalInactiveError("trusted principal unavailable")
 
-        reading = self._clock.read()
         return RuntimeApiTrustedPrincipal(
             principal_id=user.id,
             user_id=user.id,
@@ -67,8 +65,8 @@ class SQLAlchemyRuntimeApiTrustedContextResolver:
             verified_issuer=self._claims.verified_issuer,
             verified_audiences=self._claims.verified_audiences,
             active_principal_reference=f"user:{user.id}",
-            authenticated_at=reading.observed_at,
-            authentication_reference=self._authentication_reference,
+            authenticated_at=self._facts.authenticated_at,
+            authentication_reference=self._facts.authentication_reference,
         )
 
     async def resolve_scope(self, principal: RuntimeApiTrustedPrincipal) -> RuntimeApiTrustedScope:
@@ -116,15 +114,14 @@ class SQLAlchemyRuntimeApiTrustedContextResolver:
         except ValueError as error:
             raise RuntimeBindingInvariantError("trusted binding invariant violated") from error
 
-        reading = self._clock.read()
         return RuntimeApiTrustedScope(
             tenant_id=binding.runtime_tenant_id,
             organization_id=organization.id,
             membership_id=membership.id,
             classification_ceiling=classification,
             scope_binding_reference=f"binding:{binding.id}",
-            validated_at=reading.observed_at,
-            validation_reference=self._validation_reference,
+            validated_at=self._facts.validated_at,
+            validation_reference=self._facts.validation_reference,
         )
 
 

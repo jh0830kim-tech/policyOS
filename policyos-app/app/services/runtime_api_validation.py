@@ -19,6 +19,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiSubmissionCommand,
     RuntimeApiSubmissionFacts,
     RuntimeApiSubmissionInput,
+    RuntimeApiTrustedContextFacts,
     RuntimeApiTrustedPrincipal,
     RuntimeApiTrustedScope,
 )
@@ -91,6 +92,15 @@ def validate_runtime_api_principal(
     if required_audience not in principal.verified_audiences:
         raise RuntimeApiContractConflict("required audience is not verified")
     return principal
+
+
+def validate_runtime_api_trusted_context_facts(
+    facts: RuntimeApiTrustedContextFacts,
+) -> RuntimeApiTrustedContextFacts:
+    for value in (facts.authenticated_at, facts.validated_at):
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise RuntimeApiContractConflict("trusted context time is not timezone-aware")
+    return facts
 
 
 def validate_runtime_api_scope(
@@ -212,4 +222,5 @@ __all__ = (
     "validate_runtime_api_safe_error",
     "validate_runtime_api_scope",
     "validate_runtime_api_submission",
+    "validate_runtime_api_trusted_context_facts",
 )

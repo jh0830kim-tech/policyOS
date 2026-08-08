@@ -140,12 +140,27 @@ class RuntimeApiReconciliationInput(RuntimeApiModel):
     idempotency_key: IdempotencyKey
 
 
+class RuntimeApiTrustedContextFacts(RuntimeApiModel):
+    authentication_reference: BoundedReference
+    validation_reference: BoundedReference
+    authenticated_at: datetime
+    validated_at: datetime
+
+    @field_validator("authenticated_at", "validated_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("trusted context times must be timezone-aware")
+        return value
+
+
 class RuntimeApiSubmissionFacts(RuntimeApiModel):
     command_id: UUID
     command_version: CommandVersion
     receipt_id: UUID
     committed_at: datetime
     correlation_reference: BoundedReference
+    context: RuntimeApiTrustedContextFacts
 
     @field_validator("committed_at")
     @classmethod
@@ -159,6 +174,7 @@ class RuntimeApiInvocationQueryFacts(RuntimeApiModel):
     query_id: UUID
     requested_at: datetime
     correlation_reference: BoundedReference
+    context: RuntimeApiTrustedContextFacts
 
     @field_validator("requested_at")
     @classmethod
@@ -174,6 +190,7 @@ class RuntimeApiReconciliationFacts(RuntimeApiModel):
     receipt_id: UUID
     committed_at: datetime
     correlation_reference: BoundedReference
+    context: RuntimeApiTrustedContextFacts
 
     @field_validator("committed_at")
     @classmethod
@@ -317,5 +334,6 @@ __all__ = (
     "RuntimeApiSubmissionInput",
     "RuntimeApiSubmissionResult",
     "RuntimeApiTrustedPrincipal",
+    "RuntimeApiTrustedContextFacts",
     "RuntimeApiTrustedScope",
 )

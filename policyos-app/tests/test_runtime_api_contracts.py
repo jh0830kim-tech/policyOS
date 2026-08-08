@@ -33,6 +33,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiSubmissionFacts,
     RuntimeApiSubmissionInput,
     RuntimeApiSubmissionResult,
+    RuntimeApiTrustedContextFacts,
     RuntimeApiTrustedPrincipal,
     RuntimeApiTrustedScope,
 )
@@ -40,6 +41,8 @@ from app.services.runtime_api_protocols import (
     RuntimeApiApplicationFacade,
     RuntimeApiIdempotencyTransactionPort,
     RuntimeApiLocalMutation,
+    RuntimeApiLocalOperationPort,
+    RuntimeApiOrchestrationFactBinder,
     RuntimeApiTrustedContextResolver,
 )
 from app.services.runtime_api_validation import (
@@ -51,6 +54,7 @@ from app.services.runtime_api_validation import (
     validate_runtime_api_idempotency_replay,
     validate_runtime_api_public_status,
     validate_runtime_api_submission,
+    validate_runtime_api_trusted_context_facts,
 )
 
 NOW = datetime(2026, 8, 6, tzinfo=UTC)
@@ -68,6 +72,15 @@ def claims():
         verified_audiences=("runtime-api",),
         issued_at=NOW,
         expires_at=datetime(2026, 8, 7, tzinfo=UTC),
+    )
+
+
+def context_facts():
+    return RuntimeApiTrustedContextFacts(
+        authentication_reference="authentication-1",
+        validation_reference="validation-1",
+        authenticated_at=NOW,
+        validated_at=NOW,
     )
 
 
@@ -309,12 +322,38 @@ class IdempotencyTransaction:
         )
 
 
+class FactBinder:
+    async def bind_submission(self, principal, scope, permission, request, facts, command_digest):
+        return command()
+
+    async def bind_query(self, principal, scope, permission, request, facts):
+        return None
+
+    async def bind_reconciliation(
+        self, principal, scope, permission, request, facts, command_digest
+    ):
+        return None
+
+
+class LocalOperation:
+    async def submit_invocation(self, command):
+        return safe_result()
+
+    async def get_invocation(self, query):
+        return safe_result().projection
+
+    async def request_reconciliation(self, command):
+        return safe_result()
+
+
 def test_protocol_structural_conformance() -> None:
     assert isinstance(Facade(), RuntimeApiApplicationFacade)
     assert not isinstance(object(), RuntimeApiApplicationFacade)
     assert isinstance(LocalMutation(), RuntimeApiLocalMutation)
     assert not isinstance(object(), RuntimeApiLocalMutation)
     assert isinstance(IdempotencyTransaction(), RuntimeApiIdempotencyTransactionPort)
+    assert isinstance(FactBinder(), RuntimeApiOrchestrationFactBinder)
+    assert isinstance(LocalOperation(), RuntimeApiLocalOperationPort)
     assert tuple(signature(RuntimeApiIdempotencyTransactionPort.commit).parameters) == (
         "self",
         "identity",
@@ -377,6 +416,7 @@ def test_explicit_facade_facts_are_strict_complete_and_timezone_aware() -> None:
         receipt_id=UUID("00000000-0000-0000-0000-000000000109"),
         committed_at=NOW,
         correlation_reference="correlation-1",
+        context=context_facts(),
     )
     assert submission.committed_at is NOW
     with pytest.raises(ValidationError):
@@ -393,6 +433,7 @@ def test_explicit_facade_facts_are_strict_complete_and_timezone_aware() -> None:
         query_id=UUID("00000000-0000-0000-0000-000000000110"),
         requested_at=NOW,
         correlation_reference="correlation-1",
+        context=context_facts(),
     )
     reconciliation = RuntimeApiReconciliationFacts(
         command_id=UUID("00000000-0000-0000-0000-000000000111"),
@@ -400,9 +441,85 @@ def test_explicit_facade_facts_are_strict_complete_and_timezone_aware() -> None:
         receipt_id=UUID("00000000-0000-0000-0000-000000000112"),
         committed_at=NOW,
         correlation_reference="correlation-1",
+        context=context_facts(),
     )
     assert query.requested_at is NOW
     assert reconciliation.committed_at is NOW
+
+
+def test_trusted_context_facts_are_explicit_strict_frozen_and_aware() -> None:
+    facts = context_facts()
+    assert facts.model_dump() == {
+        "authentication_reference": "authentication-1",
+        "validation_reference": "validation-1",
+        "authenticated_at": NOW,
+        "validated_at": NOW,
+    }
+    assert all(
+        field.default is None or field.is_required()
+        for field in RuntimeApiTrustedContextFacts.model_fields.values()
+    )
+    assert validate_runtime_api_trusted_context_facts(facts) is facts
+    with pytest.raises(ValidationError):
+        facts.authentication_reference = "authentication-2"
+    for missing in RuntimeApiTrustedContextFacts.model_fields:
+        with pytest.raises(ValidationError):
+            RuntimeApiTrustedContextFacts.model_validate(
+                {key: value for key, value in facts.model_dump().items() if key != missing}
+            )
+    for timestamp in ("authenticated_at", "validated_at"):
+        with pytest.raises(ValidationError):
+            RuntimeApiTrustedContextFacts.model_validate(
+                {**facts.model_dump(), timestamp: datetime(2026, 8, 8)}
+            )
+    with pytest.raises(ValidationError):
+        RuntimeApiTrustedContextFacts.model_validate({**facts.model_dump(), "extra": "no"})
+
+
+def test_binder_and_local_operation_protocols_have_exact_bounded_signatures() -> None:
+    assert tuple(signature(RuntimeApiOrchestrationFactBinder.bind_submission).parameters) == (
+        "self",
+        "principal",
+        "scope",
+        "permission",
+        "request",
+        "facts",
+        "command_digest",
+    )
+    assert tuple(signature(RuntimeApiOrchestrationFactBinder.bind_query).parameters) == (
+        "self",
+        "principal",
+        "scope",
+        "permission",
+        "request",
+        "facts",
+    )
+    assert tuple(signature(RuntimeApiOrchestrationFactBinder.bind_reconciliation).parameters) == (
+        "self",
+        "principal",
+        "scope",
+        "permission",
+        "request",
+        "facts",
+        "command_digest",
+    )
+    assert tuple(signature(RuntimeApiLocalOperationPort.submit_invocation).parameters) == (
+        "self",
+        "command",
+    )
+    assert tuple(signature(RuntimeApiLocalOperationPort.get_invocation).parameters) == (
+        "self",
+        "query",
+    )
+    assert tuple(signature(RuntimeApiLocalOperationPort.request_reconciliation).parameters) == (
+        "self",
+        "command",
+    )
+    binder_names = set(vars(RuntimeApiOrchestrationFactBinder))
+    local_names = set(vars(RuntimeApiLocalOperationPort))
+    forbidden = {"commit", "rollback", "uuid4", "now", "invoke_adapter", "enqueue"}
+    assert forbidden.isdisjoint(binder_names)
+    assert forbidden.isdisjoint(local_names)
 
 
 def test_operation_permission_mapping_is_exact_and_server_owned() -> None:
@@ -428,6 +545,7 @@ def test_canonical_mutation_digests_are_deterministic_and_operation_specific() -
         receipt_id=UUID("00000000-0000-0000-0000-000000000109"),
         committed_at=NOW,
         correlation_reference="correlation-1",
+        context=context_facts(),
     )
     first = build_runtime_api_submission_digest(submission, facts=submission_facts)
     assert first == build_runtime_api_submission_digest(submission, facts=submission_facts)
@@ -445,6 +563,7 @@ def test_canonical_mutation_digests_are_deterministic_and_operation_specific() -
         receipt_id=UUID("00000000-0000-0000-0000-000000000112"),
         committed_at=NOW,
         correlation_reference="correlation-1",
+        context=context_facts(),
     )
     reconciliation_digest = build_runtime_api_reconciliation_digest(
         reconciliation, facts=reconciliation_facts

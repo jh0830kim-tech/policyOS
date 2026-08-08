@@ -4,19 +4,23 @@ from typing import Protocol, runtime_checkable
 
 from app.core.auth_claims import VerifiedAccessTokenClaims
 from app.services.runtime_api_contracts import (
+    BoundedDigest,
     RuntimeApiCommandIdentity,
     RuntimeApiIdempotencyCommitFacts,
     RuntimeApiIdempotencyCommitResult,
+    RuntimeApiInvocationQuery,
     RuntimeApiInvocationQueryFacts,
     RuntimeApiInvocationQueryInput,
     RuntimeApiOrganizationSelector,
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
+    RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationInput,
     RuntimeApiReconciliationResult,
     RuntimeApiSafeResult,
     RuntimeApiStatusProjection,
+    RuntimeApiSubmissionCommand,
     RuntimeApiSubmissionFacts,
     RuntimeApiSubmissionInput,
     RuntimeApiSubmissionResult,
@@ -72,6 +76,53 @@ class RuntimeApiPermissionFactResolver(Protocol):
 
 
 @runtime_checkable
+class RuntimeApiOrchestrationFactBinder(Protocol):
+    async def bind_submission(
+        self,
+        principal: RuntimeApiTrustedPrincipal,
+        scope: RuntimeApiTrustedScope,
+        permission: RuntimeApiPermissionFact,
+        request: RuntimeApiSubmissionInput,
+        facts: RuntimeApiSubmissionFacts,
+        command_digest: BoundedDigest,
+    ) -> RuntimeApiSubmissionCommand: ...
+
+    async def bind_query(
+        self,
+        principal: RuntimeApiTrustedPrincipal,
+        scope: RuntimeApiTrustedScope,
+        permission: RuntimeApiPermissionFact,
+        request: RuntimeApiInvocationQueryInput,
+        facts: RuntimeApiInvocationQueryFacts,
+    ) -> RuntimeApiInvocationQuery: ...
+
+    async def bind_reconciliation(
+        self,
+        principal: RuntimeApiTrustedPrincipal,
+        scope: RuntimeApiTrustedScope,
+        permission: RuntimeApiPermissionFact,
+        request: RuntimeApiReconciliationInput,
+        facts: RuntimeApiReconciliationFacts,
+        command_digest: BoundedDigest,
+    ) -> RuntimeApiReconciliationCommand: ...
+
+
+@runtime_checkable
+class RuntimeApiLocalOperationPort(Protocol):
+    async def submit_invocation(
+        self, command: RuntimeApiSubmissionCommand
+    ) -> RuntimeApiSafeResult: ...
+
+    async def get_invocation(
+        self, query: RuntimeApiInvocationQuery
+    ) -> RuntimeApiStatusProjection: ...
+
+    async def request_reconciliation(
+        self, command: RuntimeApiReconciliationCommand
+    ) -> RuntimeApiSafeResult: ...
+
+
+@runtime_checkable
 class RuntimeApiLocalMutation(Protocol):
     async def __call__(self) -> RuntimeApiSafeResult: ...
 
@@ -90,6 +141,8 @@ __all__ = (
     "RuntimeApiApplicationFacade",
     "RuntimeApiIdempotencyTransactionPort",
     "RuntimeApiLocalMutation",
+    "RuntimeApiLocalOperationPort",
+    "RuntimeApiOrchestrationFactBinder",
     "RuntimeApiPermissionFactResolver",
     "RuntimeApiTrustedContextResolver",
 )
