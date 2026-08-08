@@ -214,14 +214,12 @@ def test_cp9_api_contract_gate_has_no_production_implementation() -> None:
     roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
     program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
     for blocker in (
-        "issuer/audience",
-        "Tenant-Organization",
-        "permission",
+        "permission-fact resolver",
         "idempotency persistence",
         "facade implementation",
     ):
         assert blocker in roadmap or blocker in program
-    assert "Implemented, pending review" in roadmap
+    assert "CP9-Gate-Runtime-Grant-Provisioning | Merged, PR #67" in roadmap
     assert "external business-effect exactly-once" in roadmap
     assert "| CP9 | Planned / Blocked |" in roadmap
     assert "| CP10 | Planned |" in roadmap
@@ -396,8 +394,10 @@ def test_cp9_runtime_grant_revoke_governance_precedes_production_provisioning() 
     combined = " ".join("".join((roadmap, program, security)).split())
 
     assert adr.is_file()
-    assert "**Status:** Proposed" in text
+    assert "**Status:** Accepted" in text
     assert "CP9-Gate-Runtime-Grant-Governance" in combined
+    assert "Merged, PR #66" in combined or "Merged in PR #66" in combined
+    assert "Merged, PR #67" in combined or "Merged in PR #67" in combined
     assert "runtime.grant.manage" in normalized
     assert "definition-only" in normalized and "automatic grant 0" in normalized
     assert "self-escalation" in normalized
@@ -405,6 +405,7 @@ def test_cp9_runtime_grant_revoke_governance_precedes_production_provisioning() 
     assert "EXACT_REPLAY" in normalized
     assert "no automatic backfill" in normalized
     assert "20260808_0020_runtime_permission_grant_governance.py" in normalized
+    assert "current migration head is `20260808_0020`" in combined
     assert "Planned / Blocked" in combined
 
     production_paths = (

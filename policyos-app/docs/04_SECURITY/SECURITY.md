@@ -121,7 +121,7 @@ HTTPS, normalized-origin allowlisting, and rejection of URL userinfo, fragments,
 Provider selection is organization-scoped and capability allowlisted. Restricted data cannot use external providers; confidential external transmission requires explicit authorization. API callers cannot choose adapter classes, MCP servers/tools, commands, endpoints, or transports. Provider instructions are treated as untrusted data.
 ## Sprint 15 CP9 Runtime API transport
 
-JWT signature verification alone does not establish trust. Issuer, audience, temporal, and bounded reference claims are required and validated before verified claims create a trusted principal. Every Runtime request must then bind that principal, an active user or service principal, active membership, exact organization, and persisted/configured `Tenant-Organization` relationship. Exact `runtime.read`, `runtime.invoke`, or `runtime.reconcile` permission is also required. `CP9-Gate-Tenant-Organization-Binding` is implemented pending review with explicit persistence and a trusted resolver; Runtime permission persistence and grants remain a separate production blocker. Organization ID is never inferred to be tenant ID.
+JWT signature verification alone does not establish trust. Issuer, audience, temporal, and bounded reference claims are required and validated before verified claims create a trusted principal. Every Runtime request must then bind that principal, an active user or service principal, active membership, exact organization, and persisted/configured `Tenant-Organization` relationship. Exact `runtime.read`, `runtime.invoke`, or `runtime.reconcile` permission is also required. `CP9-Gate-Tenant-Organization-Binding` merged in PR #64 with explicit persistence and a trusted resolver; Runtime permission definitions and governed grant/revoke provisioning merged through PR #67. Organization ID is never inferred to be tenant ID.
 
 Organization membership alone cannot create Runtime tenant scope. The authoritative persisted binding is lifetime one-to-one: neither an organization nor a Runtime tenant can be rebound, and Organization ID is never reused as tenant ID. Tenant identity is never selected by transport input or created through hidden generation, migration backfill, or a production default. The binding supplies the immutable classification ceiling. Missing, inactive, or revoked bindings fail closed with non-disclosure. Superuser, system-role, admin-role, service-account, and break-glass bypasses do not exist; every principal requires active organization and membership checks plus the exact binding. Binding records store no raw credential, secret, or provider body. Self-contained migration `20260807_0018` enforces lifetime uniqueness and fails closed before downgrade when rows exist; PostgreSQL 16 verification covers explicit persistence. Routes must not directly access Runtime Persistence or Adapters, and no production Runtime route exists yet.
 
@@ -129,9 +129,9 @@ All body, header, query, and path values are untrusted. HTTP callers cannot dire
 
 Invocation mutations will require transport idempotency persistence and a bounded `Idempotency-Key` scoped to tenant, organization, principal, operation, and command version; that persistence remains a separate blocker. Body size, collection size, content type, headers, rate, timeout, cancellation, and public errors are bounded. No raw credential, body, provider response, internal exception, SQL detail, or cross-tenant existence is exposed.
 
-Internal due, claim, lease, `DELIVERING`, lifecycle append, retry, and dead-letter operations are not public endpoints. External business-effect exactly-once is not guaranteed. Real provider/MCP/connector Adapters and Worker, queue, polling loop, and scheduler behavior remain excluded; Workers are CP10 scope. `CP9-Gate-API-Contracts` is merged in PR #61, the Auth Claims Gate is merged in PR #62, Tenant-Organization Binding Governance is merged in PR #63, and the binding implementation is pending review. Production Runtime routes remain Planned / Blocked on the separate blockers above.
+Internal due, claim, lease, `DELIVERING`, lifecycle append, retry, and dead-letter operations are not public endpoints. External business-effect exactly-once is not guaranteed. Real provider/MCP/connector Adapters and Worker, queue, polling loop, and scheduler behavior remain excluded; Workers are CP10 scope. `CP9-Gate-API-Contracts` is merged in PR #61, the Auth Claims Gate in PR #62, Tenant-Organization Binding Governance in PR #63, and the binding implementation in PR #64. Production Runtime routes remain Planned / Blocked on the separate blockers above.
 
-Runtime permission definitions `runtime.read`, `runtime.invoke`, and `runtime.reconcile` are persisted by definition-only migration `20260807_0019`; a definition is not authority. Explicit `RolePermission` plus `MembershipRole`, active user/membership/binding, exact organization/tenant scope, and classification within the ceiling are required. No automatic grants, including admin/system grants, or existing role/membership backfill occurs. Wildcard and cross-organization substitution fail closed. Grant link deletion is visible on the next database resolution. Permission facts are not accepted from an HTTP body, and no raw bearer token, signing secret, or provider body is stored. Governed production grant/revoke provisioning and immutable evidence are implemented pending review; trusted bootstrap assignment remains outside the Runtime API. CP9 Runtime API: Planned / Blocked. CP10: Planned.
+Runtime permission definitions `runtime.read`, `runtime.invoke`, and `runtime.reconcile` are persisted by definition-only migration `20260807_0019`; a definition is not authority. Explicit `RolePermission` plus `MembershipRole`, active user/membership/binding, exact organization/tenant scope, and classification within the ceiling are required. No automatic grants, including admin/system grants, or existing role/membership backfill occurs. Wildcard and cross-organization substitution fail closed. Grant link deletion is visible on the next database resolution. Permission facts are not accepted from an HTTP body, and no raw bearer token, signing secret, or provider body is stored. Governed production grant/revoke provisioning and immutable evidence merged in PR #67 with migration head `20260808_0020`; trusted bootstrap assignment remains outside the Runtime API. CP9 Runtime API: Planned / Blocked. CP10: Planned.
 ## Sprint 15 CP9 Runtime permission grant/revoke governance
 
 ADR-088 defines exact `runtime.grant.manage` authority as definition-only with automatic grant 0;
@@ -148,7 +148,7 @@ and cross-scope substitution fail closed. The classification ceiling is evidence
 authority. HTTP values cannot supply trusted actor, authority, permission, tenant, binding, digest,
 timestamp, or receipt facts.
 
-Existing `RolePermission` remains the active projection. A later checkpoint adds immutable
+Existing `RolePermission` remains the active projection. Migration `20260808_0020` adds immutable
 append-only `runtime_permission_grant_events` evidence for provenance, receipt, history, request
 digest, exact replay, and monotonic revision. Same-request identical facts return the original
 receipt; changed facts, digest, or operation conflict. Fixed lock order, expected revision,
@@ -157,10 +157,10 @@ authority-revocation races. Projection and evidence commit atomically.
 
 No inferred existing-grant backfill, hidden UUID/time generation, arbitrary JSON authority fact,
 raw token, signing secret, credential, or provider body is permitted. Generic audit retention
-cannot delete authoritative grant evidence. Planned migration
-`20260808_0020_runtime_permission_grant_governance.py`, production provisioning, permission-fact
-resolver, transport idempotency persistence, facade, and routes remain unimplemented. Production
-Runtime routes and CP10 worker/queue/polling/scheduler behavior are outside this governance gate.
+cannot delete authoritative grant evidence. Grant governance merged in PR #66 and production
+provisioning in PR #67. The permission-fact resolver, transport idempotency persistence, facade,
+and routes remain unimplemented. Production Runtime routes and CP10 worker/queue/polling/scheduler
+behavior are outside this governance gate.
 
 ### CP9 governed Runtime permission provisioning
 
@@ -170,4 +170,4 @@ transaction. `runtime.grant.manage` is definition-only with zero automatic grant
 `runtime.read`, `runtime.invoke`, and `runtime.reconcile` are eligible targets. Exact replay is
 receipt-stable, conflicting replay and concurrent state changes fail closed, and transport,
 permission-fact resolution, application facade/routes, outbox, and CP10 remain deferred.
-Production grant/revoke provisioning is implemented and validated pending review; bootstrap authority remains external.
+Production grant/revoke provisioning merged in PR #67; bootstrap authority remains external.

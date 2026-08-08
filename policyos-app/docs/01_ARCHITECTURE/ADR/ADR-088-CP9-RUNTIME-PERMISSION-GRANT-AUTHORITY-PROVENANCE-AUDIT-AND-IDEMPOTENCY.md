@@ -1,7 +1,8 @@
 # ADR-088: CP9 Runtime Permission Grant Authority, Provenance, Audit, and Idempotency
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-08
+- **Accepted by:** Governance PR #66 and implementation PR #67
 - **Decision scope:** CP9 Runtime permission grant/revoke governance
 - **Complements:** ADR-087
 
@@ -9,10 +10,10 @@
 
 Migration `20260807_0019` persists exact `runtime.read`, `runtime.invoke`, and
 `runtime.reconcile` definitions without granting them. A permission definition is not authority.
-PolicyOS has no production grant/revoke service, immutable grant evidence, replay receipt,
-permission-fact resolver, facade, or Runtime route. ADR-087 fixes transport, principal, and
-application boundaries but does not decide production grant ownership, provenance, audit,
-idempotency, bootstrap, or concurrency.
+At decision time, PolicyOS had no production grant/revoke service, immutable grant evidence,
+replay receipt, permission-fact resolver, facade, or Runtime route. ADR-087 fixes transport,
+principal, and application boundaries but does not decide production grant ownership, provenance,
+audit, idempotency, bootstrap, or concurrency.
 
 ## Decision
 
@@ -25,7 +26,7 @@ eligible. The projection cannot replace provenance or immutable history.
 
 ### Append-only command ledger
 
-A later production checkpoint adds append-only `runtime_permission_grant_events`. The ledger is
+Production provisioning adds append-only `runtime_permission_grant_events`. The ledger is
 the authoritative provenance, immutable audit evidence, replay identity, receipt fact,
 grant/revoke history, and monotonic grant revision. A separate receipt table is unnecessary.
 
@@ -106,21 +107,21 @@ revision, exact request-digest uniqueness, and stable non-null evidence linkage.
 arbitrary JSON and retention/delete behavior can remove or reinterpret evidence. Grant authority
 depends on the dedicated typed ledger, not generic audit retention.
 
-### Planned migration
+### Implemented migration
 
-The later implementation plans
-`20260808_0020_runtime_permission_grant_governance.py`; this governance gate does not create it.
-It adds definition-only `runtime.grant.manage` with automatic grant 0, the append-only ledger, and
-only composite candidate keys and scoped foreign keys needed for database isolation.
+Implementation PR #67 adds
+`20260808_0020_runtime_permission_grant_governance.py`. It persists definition-only
+`runtime.grant.manage` with automatic grant 0, the append-only ledger, and only composite candidate
+keys and scoped foreign keys needed for database isolation.
 
 Existing managed Runtime `RolePermission` makes upgrade fail closed. Actor or provenance is never
 inferred and no automatic backfill is allowed. Downgrade fails closed when a ledger row or managed
 active grant exists. Partial insertion/deletion is prohibited, and historical migrations `0001`
 through `0019` remain unchanged.
 
-### Planned typed contracts and errors
+### Implemented typed contracts and errors
 
-The later checkpoint defines strict, frozen, caller-supplied `RuntimePermissionGrantIdentity`,
+Implementation PR #67 defines strict, frozen, caller-supplied `RuntimePermissionGrantIdentity`,
 `RuntimePermissionGrantCommand`, `RuntimePermissionGrantReceipt`, and
 `RuntimePermissionGrantResult`. Results distinguish `COMMITTED` and `EXACT_REPLAY`.
 
@@ -142,9 +143,6 @@ audit fact.
 
 ## Deferred scope
 
-- grant/revoke contracts and service
-- model and migration `0020`
-- PostgreSQL persistence and concurrency acceptance
 - production Runtime permission fact resolver
 - transport idempotency persistence
 - trusted application facade
@@ -161,7 +159,7 @@ audit fact.
 
 ## Consequences
 
-`CP9-Gate-Runtime-Grant-Governance` can merge without production provisioning. Production Grant
-Provisioning remains Planned / Blocked until contracts, ledger, migration, service, and PostgreSQL
-acceptance are separately approved and implemented. CP9 Runtime API remains Planned / Blocked,
-and CP10 remains Planned.
+`CP9-Gate-Runtime-Grant-Governance` merged in PR #66. Production Grant Provisioning and its
+PostgreSQL acceptance merged in PR #67. CP9 Runtime API remains Planned / Blocked on the production
+permission-fact resolver, transport idempotency persistence, trusted application facade, and
+production routes. CP10 remains Planned.

@@ -46,7 +46,7 @@ revalidated immediately before the effect.
 
 ## 4. Current baseline
 
-The baseline is `main` after merged CP8 Runtime Delivery closeout PR #59.
+The baseline is `main` after merged governed Runtime grant provisioning PR #67.
 
 | Checkpoint | Status | Evidence |
 | --- | --- | --- |
@@ -75,10 +75,11 @@ The baseline is `main` after merged CP8 Runtime Delivery closeout PR #59.
 | CP9-Gate-API-Contracts | Merged, PR #61 | Immutable API/application contracts; no production implementation. |
 | CP9-Gate-Auth-Claims | Merged, PR #62 | Required issuer/audience settings, issued trust claims, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection, generic bearer failures, and focused authentication regression. |
 | CP9-Gate-Tenant-Organization-Binding-Governance | Merged, PR #63 | ADR-087 amendment fixes lifetime one-to-one binding and fail-closed provisioning, lifecycle, classification, bypass, and downgrade policy. |
-| CP9-Gate-Tenant-Organization-Binding | Implemented, pending review | Lifetime one-to-one model, explicit persistence, self-contained migration `20260807_0018`, fail-closed downgrade, trusted resolver, and PostgreSQL 16 verification. |
+| CP9-Gate-Tenant-Organization-Binding | Merged in PR #64 | Lifetime one-to-one model, explicit persistence, self-contained migration `20260807_0018`, fail-closed downgrade, trusted resolver, and PostgreSQL 16 verification. |
 | CP9-Gate-Runtime-Permission-Definitions | Merged in PR #65 | Definition-only exact Runtime permissions. No automatic grants, wildcard, or existing role/membership backfill. |
-| CP9-Gate-Runtime-Grant-Governance | Implemented, pending review | ADR-088 fixes `runtime.grant.manage`, append-only evidence, replay, scope, bootstrap, and atomic transaction policy without production implementation. |
-| CP9 Runtime API | Planned / Blocked | Production routes remain blocked on Tenant-Organization binding, Runtime permission persistence and grants, transport idempotency persistence, and the trusted application facade. |
+| CP9-Gate-Runtime-Grant-Governance | Merged in PR #66 | ADR-088 fixes `runtime.grant.manage`, append-only evidence, replay, scope, bootstrap, and atomic transaction policy. |
+| CP9-Gate-Runtime-Grant-Provisioning | Merged in PR #67 | Governed projection and ledger persistence, exact replay, scoped authority revalidation, fail-closed migration, concurrency, and PostgreSQL 16 evidence. |
+| CP9 Runtime API | Planned / Blocked | Production routes remain blocked on the Runtime permission-fact resolver, transport idempotency persistence, and the trusted application facade. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
@@ -86,7 +87,7 @@ governed CP7 Orchestration; deterministic fake and dry-run Adapters; and Postgre
 CP8 delivery Persistence now includes lifecycle, claim, retry, dead-letter, and reconciliation
 storage. Persistence PR #53, Lifecycle Port conformance PR #54, Governed Delivery Orchestration PR #55,
 Alembic blocker PR #56, projection-cardinality blocker PR #57, and Runtime Delivery Acceptance
-PR #58 are merged. Migration head is `20260807_0019`, and CP8 Runtime Delivery is complete. No real external adapter, runtime API, Worker, queue, polling
+PR #58 are merged. Migration head is `20260808_0020`, and CP8 Runtime Delivery is complete. No real external adapter, runtime API, Worker, queue, polling
 loop, scheduler, live credential resolution, or external side effect exists.
 
 ## 5. Program work structure
@@ -457,9 +458,9 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP9 - Runtime API
 
-- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` is merged in PR #61, `CP9-Gate-Auth-Claims` is merged in PR #62, and `CP9-Gate-Tenant-Organization-Binding-Governance` is merged in PR #63, and `CP9-Gate-Tenant-Organization-Binding` is implemented pending review. No Runtime production route or facade implementation exists.
+- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` in PR #61, `CP9-Gate-Auth-Claims` in PR #62, Tenant-Organization Binding Governance in PR #63, Binding in PR #64, Runtime permission definitions in PR #65, grant governance in PR #66, and grant provisioning in PR #67. No Runtime production route or facade implementation exists.
 - **Purpose:** Expose authenticated, organization-scoped transport schemas over the approved trusted application facade and Runtime Orchestration boundary.
-- **Entry conditions:** The ADR-087 binding amendment is merged in PR #63, and the binding implementation gate supplies the persisted lifetime binding and trusted resolver. Sprint 15 uses a lifetime one-to-one binding, explicit administrative provisioning, no automatic backfill, no transport tenant-ID input, no privileged bypass, an immutable persisted classification ceiling, fail-closed organizations without bindings, and fail-closed downgrade when binding rows exist. Runtime permission persistence and grants, transport idempotency persistence, and a stable trusted application facade remain production blockers.
+- **Entry conditions:** The persisted lifetime binding and trusted binding resolver are merged, and exact Runtime permission definitions plus governed grant/revoke provisioning are merged through PR #67. Sprint 15 uses a lifetime one-to-one binding, explicit administrative provisioning, no automatic backfill, no transport tenant-ID input, no privileged bypass, an immutable persisted classification ceiling, and fail-closed organizations without bindings. The production Runtime permission-fact resolver, transport idempotency persistence, and a stable trusted application facade remain production blockers.
 - **Binding implementation acceptance:** Model/migration parity; PostgreSQL 16 fresh and existing upgrade; lifetime 1:1 uniqueness; concurrent provisioning conflict; missing, inactive, and revoked binding rejection; exact trusted-scope equality; cross-tenant and cross-organization non-disclosure; and no route, facade, or permission expansion.
 - **Allowed outputs:** After the contracts gate, bounded routes in `app.api`, strict schemas in `app.schemas`, trusted application-facade integration, dependencies, and transport tests.
 - **Package placement:** Routes belong in `app.api`, schemas in `app.schemas`, and the trusted facade sits between API and Runtime Orchestration. `app.runtime.api` is prohibited.
@@ -508,7 +509,7 @@ prerequisite-gate review units and canonical dependency direction. Every new arc
 must cite these decisions and add an implementation ADR when package placement, dependency
 direction, public contracts, or security behavior is not already sufficiently decided. A
 contradiction requires a superseding ADR; roadmap prose alone cannot supersede an ADR. ADR-087
-defines the CP9 transport/principal boundary, and proposed ADR-088 independently defines Runtime
+defines the CP9 transport/principal boundary, and accepted ADR-088 independently defines Runtime
 grant/revoke authority, provenance, audit, idempotency, and bootstrap policy.
 
 ## 9. Git, PR, and CI policy
@@ -638,19 +639,17 @@ does not imply a Git tag, release publication, production enablement, or Sprint 
 - Decide CP10 worker package placement, queue, lease, identity, and scheduling model; workers
   remain outside the `app.runtime` domain unless a superseding ADR approves otherwise.
 
-PR #65 merged the definition-only Runtime permission gate at baseline merge commit `876d14f6` and
-left migration head `20260807_0019`. `CP9-Gate-Runtime-Grant-Governance` is Implemented, pending
-review through proposed ADR-088. Production Grant Provisioning is Implemented / Validated / Pending Review: the
-contracts, `runtime_permission_grant_events` ledger, service, model, PostgreSQL acceptance, and
-planned migration `20260808_0020_runtime_permission_grant_governance.py` begin only in a separate
-implementation checkpoint after governance merges. The migration must add `runtime.grant.manage`
-definition-only with automatic grant 0, infer no actor/provenance backfill, and fail closed for
-existing managed grants and populated downgrade.
+PR #65 merged the definition-only Runtime permission gate. PR #66 accepted ADR-088 governance and
+PR #67 merged the contracts, `runtime_permission_grant_events` ledger, service, model, migration
+`20260808_0020_runtime_permission_grant_governance.py`, and PostgreSQL acceptance. The current
+migration head is `20260808_0020`. `runtime.grant.manage` remains definition-only with automatic
+grant 0; the migration infers no actor/provenance backfill and fails closed for existing managed
+grants and populated downgrade.
 
 Initial `runtime.grant.manage` authority is provisioned only by a separately trusted
 bootstrap/operator procedure outside the public Runtime API. Production routes remain blocked
-until grant provisioning, the production Runtime permission fact resolver, transport idempotency
-persistence, and the trusted application facade are complete. CP9 Runtime API: Planned / Blocked.
+until the production Runtime permission fact resolver, transport idempotency persistence, and the
+trusted application facade are complete. CP9 Runtime API: Planned / Blocked.
 CP10: Planned.
 
 ### CP9 governed Runtime permission provisioning

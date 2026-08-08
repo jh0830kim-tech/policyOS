@@ -36,8 +36,9 @@ state, and execution result is not a policy outcome.
 - CP8 PostgreSQL Delivery Persistence merged in PR #53, Lifecycle Port conformance in PR #54,
   and governed Delivery Orchestration in PR #55.
 - PR #56 corrected Alembic 0007 asyncpg execution, and PR #57 corrected repeated lifecycle
-  projection cardinality. PR #65 merged the definition-only Runtime permissions, and the current
-  migration head is `20260807_0019`.
+  projection cardinality. PR #65 merged the definition-only Runtime permissions, PR #66 merged
+  grant/revoke governance, and PR #67 merged governed grant provisioning. The current migration
+  head is `20260808_0020`.
 - The CP8 Runtime Delivery Acceptance Gate passed PostgreSQL 16 verification and green CI and
   merged in PR #58. CP8 Runtime Delivery is complete within its approved local delivery boundary.
   No real external adapter, runtime API, Worker, queue, polling loop, scheduler, live credential
@@ -138,26 +139,26 @@ grants permission or causes automatic execution.
 | CP9-Gate-Tenant-Organization-Binding-Governance | Merged, PR #63 | Binding governance | Lifetime one-to-one cardinality, explicit provisioning, immutable classification ceiling, no rebinding or privileged bypass, and fail-closed downgrade | Governance baseline only |
 | CP9-Gate-Tenant-Organization-Binding | Merged, PR #64 | Binding persistence | Lifetime one-to-one model, explicit persistence, self-contained migration `20260807_0018`, fail-closed downgrade, trusted resolver, and PostgreSQL 16 verification | No production Runtime route or provisioning surface |
 | CP9-Gate-Runtime-Permission-Definitions | Merged, PR #65 | RBAC definitions | Definition-only persistence of exact `runtime.read`, `runtime.invoke`, and `runtime.reconcile` permissions in migration `20260807_0019` | No automatic grants or existing role/membership backfill |
-| CP9-Gate-Runtime-Grant-Governance | Implemented, pending review | RBAC grant governance | ADR-088 fixes exact management authority, immutable append-only ledger, replay, scope, and transaction semantics | Governance only; Production Grant Provisioning is Implemented / Validated / Pending Review |
-| CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires binding, Runtime permissions, transport idempotency, and stable facade |
+| CP9-Gate-Runtime-Grant-Governance | Merged, PR #66 | RBAC grant governance | ADR-088 fixes exact management authority, immutable append-only ledger, replay, scope, and transaction semantics | Governance precedes production provisioning |
+| CP9-Gate-Runtime-Grant-Provisioning | Merged, PR #67 | RBAC grant persistence | Atomic projection and append-only ledger, exact replay, scoped authority revalidation, concurrency, and PostgreSQL 16 evidence | Automatic management grants remain zero |
+| CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires a Runtime permission-fact resolver, transport idempotency persistence, and stable facade |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
 CP9 Governance / ADR-087 is merged in PR #60, API Contracts in PR #61, Auth Claims in PR #62,
 Tenant-Organization Binding Governance in PR #63, Binding in PR #64, and definition-only Runtime
-permissions in PR #65. ADR-088 adds `CP9-Gate-Runtime-Grant-Governance` as Implemented, pending
-review. Production Grant Provisioning is Implemented / Validated / Pending Review. No production Runtime route or
-facade exists. Routes remain in `app.api`; `app.runtime.api` and `app.runtime.outbox` remain
-prohibited. CP9 remains Planned / Blocked, CP10 Workers remain Planned, and
-external business-effect exactly-once remains unguaranteed. Blind retry and automatic redrive remain
-prohibited.
+permissions in PR #65. ADR-088 governance merged in PR #66 and governed Runtime grant provisioning
+merged in PR #67 with migration head `20260808_0020`. No production Runtime permission-fact
+resolver, route, or facade exists. Routes remain in `app.api`; `app.runtime.api` and
+`app.runtime.outbox` remain prohibited. CP9 remains Planned / Blocked, CP10 Workers remain Planned,
+and external business-effect exactly-once remains unguaranteed. Blind retry and automatic redrive
+remain prohibited.
 
 The required implementation order is:
 
-1. Trusted grant/revoke provisioning authority and immutable ledger implementation.
-2. Production Runtime permission fact resolver.
-3. Transport idempotency persistence.
-4. Trusted application facade.
-5. Production Runtime routes.
+1. Production Runtime permission fact resolver.
+2. Transport idempotency persistence.
+3. Trusted application facade.
+4. Production Runtime routes.
 
 
 ## 6. Boundary input and output contracts
@@ -335,7 +336,7 @@ PostgreSQL 22 passed; Ports, Delivery, and Architecture 46 passed; order A 177 p
 order B 177 passed with skip 0; and migration upgrade, downgrade, and parity checks passed.
 
 PR #56 corrected Alembic 0007 asyncpg execution, PR #57 added lifecycle projection cardinality,
-and Runtime permission definition migration `20260807_0019` is the current head. PR #58 merged the PostgreSQL
+and Runtime grant provisioning migration `20260808_0020` is the current head. PR #58 merged the PostgreSQL
 crash-window and vertical Acceptance Gate with green CI, completing CP8 Runtime Delivery. No
 `app.runtime.outbox`, Worker, queue, polling loop, scheduler, or API is introduced, and external
 exactly-once business effects are not guaranteed.
@@ -456,7 +457,10 @@ green CI. CP9 routes remain in `app.api`, and Workers remain external entry poin
 superseding ADRs approve different placement. Roadmap documentation does not resolve or supersede
 those later decisions.
 
-CP9-Gate-Runtime-Permission-Definitions is implemented pending review: permission definitions are persisted while production grants are not provisioned. CP9 Runtime API: Planned / Blocked. CP10: Planned.
+CP9-Gate-Runtime-Permission-Definitions merged in PR #65, grant governance merged in PR #66, and
+governed grant provisioning merged in PR #67. CP9 Runtime API remains Planned / Blocked pending the
+permission-fact resolver, transport idempotency persistence, trusted application facade, and
+production routes. CP10 remains Planned.
 
 ### CP9 governed Runtime permission provisioning
 
