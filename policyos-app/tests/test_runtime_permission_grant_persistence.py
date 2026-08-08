@@ -1,6 +1,9 @@
 import asyncio
 import os
+import subprocess
+import sys
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
@@ -38,12 +41,24 @@ MANAGE_ID = UUID("00000000-0000-0000-0000-000000001904")
 READ_ID = UUID("00000000-0000-0000-0000-000000001901")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def database_url() -> str:
     value = os.getenv("POLICYOS_TEST_DATABASE_URL")
     if value is None:
         pytest.skip("POLICYOS_TEST_DATABASE_URL is required for PostgreSQL integration")
     return value
+
+
+@pytest.fixture(scope="module", autouse=True)
+def migrated_database(database_url: str) -> None:
+    environment = os.environ.copy()
+    environment["DATABASE_URL"] = database_url
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        check=True,
+        cwd=Path(__file__).resolve().parents[1],
+        env=environment,
+    )
 
 
 async def seed(factory: async_sessionmaker):
