@@ -18,6 +18,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiIdempotencyCommitResult,
     RuntimeApiIdempotencyDisposition,
     RuntimeApiIdempotencyReceipt,
+    RuntimeApiInvocationQuery,
     RuntimeApiInvocationQueryFacts,
     RuntimeApiInvocationQueryInput,
     RuntimeApiOperation,
@@ -25,6 +26,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
     RuntimeApiPublicStatus,
+    RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationInput,
     RuntimeApiSafeResult,
@@ -52,8 +54,12 @@ from app.services.runtime_api_validation import (
     required_runtime_api_permission,
     validate_runtime_api_commit_result,
     validate_runtime_api_idempotency_replay,
+    validate_runtime_api_invocation_query_binding,
+    validate_runtime_api_projection_binding,
     validate_runtime_api_public_status,
+    validate_runtime_api_reconciliation_binding,
     validate_runtime_api_submission,
+    validate_runtime_api_submission_binding,
     validate_runtime_api_trusted_context_facts,
 )
 
@@ -612,6 +618,180 @@ def test_canonical_mutation_digests_are_deterministic_and_operation_specific() -
         )
         == reconciliation_digest
     )
+
+
+def test_binder_output_validators_require_exact_outer_and_resolved_facts() -> None:
+    request = RuntimeApiSubmissionInput(
+        action_reference="action-1",
+        command_reference="command-1",
+        classification=DataClassification.INTERNAL,
+        idempotency_key="key-1",
+    )
+    facts = RuntimeApiSubmissionFacts(
+        command_id=UUID("00000000-0000-0000-0000-000000000108"),
+        command_version="v1",
+        receipt_id=UUID("00000000-0000-0000-0000-000000000109"),
+        committed_at=NOW,
+        correlation_reference="correlation-1",
+        context=context_facts(),
+    )
+    digest = build_runtime_api_submission_digest(request, facts=facts)
+    bound = RuntimeApiSubmissionCommand(
+        identity=RuntimeApiCommandIdentity(
+            command_id=facts.command_id,
+            operation=RuntimeApiOperation.SUBMIT_INVOCATION,
+            tenant_id=TENANT,
+            organization_id=ORG,
+            principal_id=PRINCIPAL,
+            command_version=facts.command_version,
+            idempotency_key=request.idempotency_key,
+            command_digest=digest,
+            correlation_reference=facts.correlation_reference,
+        ),
+        principal=principal(),
+        scope=scope(),
+        permission=permission(),
+        action_reference=request.action_reference,
+        command_reference=request.command_reference,
+        classification=request.classification,
+    )
+    assert (
+        validate_runtime_api_submission_binding(
+            bound,
+            request=request,
+            facts=facts,
+            principal=principal(),
+            scope=scope(),
+            permission=permission(),
+            command_digest=digest,
+            required_audience="runtime-api",
+        )
+        is bound
+    )
+    for changed in (
+        bound.model_copy(update={"action_reference": "action-2"}),
+        bound.model_copy(
+            update={"principal": principal().model_copy(update={"principal_id": ORG})}
+        ),
+        bound.model_copy(
+            update={
+                "identity": bound.identity.model_copy(
+                    update={"command_digest": "sha256:" + "0" * 64}
+                )
+            }
+        ),
+    ):
+        with pytest.raises(RuntimeApiContractConflict):
+            validate_runtime_api_submission_binding(
+                changed,
+                request=request,
+                facts=facts,
+                principal=principal(),
+                scope=scope(),
+                permission=permission(),
+                command_digest=digest,
+                required_audience="runtime-api",
+            )
+
+
+def test_query_reconciliation_and_projection_bindings_are_exact() -> None:
+    query_request = RuntimeApiInvocationQueryInput(invocation_reference="invocation-1")
+    query_facts = RuntimeApiInvocationQueryFacts(
+        query_id=UUID("00000000-0000-0000-0000-000000000110"),
+        requested_at=NOW,
+        correlation_reference="correlation-1",
+        context=context_facts(),
+    )
+    bound_query = RuntimeApiInvocationQuery(
+        query_id=query_facts.query_id,
+        principal=principal(),
+        scope=scope(),
+        permission=permission(RuntimeApiPermission.READ),
+        invocation_reference=query_request.invocation_reference,
+        correlation_reference=query_facts.correlation_reference,
+    )
+    assert (
+        validate_runtime_api_invocation_query_binding(
+            bound_query,
+            request=query_request,
+            facts=query_facts,
+            principal=principal(),
+            scope=scope(),
+            permission=permission(RuntimeApiPermission.READ),
+            required_audience="runtime-api",
+        )
+        is bound_query
+    )
+    assert (
+        validate_runtime_api_projection_binding(
+            safe_result().projection, request=query_request, facts=query_facts
+        )
+        == safe_result().projection
+    )
+    with pytest.raises(RuntimeApiContractConflict):
+        validate_runtime_api_projection_binding(
+            safe_result().projection.model_copy(update={"invocation_reference": "other"}),
+            request=query_request,
+            facts=query_facts,
+        )
+
+    request = RuntimeApiReconciliationInput(
+        invocation_reference="invocation-1",
+        reconciliation_reference="reconciliation-1",
+        idempotency_key="key-1",
+    )
+    facts = RuntimeApiReconciliationFacts(
+        command_id=UUID("00000000-0000-0000-0000-000000000111"),
+        command_version="v1",
+        receipt_id=UUID("00000000-0000-0000-0000-000000000112"),
+        committed_at=NOW,
+        correlation_reference="correlation-1",
+        context=context_facts(),
+    )
+    digest = build_runtime_api_reconciliation_digest(request, facts=facts)
+    reconcile_permission = permission(RuntimeApiPermission.RECONCILE)
+    bound = RuntimeApiReconciliationCommand(
+        identity=RuntimeApiCommandIdentity(
+            command_id=facts.command_id,
+            operation=RuntimeApiOperation.REQUEST_RECONCILIATION,
+            tenant_id=TENANT,
+            organization_id=ORG,
+            principal_id=PRINCIPAL,
+            command_version=facts.command_version,
+            idempotency_key=request.idempotency_key,
+            command_digest=digest,
+            correlation_reference=facts.correlation_reference,
+        ),
+        principal=principal(),
+        scope=scope(),
+        permission=reconcile_permission,
+        invocation_reference=request.invocation_reference,
+        reconciliation_reference=request.reconciliation_reference,
+    )
+    assert (
+        validate_runtime_api_reconciliation_binding(
+            bound,
+            request=request,
+            facts=facts,
+            principal=principal(),
+            scope=scope(),
+            permission=reconcile_permission,
+            command_digest=digest,
+            required_audience="runtime-api",
+        )
+        is bound
+    )
+    with pytest.raises(RuntimeApiContractConflict):
+        validate_runtime_api_reconciliation_binding(
+            bound.model_copy(update={"reconciliation_reference": "other"}),
+            request=request,
+            facts=facts,
+            principal=principal(),
+            scope=scope(),
+            permission=reconcile_permission,
+            command_digest=digest,
+            required_audience="runtime-api",
+        )
 
 
 def test_atomic_idempotency_port_calls_mutation_only_for_new_identity() -> None:

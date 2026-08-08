@@ -597,7 +597,7 @@ def test_cp9_atomic_commit_contract_correction_is_merged_before_persistence() ->
     assert not (ROOT / "app" / "runtime" / "scheduler").exists()
 
 
-def test_cp9_trusted_application_facade_governance_precedes_facade_and_routes() -> None:
+def test_cp9_trusted_application_facade_governance_precedes_routes() -> None:
     adr = ADR / ("ADR-091-CP9-RUNTIME-TRUSTED-APPLICATION-FACADE-TRANSACTION-AND-FACT-BINDING.md")
     roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
     program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
@@ -639,7 +639,8 @@ def test_cp9_trusted_application_facade_governance_precedes_facade_and_routes() 
         "CP10 Workers | Planned",
         "Merged, PR #75",
         "Trusted Application Facade Contracts | Merged, PR #76",
-        "Fact-Binding Contracts | Implemented, pending review",
+        "Fact-Binding Contracts | Merged, PR #77",
+        "Trusted Application Facade | Implemented, pending review",
     ):
         assert phrase in combined
 
@@ -660,9 +661,12 @@ def test_cp9_trusted_application_facade_governance_precedes_facade_and_routes() 
     assert "RuntimeApiLocalOperationPort" in protocols
     assert "RuntimeClockPort" not in tenant_binding
     assert "clock.read" not in tenant_binding
-    assert "fact-binding contracts, production facade, production routes" in combined
+    assert "facade review/merge, concrete local binding implementation" in combined
 
-    assert not (ROOT / "app" / "services" / "runtime_api_facade.py").exists()
+    facade = ROOT / "app" / "services" / "runtime_api_facade.py"
+    assert facade.is_file()
+    source = facade.read_text(encoding="utf-8").lower()
+    assert not any(item in source for item in ("fastapi", "provider", "mcp", "queue", "worker"))
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
