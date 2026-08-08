@@ -143,7 +143,8 @@ grants permission or causes automatic execution.
 | CP9-Gate-Runtime-Grant-Provisioning | Merged, PR #67 | RBAC grant persistence | Atomic projection and append-only ledger, exact replay, scoped authority revalidation, concurrency, and PostgreSQL 16 evidence | Automatic management grants remain zero |
 | CP9-Gate-Runtime-Permission-Fact-Resolver-Governance | Merged, PR #69 | RBAC resolution governance | ADR-089 fixes server-owned operation mapping, live projection authority, non-disclosure, and revocation linearization | Governance baseline; no facade or route |
 | CP9-Gate-Runtime-Permission-Fact-Resolver | Merged, PR #70 | RBAC resolution | Transaction-bound SQLAlchemy resolution of exact live `RolePermission` facts | No cache, migration, facade, route, or transport |
-| CP9-Gate-Transport-Idempotency-Governance | Implemented, pending review | Mutation replay governance | ADR-090 fixes scoped identity, explicit command version, canonical digest, immutable receipts, and transaction linearization | Migration `0021` is planned only |
+| CP9-Gate-Transport-Idempotency-Governance | Merged, PR #71 | Mutation replay governance | ADR-090 fixes scoped identity, explicit command version, canonical digest, immutable receipts, and transaction linearization | Migration `0021` is planned only |
+| CP9-Gate-Transport-Idempotency-Contracts | Implemented, pending review | Mutation replay contracts | Adds bounded command version, explicit commit facts, atomic commit protocol, and exact replay equality | No persistence, migration, facade, or route |
 | CP9-Transport-Idempotency | Planned / Blocked | Mutation replay persistence | Planned `runtime_api_idempotency_receipts` and migration `20260808_0021_runtime_api_idempotency.py` | Governance must merge first |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires transport idempotency persistence, stable facade, and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
@@ -160,7 +161,7 @@ remain prohibited.
 
 The required implementation order is:
 
-1. Review and merge ADR-090 transport idempotency governance.
+1. Review and merge the transport idempotency contracts gate.
 2. Implement transport idempotency persistence.
 3. Implement the trusted application facade.
 4. Implement production Runtime routes.
@@ -477,6 +478,10 @@ ADR-090 proposes mutation-only transport replay using a trusted scoped identity,
 `command_version`, canonical digest, transaction-scoped PostgreSQL advisory lock, and immutable
 bounded receipt. Migration `20260808_0021_runtime_api_idempotency.py` is planned only and does not
 exist in this governance gate.
+
+ADR-090 governance merged in PR #71. `CP9-Gate-Transport-Idempotency-Contracts` adds only immutable
+bounded contracts, explicit caller-supplied commit facts, one atomic commit protocol, and exact
+replay equality. Production persistence, migration `0021`, facade, and routes remain blocked.
 
 ### CP9 governed Runtime permission provisioning
 

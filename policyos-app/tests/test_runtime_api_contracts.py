@@ -12,6 +12,7 @@ from app.schemas.runtime_api import RuntimeInvocationSubmitRequest
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
     RuntimeApiContractConflict,
+    RuntimeApiIdempotencyCommitFacts,
     RuntimeApiIdempotencyCommitResult,
     RuntimeApiIdempotencyDisposition,
     RuntimeApiIdempotencyReceipt,
@@ -78,6 +79,7 @@ def identity(**updates):
         tenant_id=TENANT,
         organization_id=ORG,
         principal_id=PRINCIPAL,
+        command_version="v1.0",
         idempotency_key="key-1",
         command_digest="sha256:0123456789abcdef",
         correlation_reference="correlation-1",
@@ -178,9 +180,18 @@ def test_submission_exact_scope_permission_and_classification() -> None:
 def test_idempotency_exact_replay_and_conflict() -> None:
     first = receipt()
     assert validate_runtime_api_idempotency_replay(identity(), first) is first
+    assert (
+        validate_runtime_api_idempotency_replay(
+            identity(command_id=ORG, correlation_reference="correlation-2"), first
+        )
+        is first
+    )
     for changed in (
         identity(command_digest="sha256:fedcba9876543210"),
+        identity(command_version="v2"),
+        identity(idempotency_key="key-2"),
         identity(tenant_id=ORG),
+        identity(organization_id=TENANT),
         identity(principal_id=ORG),
         identity(operation=RuntimeApiOperation.REQUEST_RECONCILIATION),
     ):
@@ -192,6 +203,25 @@ def test_idempotency_exact_replay_and_conflict() -> None:
         safe_result=first.safe_result,
     )
     assert validate_runtime_api_commit_result(result).receipt is first
+    assert result.receipt.identity == first.identity
+    assert result.safe_result == first.safe_result
+
+
+@pytest.mark.parametrize("value", ("", " ", "a" * 41, "version/1", "한글"))
+def test_command_version_is_strict_and_bounded(value: str) -> None:
+    with pytest.raises(ValidationError):
+        identity(command_version=value)
+
+
+def test_idempotency_commit_facts_are_explicit_and_timezone_aware() -> None:
+    facts = RuntimeApiIdempotencyCommitFacts(
+        receipt_id=UUID("00000000-0000-0000-0000-000000000107"), committed_at=NOW
+    )
+    assert facts.committed_at is NOW
+    with pytest.raises(ValidationError):
+        RuntimeApiIdempotencyCommitFacts(
+            receipt_id=facts.receipt_id, committed_at=datetime(2026, 8, 8)
+        )
 
 
 def test_ambiguous_status_is_not_success() -> None:
@@ -219,8 +249,13 @@ class Facade:
 
 
 class IdempotencyTransaction:
-    async def commit(self, identity, result):
-        item = receipt(identity)
+    async def commit(self, identity, result, facts):
+        item = RuntimeApiIdempotencyReceipt(
+            receipt_id=facts.receipt_id,
+            identity=identity,
+            safe_result=result,
+            committed_at=facts.committed_at,
+        )
         return RuntimeApiIdempotencyCommitResult(
             disposition=RuntimeApiIdempotencyDisposition.COMMITTED,
             receipt=item,
@@ -232,6 +267,12 @@ def test_protocol_structural_conformance() -> None:
     assert isinstance(Facade(), RuntimeApiApplicationFacade)
     assert not isinstance(object(), RuntimeApiApplicationFacade)
     assert isinstance(IdempotencyTransaction(), RuntimeApiIdempotencyTransactionPort)
+    assert tuple(signature(RuntimeApiIdempotencyTransactionPort.commit).parameters) == (
+        "self",
+        "identity",
+        "result",
+        "facts",
+    )
 
 
 def test_explicit_immutable_exports() -> None:
@@ -244,6 +285,8 @@ def test_explicit_immutable_exports() -> None:
         assert isinstance(module.__all__, tuple)
         assert len(module.__all__) == len(set(module.__all__))
         assert all(hasattr(module, name) for name in module.__all__)
+    assert "CommandVersion" in contracts.__all__
+    assert "RuntimeApiIdempotencyCommitFacts" in contracts.__all__
 
 
 def test_trusted_context_protocol_remains_transport_tenant_free() -> None:

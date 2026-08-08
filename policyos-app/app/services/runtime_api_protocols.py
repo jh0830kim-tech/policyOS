@@ -4,6 +4,7 @@ from typing import Protocol, runtime_checkable
 
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
+    RuntimeApiIdempotencyCommitFacts,
     RuntimeApiIdempotencyCommitResult,
     RuntimeApiInvocationQuery,
     RuntimeApiPermission,
@@ -59,6 +60,7 @@ class RuntimeApiIdempotencyTransactionPort(Protocol):
         self,
         identity: RuntimeApiCommandIdentity,
         result: RuntimeApiSafeResult,
+        facts: RuntimeApiIdempotencyCommitFacts,
     ) -> RuntimeApiIdempotencyCommitResult: ...
 
 
