@@ -504,3 +504,55 @@ def test_cp9_permission_fact_resolver_is_additive_and_transport_free() -> None:
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
+
+
+def test_cp9_transport_idempotency_governance_precedes_production_persistence() -> None:
+    adr = ADR / "ADR-090-CP9-RUNTIME-TRANSPORT-IDEMPOTENCY-PERSISTENCE-AND-REPLAY.md"
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
+    text = adr.read_text(encoding="utf-8")
+    normalized = " ".join(text.split())
+    combined = " ".join("".join((roadmap, program, security)).split())
+
+    assert adr.is_file()
+    assert "**Status:** Proposed" in text
+    for phrase in (
+        "CP9-Gate-Transport-Idempotency-Governance",
+        "Implemented, pending review",
+        "Production Transport Idempotency",
+        "Planned / Blocked",
+        "Merged, PR #69",
+        "Merged, PR #70",
+    ):
+        assert phrase in combined
+    for phrase in (
+        "command_version",
+        "complete scoped replay identity",
+        "canonical command digest",
+        "Exact replay",
+        "typed idempotency conflict",
+        "revalidates authentication",
+        "PostgreSQL advisory lock",
+        "immutable and append-only",
+        "raw bearer token",
+        "provider body",
+        "external business-effect exactly-once",
+        "20260808_0021_runtime_api_idempotency.py",
+    ):
+        assert phrase in normalized
+    assert "raw request body" in " ".join(text.split()).casefold()
+
+    contracts = (ROOT / "app" / "services" / "runtime_api_contracts.py").read_text(encoding="utf-8")
+    assert "command_version" not in contracts
+    assert not any(
+        path.name.startswith("20260808_0021")
+        for path in (ROOT / "alembic" / "versions").glob("*.py")
+    )
+    assert not (ROOT / "app" / "models" / "runtime_api_idempotency.py").exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_idempotency.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "app" / "runtime" / "api").exists()
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()
+    assert not (ROOT / "app" / "runtime" / "workers").exists()
+    assert not (ROOT / "app" / "runtime" / "scheduler").exists()

@@ -127,7 +127,7 @@ Organization membership alone cannot create Runtime tenant scope. The authoritat
 
 All body, header, query, and path values are untrusted. HTTP callers cannot directly supply internal Authority, Plan, State, Lifecycle, Permit, Registry, Audit, Adapter, Persistence, credential, retry, dead-letter, timestamp, digest, or receipt facts. Future routes in `app.api` will validate strict `app.schemas` contracts and call only the trusted application facade, which resolves server-side facts and invokes Runtime Orchestration. Direct ORM, Persistence, or Adapter access is prohibited. The trusted application facade remains a blocker, and no production Runtime route exists yet.
 
-Invocation mutations will require transport idempotency persistence and a bounded `Idempotency-Key` scoped to tenant, organization, principal, operation, and command version; that persistence remains a separate blocker. Body size, collection size, content type, headers, rate, timeout, cancellation, and public errors are bounded. No raw credential, body, provider response, internal exception, SQL detail, or cross-tenant existence is exposed.
+Invocation mutations will require transport idempotency persistence and a bounded ASCII `Idempotency-Key` scoped to tenant, organization, principal, operation, explicit command version, and canonical command digest; that persistence remains a separate blocker. Body size, collection size, content type, headers, rate, timeout, cancellation, and public errors are bounded. No raw credential, body, provider response, internal exception, SQL detail, or cross-tenant existence is exposed.
 
 Internal due, claim, lease, `DELIVERING`, lifecycle append, retry, and dead-letter operations are not public endpoints. External business-effect exactly-once is not guaranteed. Real provider/MCP/connector Adapters and Worker, queue, polling loop, and scheduler behavior remain excluded; Workers are CP10 scope. `CP9-Gate-API-Contracts` is merged in PR #61, the Auth Claims Gate in PR #62, Tenant-Organization Binding Governance in PR #63, and the binding implementation in PR #64. Production Runtime routes remain Planned / Blocked on the separate blockers above.
 
@@ -202,3 +202,24 @@ caller-owned transaction and locks active user, organization, membership, bindin
 organization-scoped roles, exact permission, and `RolePermission` facts in fixed order. It neither
 queries the grant ledger nor caches allow or deny outcomes. This resolver is implemented, pending
 review; CP9 remains Planned / Blocked on idempotency persistence, facade, and routes.
+
+## Sprint 15 CP9 Transport Idempotency security boundary
+
+ADR-090 permits a client to provide only a bounded ASCII `Idempotency-Key` for
+`submit_invocation` and `request_reconciliation`. The server constructs the trusted scoped replay
+identity from tenant, organization, principal, operation, explicit `command_version`, and the key,
+then computes a canonical digest only after strict schema validation and current authentication,
+scope, Tenant-Organization binding, and exact permission resolution. Those trust facts are
+revalidated before every receipt lookup or replay, so revoked authority cannot reuse history.
+
+An exact scoped identity and digest returns the original bounded safe result. Any identity,
+operation, version, or digest mismatch raises a bounded typed conflict without disclosing receipt,
+scope, or database detail. A caller-owned transaction and transaction-scoped stable PostgreSQL
+advisory lock linearize the local mutation and immutable receipt. Receipts are append-only: UPDATE,
+DELETE, cascade delete, expiry, and key reuse are prohibited during Sprint 15.
+
+Receipts contain bounded structured facts only. Raw request or provider payload, bearer token,
+secret, credential, arbitrary JSON, internal exception, and SQL/error detail are prohibited. A
+receipt and local mutation commit or roll back together. This boundary does not guarantee external
+business-effect exactly-once. Production persistence, migration `0021`, facade, routes,
+`app.runtime.api`, outbox, Workers, and CP10 remain unimplemented.
