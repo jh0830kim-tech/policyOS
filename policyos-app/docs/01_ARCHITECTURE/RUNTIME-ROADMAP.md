@@ -1,4 +1,4 @@
-# Runtime Architecture Roadmap
+ Runtime Architecture Roadmap
 
 ## 1. Role of the runtime
 
@@ -36,7 +36,7 @@ state, and execution result is not a policy outcome.
 - CP8 PostgreSQL Delivery Persistence merged in PR #53, Lifecycle Port conformance in PR #54,
   and governed Delivery Orchestration in PR #55.
 - PR #56 corrected Alembic 0007 asyncpg execution, and PR #57 corrected repeated lifecycle
-  projection cardinality. The migration head is `20260807_0018`.
+  projection cardinality. The migration head is `20260807_0019`.
 - The CP8 Runtime Delivery Acceptance Gate passed PostgreSQL 16 verification and green CI and
   merged in PR #58. CP8 Runtime Delivery is complete within its approved local delivery boundary.
   No real external adapter, runtime API, Worker, queue, polling loop, scheduler, live credential
@@ -135,7 +135,8 @@ grants permission or causes automatic execution.
 | CP9-Gate-API-Contracts | Merged, PR #61 | API contracts | Immutable principal, scope, facade, idempotency and safe error contracts | Contracts do not create a production API |
 | CP9-Gate-Auth-Claims | Merged, PR #62 | Authentication trust | Required issuer/audience, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection and generic bearer failures | Focused authentication regression complete |
 | CP9-Gate-Tenant-Organization-Binding-Governance | Merged, PR #63 | Binding governance | Lifetime one-to-one cardinality, explicit provisioning, immutable classification ceiling, no rebinding or privileged bypass, and fail-closed downgrade | Governance baseline only |
-| CP9-Gate-Tenant-Organization-Binding | Implemented, pending review | Binding persistence | Lifetime one-to-one model, explicit persistence, self-contained migration `20260807_0018`, fail-closed downgrade, trusted resolver, and PostgreSQL 16 verification | No production Runtime route or provisioning surface |
+| CP9-Gate-Tenant-Organization-Binding | Merged, PR #64 | Binding persistence | Lifetime one-to-one model, explicit persistence, self-contained migration `20260807_0018`, fail-closed downgrade, trusted resolver, and PostgreSQL 16 verification | No production Runtime route or provisioning surface |
+| CP9-Gate-Runtime-Permission-Definitions | Implemented, pending review | RBAC definitions | Definition-only persistence of exact `runtime.read`, `runtime.invoke`, and `runtime.reconcile` permissions in migration `20260807_0019` | No automatic grants or existing role/membership backfill |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires binding, Runtime permissions, transport idempotency, and stable facade |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -143,7 +144,7 @@ CP9 Governance / ADR-087 is merged in PR #60, `CP9-Gate-API-Contracts` is merged
 
 The required implementation order is:
 
-1. Runtime permission persistence and grants.
+1. Trusted production Runtime permission grant/revoke provisioning authority and evidence.
 2. Transport idempotency persistence.
 3. Trusted application facade.
 4. Production Runtime routes.
@@ -325,7 +326,7 @@ PostgreSQL 22 passed; Ports, Delivery, and Architecture 46 passed; order A 177 p
 order B 177 passed with skip 0; and migration upgrade, downgrade, and parity checks passed.
 
 PR #56 corrected Alembic 0007 asyncpg execution, PR #57 added lifecycle projection cardinality,
-and binding migration `20260807_0018` is the current head. PR #58 merged the PostgreSQL
+and Runtime permission definition migration `20260807_0019` is the current head. PR #58 merged the PostgreSQL
 crash-window and vertical Acceptance Gate with green CI, completing CP8 Runtime Delivery. No
 `app.runtime.outbox`, Worker, queue, polling loop, scheduler, or API is introduced, and external
 exactly-once business effects are not guaranteed.
@@ -445,3 +446,5 @@ blocks CP8 production implementation until `CP8-Gate-Delivery-Persistence-Contra
 green CI. CP9 routes remain in `app.api`, and Workers remain external entry points unless
 superseding ADRs approve different placement. Roadmap documentation does not resolve or supersede
 those later decisions.
+
+CP9-Gate-Runtime-Permission-Definitions is implemented pending review: permission definitions are persisted while production grants are not provisioned. CP9 Runtime API: Planned / Blocked. CP10: Planned.

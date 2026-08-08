@@ -341,3 +341,40 @@ def test_cp9_tenant_organization_binding_gate_is_implemented_without_runtime_rou
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
+
+
+def test_cp9_runtime_permission_definitions_are_persisted_without_grants() -> None:
+    migration = ROOT / "alembic" / "versions" / "20260807_0019_runtime_api_permissions.py"
+    source = migration.read_text(encoding="utf-8")
+    docs = " ".join(
+        "".join(
+            (ROOT / path).read_text(encoding="utf-8")
+            for path in (
+                "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+                "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+                "docs/04_SECURITY/SECURITY.md",
+            )
+        ).split()
+    )
+    assert migration.is_file()
+    assert (
+        'revision: str = "20260807_0019"' in source
+        and 'down_revision: str | None = "20260807_0018"' in source
+    )
+    assert all(
+        permission in source
+        for permission in ("runtime.read", "runtime.invoke", "runtime.reconcile")
+    )
+    assert all(
+        phrase in docs
+        for phrase in (
+            "definition-only",
+            "No automatic grants",
+            "Production grant/revoke",
+            "CP9 Runtime API: Planned / Blocked",
+            "CP10: Planned",
+        )
+    )
+    assert not (ROOT / "app" / "runtime" / "api").exists()
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()

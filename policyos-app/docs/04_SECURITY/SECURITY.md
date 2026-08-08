@@ -1,4 +1,4 @@
-# Security Baseline
+ Security Baseline
 
 ## Security goals
 - Protect credentials and personal data.
@@ -130,3 +130,5 @@ All body, header, query, and path values are untrusted. HTTP callers cannot dire
 Invocation mutations will require transport idempotency persistence and a bounded `Idempotency-Key` scoped to tenant, organization, principal, operation, and command version; that persistence remains a separate blocker. Body size, collection size, content type, headers, rate, timeout, cancellation, and public errors are bounded. No raw credential, body, provider response, internal exception, SQL detail, or cross-tenant existence is exposed.
 
 Internal due, claim, lease, `DELIVERING`, lifecycle append, retry, and dead-letter operations are not public endpoints. External business-effect exactly-once is not guaranteed. Real provider/MCP/connector Adapters and Worker, queue, polling loop, and scheduler behavior remain excluded; Workers are CP10 scope. `CP9-Gate-API-Contracts` is merged in PR #61, the Auth Claims Gate is merged in PR #62, Tenant-Organization Binding Governance is merged in PR #63, and the binding implementation is pending review. Production Runtime routes remain Planned / Blocked on the separate blockers above.
+
+Runtime permission definitions `runtime.read`, `runtime.invoke`, and `runtime.reconcile` are persisted by definition-only migration `20260807_0019`; a definition is not authority. Explicit `RolePermission` plus `MembershipRole`, active user/membership/binding, exact organization/tenant scope, and classification within the ceiling are required. No automatic grants, including admin/system grants, or existing role/membership backfill occurs. Wildcard and cross-organization substitution fail closed. Grant link deletion is visible on the next database resolution. Permission facts are not accepted from an HTTP body, and no raw bearer token, signing secret, or provider body is stored. Production grant/revoke authority and evidence remain blocked. CP9 Runtime API: Planned / Blocked. CP10: Planned.
