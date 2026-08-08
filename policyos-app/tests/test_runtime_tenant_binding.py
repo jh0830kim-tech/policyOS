@@ -9,8 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.privacy import DataClassification
 from app.core.auth_claims import VerifiedAccessTokenClaims
 from app.models.identity import Membership, Organization, TenantOrganizationBinding, User
-from app.runtime.ports.clock import RuntimeClockReading
-from app.services.runtime_api_contracts import RuntimeApiTrustedPrincipal
+from app.services.runtime_api_contracts import (
+    RuntimeApiTrustedContextFacts,
+    RuntimeApiTrustedPrincipal,
+)
 from app.services.runtime_api_protocols import RuntimeApiTrustedContextResolver
 from app.services.runtime_tenant_binding import (
     RuntimeBindingInvariantError,
@@ -20,16 +22,12 @@ from app.services.runtime_tenant_binding import (
 )
 
 NOW = datetime(2026, 8, 7, 9, 0, tzinfo=UTC)
+VALIDATED_AT = NOW + timedelta(seconds=1)
 USER_ID = UUID(int=1)
 ORGANIZATION_ID = UUID(int=2)
 MEMBERSHIP_ID = UUID(int=3)
 BINDING_ID = UUID(int=4)
 TENANT_ID = UUID(int=5)
-
-
-class FixedClock:
-    def read(self) -> RuntimeClockReading:
-        return RuntimeClockReading(clock_reference="clock-1", observed_at=NOW)
 
 
 class Rows:
@@ -103,9 +101,12 @@ def resolver(db: AsyncSession, *, token_claims: VerifiedAccessTokenClaims | None
         db,
         claims=token_claims or claims(),
         organization_id=ORGANIZATION_ID,
-        clock=FixedClock(),
-        authentication_reference="authentication-1",
-        validation_reference="validation-1",
+        facts=RuntimeApiTrustedContextFacts(
+            authentication_reference="authentication-1",
+            validation_reference="validation-1",
+            authenticated_at=NOW,
+            validated_at=VALIDATED_AT,
+        ),
     )
 
 
@@ -139,7 +140,7 @@ async def test_active_binding_resolves_exact_trusted_principal_and_scope() -> No
     assert scope.membership_id == MEMBERSHIP_ID
     assert scope.classification_ceiling is DataClassification.CONFIDENTIAL
     assert scope.scope_binding_reference == f"binding:{BINDING_ID}"
-    assert scope.validated_at == NOW
+    assert scope.validated_at == VALIDATED_AT
     assert scope.validation_reference == "validation-1"
     db.commit.assert_not_called()
     db.rollback.assert_not_called()
@@ -219,6 +220,10 @@ def test_resolver_structurally_conforms_without_transport_tenant_input() -> None
         SQLAlchemyRuntimeApiTrustedContextResolver.__init__
     ).parameters
     assert "tenant_id" not in constructor_parameters
+    assert "clock" not in constructor_parameters
+    assert "authentication_reference" not in constructor_parameters
+    assert "validation_reference" not in constructor_parameters
+    assert set(vars(service)) == {"_session", "_claims", "_organization_id", "_facts"}
     assert "token" not in vars(service)
     assert "secret" not in vars(service)
     assert not any("provider" in name for name in vars(service))

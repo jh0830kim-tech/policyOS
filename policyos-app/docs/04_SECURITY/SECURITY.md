@@ -235,7 +235,7 @@ CP10 remain unimplemented.
 
 ## Sprint 15 CP9 trusted application facade security boundary
 
-ADR-091 governance merged in PR #75. Its contract amendment is implemented, pending review, without
+ADR-091 governance merged in PR #75 and its contract amendment merged in PR #76, without
 creating a production facade or route. ADR-091 requires routes to call only the trusted application facade and forbids routes from
 constructing principal, scope, permission, replay identity, or digest facts. The facade owns the
 single `AsyncSession` transaction spanning principal and scope resolution, exact permission, the
@@ -267,3 +267,14 @@ identifiers, or hidden clocks. Pure digest builders use only the approved fixed-
 length-prefixed UTF-8 submission or reconciliation fact set. Query operations have no mutation
 digest. The remaining order is contract amendment, production facade, routes, PostgreSQL/HTTP
 acceptance, CP9 closeout, then separately approved CP10.
+
+The fact-binding contracts gate is implemented, pending review. A strict frozen
+`RuntimeApiTrustedContextFacts` supplies authentication and validation references and aware
+timestamps explicitly to all facade operations. The SQLAlchemy trusted-context resolver consumes
+those facts exactly and has no clock dependency or implicit time read. Additive orchestration-binder
+and local-operation Protocols receive resolved principal, scope, exact permission, outer input,
+explicit facts, and canonical digest where applicable. They cannot commit, roll back, create UUIDs
+or timestamps, infer governance facts, or invoke adapters, providers, MCP, queues, workers, or
+external effects. Missing, stale, ambiguous, revoked, and cross-scope persisted facts fail closed.
+The required order remains fact-binding contracts, production facade, routes, combined
+PostgreSQL/HTTP acceptance, CP9 closeout, then separately approved CP10.

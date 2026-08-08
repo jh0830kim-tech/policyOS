@@ -148,7 +148,8 @@ grants permission or causes automatic execution.
 | CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction | Merged, PR #73 | Mutation callback ordering | Requires lock and replay/conflict resolution before invoking one bounded local mutation | No facade or route |
 | CP9-Transport-Idempotency | Merged, PR #74 | Mutation replay persistence | Immutable `runtime_api_idempotency_receipts`, migration `20260808_0021`, and caller-owned transaction service | Facade and routes remain blocked |
 | CP9-Gate-Trusted-Application-Facade-Governance | Merged, PR #75 | Facade trust boundary | ADR-091 fixes transaction ownership, trusted fact binding, canonical digest construction, and safe errors | Governance only; no facade or route |
-| CP9-Gate-Trusted-Application-Facade-Contracts | Implemented, pending review | Facade contracts | Transport-safe inputs, verified claims, organization selector, explicit server facts, exact permissions, and canonical digests | No production facade or route |
+| CP9-Gate-Trusted-Application-Facade-Contracts | Merged, PR #76 | Facade contracts | Transport-safe inputs, verified claims, organization selector, explicit server facts, exact permissions, and canonical digests | No production facade or route |
+| CP9-Gate-Trusted-Application-Facade-Fact-Binding-Contracts | Implemented, pending review | Fact-binding contracts | Explicit trusted-context facts, clock-free resolver input, orchestration binder Protocol, and local-operation Protocol | No concrete binder, facade, or route |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires production facade implementation and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -164,7 +165,7 @@ remain prohibited.
 
 The required implementation order is:
 
-1. Review and merge the application-facade contract amendment.
+1. Review and merge the fact-binding contract amendment.
 2. Implement the production trusted application facade.
 3. Implement production Runtime routes.
 4. Run combined CP9 PostgreSQL and HTTP acceptance.

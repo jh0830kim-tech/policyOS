@@ -86,7 +86,8 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction | Merged, PR #73 | Lock and receipt resolution precede one bounded local mutation; replay and conflict invoke none. |
 | CP9 Production Transport Idempotency | Merged, PR #74 | Immutable model, transaction-bound service, and migration `20260808_0021_runtime_api_idempotency.py` are merged. |
 | CP9 Trusted Application Facade Governance | Merged, PR #75 | ADR-091 fixes facade transaction ownership, fact binding, digest construction, and error non-disclosure. |
-| CP9 Trusted Application Facade Contracts | Implemented, pending review | Adds transport-safe service inputs, explicit server facts, exact permissions, and canonical digest builders. |
+| CP9 Trusted Application Facade Contracts | Merged, PR #76 | Adds transport-safe service inputs, explicit server facts, exact permissions, and canonical digest builders. |
+| CP9 Trusted Application Facade Fact-Binding Contracts | Implemented, pending review | Adds explicit trusted-context facts, clock-free resolver input, and bounded binder/local-operation Protocols. |
 | CP9 Runtime API | Planned / Blocked | The production facade and production routes remain ordered blockers. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
@@ -466,7 +467,7 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP9 - Runtime API
 
-- **Status:** Planned / Blocked. Governance is merged in PR #60 through the approved intermediate gates, production transport idempotency with migration `20260808_0021` is merged in PR #74, and ADR-091 governance is merged in PR #75. The facade contract amendment is implemented, pending review; the production facade and production routes remain blocked in that order.
+- **Status:** Planned / Blocked. Governance is merged in PR #60 through the approved intermediate gates, production transport idempotency with migration `20260808_0021` is merged in PR #74, ADR-091 governance is merged in PR #75, and the facade contract amendment is merged in PR #76. The fact-binding contracts are implemented, pending review; the production facade and production routes remain blocked in that order.
 - **Purpose:** Expose authenticated, organization-scoped transport schemas over the approved trusted application facade and Runtime Orchestration boundary.
 - **Entry conditions:** The persisted lifetime binding, exact Runtime permissions, governed grant/revoke provisioning, live permission-fact resolver, and transport idempotency persistence are merged through PR #74. ADR-091 merged in PR #75 before this contract amendment; production facade, production routes, combined PostgreSQL/HTTP acceptance, and CP9 closeout follow in order.
 - **Binding implementation acceptance:** Model/migration parity; PostgreSQL 16 fresh and existing upgrade; lifetime 1:1 uniqueness; concurrent provisioning conflict; missing, inactive, and revoked binding rejection; exact trusted-scope equality; cross-tenant and cross-organization non-disclosure; and no route, facade, or permission expansion.
@@ -702,12 +703,17 @@ length-prefixed UTF-8 fields and `sha256:<64 lowercase hex>`. Replay or conflict
 mutation; a new request invokes it exactly once after lock and lookup. Missing, stale, revoked,
 ambiguous, or cross-scope persisted facts fail closed without inference or disclosure.
 
-ADR-091 governance merged in PR #75. The contract amendment adds strict transport-safe immutable
+ADR-091 governance merged in PR #75 and its facade contract amendment merged in PR #76. The
+fact-binding amendment adds explicit strict trusted-context facts to every facade fact contract,
+removes implicit clock reads from trusted-context resolution, and defines additive bounded
+orchestration-binder and local-operation Protocols. It adds no concrete binder or operation service.
+
+The merged facade contracts add strict transport-safe immutable
 service inputs, verified claims and organization-selector facade parameters, explicit immutable
 server facts, exact server-owned permission mapping, and pure canonical digest builders. It remains
 free of HTTP, ORM, transaction, persistence, and external-effect behavior.
 
-The remaining required order is contract amendment, production facade, production routes, combined
+The remaining required order is fact-binding contracts, production facade, production routes, combined
 CP9 PostgreSQL/HTTP acceptance, CP9 closeout, then separately approved CP10. CP9 remains Planned /
 Blocked and CP10 remains Planned.
 
