@@ -637,8 +637,20 @@ def test_cp9_trusted_application_facade_governance_precedes_facade_and_routes() 
         "facade contract amendment",
         "CP9 Runtime API | Planned / Blocked",
         "CP10 Workers | Planned",
+        "Merged, PR #75",
+        "Trusted Application Facade Contracts | Implemented, pending review",
     ):
         assert phrase in combined
+
+    contracts = (ROOT / "app" / "services" / "runtime_api_contracts.py").read_text(encoding="utf-8")
+    protocols = (ROOT / "app" / "services" / "runtime_api_protocols.py").read_text(encoding="utf-8")
+    validation = (ROOT / "app" / "services" / "runtime_api_validation.py").read_text(
+        encoding="utf-8"
+    )
+    assert "RuntimeApiSubmissionInput" in contracts
+    assert "VerifiedAccessTokenClaims" in protocols
+    assert "build_runtime_api_submission_digest" in validation
+    assert "contract amendment, production facade, production routes" in combined
 
     assert not (ROOT / "app" / "services" / "runtime_api_facade.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
