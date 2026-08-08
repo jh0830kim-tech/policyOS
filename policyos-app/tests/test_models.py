@@ -8,6 +8,7 @@ from app.models import (
     Organization,
     Permission,
     Role,
+    RuntimeApiIdempotencyReceiptRecord,
     TenantOrganizationBinding,
     User,
     WorkPackageRecord,
@@ -105,3 +106,14 @@ def test_runtime_permission_grant_event_is_registered_append_only_evidence() -> 
     assert "uq_runtime_grant_event_receipt" in constraint_names
     assert "payload" not in table.c
     assert "metadata" not in table.c
+
+
+def test_runtime_api_idempotency_receipt_is_strict_and_immutable() -> None:
+    table = RuntimeApiIdempotencyReceiptRecord.__table__
+    assert len(table.columns) == 17
+    assert all(not column.nullable for column in table.columns)
+    assert all(column.default is None and column.server_default is None for column in table.columns)
+    assert "uq_runtime_api_idempotency_scope" in {item.name for item in table.constraints}
+    assert not set(table.columns).intersection(
+        {"payload", "metadata", "token", "secret", "raw_body"}
+    )

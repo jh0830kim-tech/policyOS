@@ -38,7 +38,7 @@ state, and execution result is not a policy outcome.
 - PR #56 corrected Alembic 0007 asyncpg execution, and PR #57 corrected repeated lifecycle
   projection cardinality. PR #65 merged the definition-only Runtime permissions, PR #66 merged
   grant/revoke governance, and PR #67 merged governed grant provisioning. The current migration
-  head is `20260808_0020`.
+  head is `20260808_0021`.
 - The CP8 Runtime Delivery Acceptance Gate passed PostgreSQL 16 verification and green CI and
   merged in PR #58. CP8 Runtime Delivery is complete within its approved local delivery boundary.
   No real external adapter, runtime API, Worker, queue, polling loop, scheduler, live credential
@@ -145,8 +145,8 @@ grants permission or causes automatic execution.
 | CP9-Gate-Runtime-Permission-Fact-Resolver | Merged, PR #70 | RBAC resolution | Transaction-bound SQLAlchemy resolution of exact live `RolePermission` facts | No cache, migration, facade, route, or transport |
 | CP9-Gate-Transport-Idempotency-Governance | Merged, PR #71 | Mutation replay governance | ADR-090 fixes scoped identity, explicit command version, canonical digest, immutable receipts, and transaction linearization | Migration `0021` is planned only |
 | CP9-Gate-Transport-Idempotency-Contracts | Merged, PR #72 | Mutation replay contracts | Adds bounded command version, explicit commit facts, atomic commit protocol, and exact replay equality | No persistence, migration, facade, or route |
-| CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction | Implemented, pending review | Mutation callback ordering | Requires lock and replay/conflict resolution before invoking one bounded local mutation | No persistence, migration, facade, or route |
-| CP9-Transport-Idempotency | Planned / Blocked | Mutation replay persistence | Planned `runtime_api_idempotency_receipts` and migration `20260808_0021_runtime_api_idempotency.py` | Governance must merge first |
+| CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction | Merged, PR #73 | Mutation callback ordering | Requires lock and replay/conflict resolution before invoking one bounded local mutation | No facade or route |
+| CP9-Transport-Idempotency | Implemented, pending review | Mutation replay persistence | Immutable `runtime_api_idempotency_receipts`, migration `20260808_0021`, and caller-owned transaction service | Facade and routes remain blocked |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires transport idempotency persistence, stable facade, and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -163,7 +163,7 @@ remain prohibited.
 The required implementation order is:
 
 1. Review and merge the transport idempotency contracts gate.
-2. Implement transport idempotency persistence.
+2. Review and merge transport idempotency persistence.
 3. Implement the trusted application facade.
 4. Implement production Runtime routes.
 
@@ -343,7 +343,7 @@ PostgreSQL 22 passed; Ports, Delivery, and Architecture 46 passed; order A 177 p
 order B 177 passed with skip 0; and migration upgrade, downgrade, and parity checks passed.
 
 PR #56 corrected Alembic 0007 asyncpg execution, PR #57 added lifecycle projection cardinality,
-and Runtime grant provisioning migration `20260808_0020` is the current head. PR #58 merged the PostgreSQL
+and Runtime grant provisioning migration `20260808_0020` precedes the current `20260808_0021` head. PR #58 merged the PostgreSQL
 crash-window and vertical Acceptance Gate with green CI, completing CP8 Runtime Delivery. No
 `app.runtime.outbox`, Worker, queue, polling loop, scheduler, or API is introduced, and external
 exactly-once business effects are not guaranteed.

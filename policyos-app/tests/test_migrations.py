@@ -10,7 +10,7 @@ from alembic.script import ScriptDirectory
 def test_alembic_has_single_head() -> None:
     config = Config("alembic.ini")
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["20260808_0020"]
+    assert scripts.get_heads() == ["20260808_0021"]
 
 
 def test_initial_migration_contains_foundation_tables() -> None:
@@ -289,3 +289,28 @@ def test_runtime_permission_grant_governance_migration_is_fail_closed() -> None:
     assert "Existing Runtime permission grants prohibit governance upgrade" in source
     assert "Populated Runtime grant governance cannot be downgraded" in source
     assert "RolePermission" not in source
+
+
+def test_runtime_api_idempotency_migration_is_self_contained_and_fail_closed() -> None:
+    source = Path("alembic/versions/20260808_0021_runtime_api_idempotency.py").read_text(
+        encoding="utf-8"
+    )
+    assert 'revision: str = "20260808_0021"' in source
+    assert 'down_revision: str | None = "20260808_0020"' in source
+    assert "Populated Runtime API idempotency receipts cannot be downgraded" in source
+    assert source.index("select(sa.func.count())") < source.index("op.drop_table")
+    assert "from app" not in source
+    assert "JSON" not in source
+
+
+def test_runtime_permission_grant_migration_0020_canonical_hash_is_unchanged() -> None:
+    normalized = (
+        Path("alembic/versions/20260808_0020_runtime_permission_grant_governance.py")
+        .read_bytes()
+        .replace(b"\r\n", b"\n")
+        .replace(b"\r", b"\n")
+    )
+    assert (
+        hashlib.sha256(normalized).hexdigest()
+        == "4c0af4206375a0a36fc6a48ff5fa297ec242e6c6c0c9c4ac907e5fd069153bb3"
+    )
