@@ -36,7 +36,8 @@ state, and execution result is not a policy outcome.
 - CP8 PostgreSQL Delivery Persistence merged in PR #53, Lifecycle Port conformance in PR #54,
   and governed Delivery Orchestration in PR #55.
 - PR #56 corrected Alembic 0007 asyncpg execution, and PR #57 corrected repeated lifecycle
-  projection cardinality. The migration head is `20260807_0019`.
+  projection cardinality. PR #65 merged the definition-only Runtime permissions, and the current
+  migration head is `20260807_0019`.
 - The CP8 Runtime Delivery Acceptance Gate passed PostgreSQL 16 verification and green CI and
   merged in PR #58. CP8 Runtime Delivery is complete within its approved local delivery boundary.
   No real external adapter, runtime API, Worker, queue, polling loop, scheduler, live credential
@@ -136,19 +137,27 @@ grants permission or causes automatic execution.
 | CP9-Gate-Auth-Claims | Merged, PR #62 | Authentication trust | Required issuer/audience, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection and generic bearer failures | Focused authentication regression complete |
 | CP9-Gate-Tenant-Organization-Binding-Governance | Merged, PR #63 | Binding governance | Lifetime one-to-one cardinality, explicit provisioning, immutable classification ceiling, no rebinding or privileged bypass, and fail-closed downgrade | Governance baseline only |
 | CP9-Gate-Tenant-Organization-Binding | Merged, PR #64 | Binding persistence | Lifetime one-to-one model, explicit persistence, self-contained migration `20260807_0018`, fail-closed downgrade, trusted resolver, and PostgreSQL 16 verification | No production Runtime route or provisioning surface |
-| CP9-Gate-Runtime-Permission-Definitions | Implemented, pending review | RBAC definitions | Definition-only persistence of exact `runtime.read`, `runtime.invoke`, and `runtime.reconcile` permissions in migration `20260807_0019` | No automatic grants or existing role/membership backfill |
+| CP9-Gate-Runtime-Permission-Definitions | Merged, PR #65 | RBAC definitions | Definition-only persistence of exact `runtime.read`, `runtime.invoke`, and `runtime.reconcile` permissions in migration `20260807_0019` | No automatic grants or existing role/membership backfill |
+| CP9-Gate-Runtime-Grant-Governance | Implemented, pending review | RBAC grant governance | ADR-088 fixes exact management authority, immutable append-only ledger, replay, scope, and transaction semantics | Governance only; Production Grant Provisioning is Planned / Blocked |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires binding, Runtime permissions, transport idempotency, and stable facade |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
-CP9 Governance / ADR-087 is merged in PR #60, `CP9-Gate-API-Contracts` is merged in PR #61, and `CP9-Gate-Auth-Claims` is merged in PR #62. `CP9-Gate-Tenant-Organization-Binding-Governance` is merged in PR #63, while `CP9-Gate-Tenant-Organization-Binding` is implemented pending review. No production Runtime route or facade implementation exists. Routes remain in `app.api`, schemas in `app.schemas`, and `app.runtime.api` is prohibited. CP9 production remains Planned / Blocked. CP10 remains Planned, and external business-effect exactly-once remains unguaranteed.
+CP9 Governance / ADR-087 is merged in PR #60, API Contracts in PR #61, Auth Claims in PR #62,
+Tenant-Organization Binding Governance in PR #63, Binding in PR #64, and definition-only Runtime
+permissions in PR #65. ADR-088 adds `CP9-Gate-Runtime-Grant-Governance` as Implemented, pending
+review. Production Grant Provisioning remains Planned / Blocked. No production Runtime route or
+facade exists. Routes remain in `app.api`; `app.runtime.api` and `app.runtime.outbox` remain
+prohibited. CP9 remains Planned / Blocked, CP10 Workers remain Planned, and
+external business-effect exactly-once remains unguaranteed. Blind retry and automatic redrive remain
+prohibited.
 
 The required implementation order is:
 
-1. Trusted production Runtime permission grant/revoke provisioning authority and evidence.
-2. Transport idempotency persistence.
-3. Trusted application facade.
-4. Production Runtime routes.
-5. CP10 Workers.
+1. Trusted grant/revoke provisioning authority and immutable ledger implementation.
+2. Production Runtime permission fact resolver.
+3. Transport idempotency persistence.
+4. Trusted application facade.
+5. Production Runtime routes.
 
 
 ## 6. Boundary input and output contracts

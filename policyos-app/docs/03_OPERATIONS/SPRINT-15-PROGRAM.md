@@ -76,7 +76,8 @@ The baseline is `main` after merged CP8 Runtime Delivery closeout PR #59.
 | CP9-Gate-Auth-Claims | Merged, PR #62 | Required issuer/audience settings, issued trust claims, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection, generic bearer failures, and focused authentication regression. |
 | CP9-Gate-Tenant-Organization-Binding-Governance | Merged, PR #63 | ADR-087 amendment fixes lifetime one-to-one binding and fail-closed provisioning, lifecycle, classification, bypass, and downgrade policy. |
 | CP9-Gate-Tenant-Organization-Binding | Implemented, pending review | Lifetime one-to-one model, explicit persistence, self-contained migration `20260807_0018`, fail-closed downgrade, trusted resolver, and PostgreSQL 16 verification. |
-| CP9-Gate-Runtime-Permission-Definitions | Implemented, pending review | Definition-only exact Runtime permissions. No automatic grants, wildcard, or existing role/membership backfill. |
+| CP9-Gate-Runtime-Permission-Definitions | Merged in PR #65 | Definition-only exact Runtime permissions. No automatic grants, wildcard, or existing role/membership backfill. |
+| CP9-Gate-Runtime-Grant-Governance | Implemented, pending review | ADR-088 fixes `runtime.grant.manage`, append-only evidence, replay, scope, bootstrap, and atomic transaction policy without production implementation. |
 | CP9 Runtime API | Planned / Blocked | Production routes remain blocked on Tenant-Organization binding, Runtime permission persistence and grants, transport idempotency persistence, and the trusted application facade. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
@@ -506,7 +507,9 @@ the implemented Authority, Planning, State, and Registry domains. ADR-077 fixes 
 prerequisite-gate review units and canonical dependency direction. Every new architecture domain
 must cite these decisions and add an implementation ADR when package placement, dependency
 direction, public contracts, or security behavior is not already sufficiently decided. A
-contradiction requires a superseding ADR; roadmap prose alone cannot supersede an ADR.
+contradiction requires a superseding ADR; roadmap prose alone cannot supersede an ADR. ADR-087
+defines the CP9 transport/principal boundary, and proposed ADR-088 independently defines Runtime
+grant/revoke authority, provenance, audit, idempotency, and bootstrap policy.
 
 ## 9. Git, PR, and CI policy
 
@@ -635,4 +638,17 @@ does not imply a Git tag, release publication, production enablement, or Sprint 
 - Decide CP10 worker package placement, queue, lease, identity, and scheduling model; workers
   remain outside the `app.runtime` domain unless a superseding ADR approves otherwise.
 
-Runtime permission definitions are definition-only. Fresh install authority is zero. Production grant/revoke commands, grant actor/provenance/audit/idempotency, the Runtime permission fact production resolver, facade, and routes are unimplemented. No automatic grants or existing role/membership backfill. CP9 Runtime API: Planned / Blocked. CP10: Planned.
+PR #65 merged the definition-only Runtime permission gate at baseline merge commit `876d14f6` and
+left migration head `20260807_0019`. `CP9-Gate-Runtime-Grant-Governance` is Implemented, pending
+review through proposed ADR-088. Production Grant Provisioning remains Planned / Blocked: the
+contracts, `runtime_permission_grant_events` ledger, service, model, PostgreSQL acceptance, and
+planned migration `20260808_0020_runtime_permission_grant_governance.py` begin only in a separate
+implementation checkpoint after governance merges. The migration must add `runtime.grant.manage`
+definition-only with automatic grant 0, infer no actor/provenance backfill, and fail closed for
+existing managed grants and populated downgrade.
+
+Initial `runtime.grant.manage` authority is provisioned only by a separately trusted
+bootstrap/operator procedure outside the public Runtime API. Production routes remain blocked
+until grant provisioning, the production Runtime permission fact resolver, transport idempotency
+persistence, and the trusted application facade are complete. CP9 Runtime API: Planned / Blocked.
+CP10: Planned.

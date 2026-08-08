@@ -378,3 +378,42 @@ def test_cp9_runtime_permission_definitions_are_persisted_without_grants() -> No
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
+
+def test_cp9_runtime_grant_revoke_governance_precedes_production_provisioning() -> None:
+    adr = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / ("ADR-088-CP9-RUNTIME-PERMISSION-GRANT-AUTHORITY-PROVENANCE-AUDIT-AND-IDEMPOTENCY.md")
+    )
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
+    text = adr.read_text(encoding="utf-8")
+    normalized = " ".join(text.split())
+    combined = " ".join("".join((roadmap, program, security)).split())
+
+    assert adr.is_file()
+    assert "**Status:** Proposed" in text
+    assert "CP9-Gate-Runtime-Grant-Governance" in combined
+    assert "runtime.grant.manage" in normalized
+    assert "definition-only" in normalized and "automatic grant 0" in normalized
+    assert "self-escalation" in normalized
+    assert "append-only" in normalized and "runtime_permission_grant_events" in normalized
+    assert "EXACT_REPLAY" in normalized
+    assert "no automatic backfill" in normalized
+    assert "20260808_0020_runtime_permission_grant_governance.py" in normalized
+    assert "Planned / Blocked" in combined
+
+    forbidden_paths = (
+        "alembic/versions/20260808_0020_runtime_permission_grant_governance.py",
+        "app/models/runtime_permission_grants.py",
+        "app/services/runtime_permission_grants.py",
+        "app/services/runtime_permission_grants_contracts.py",
+        "app/api/routes/runtime.py",
+        "app/runtime/api",
+        "app/runtime/outbox",
+    )
+    assert all(not (ROOT / path).exists() for path in forbidden_paths)
