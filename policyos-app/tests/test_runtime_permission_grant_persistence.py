@@ -35,6 +35,7 @@ from app.services.runtime_permission_grants_contracts import (
     RuntimePermissionPersistenceConflict,
     RuntimePermissionReplayConflict,
     RuntimePermissionRoleNotFound,
+    RuntimePermissionStaleRevision,
 )
 
 MANAGE_ID = UUID("00000000-0000-0000-0000-000000001904")
@@ -327,7 +328,13 @@ async def test_distinct_grant_revoke_and_grant_revoke_races_are_typed(
         execute(make_command(race_ids, revision=1)),
         return_exceptions=True,
     )
-    assert any(isinstance(value, RuntimePermissionAlreadyGranted) for value in race)
+    assert (
+        sum(
+            isinstance(value, (RuntimePermissionAlreadyGranted, RuntimePermissionStaleRevision))
+            for value in race
+        )
+        == 1
+    )
     assert any(
         getattr(value, "disposition", None) is RuntimePermissionGrantDisposition.COMMITTED
         for value in race
