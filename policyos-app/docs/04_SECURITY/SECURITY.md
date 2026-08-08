@@ -132,3 +132,32 @@ Invocation mutations will require transport idempotency persistence and a bounde
 Internal due, claim, lease, `DELIVERING`, lifecycle append, retry, and dead-letter operations are not public endpoints. External business-effect exactly-once is not guaranteed. Real provider/MCP/connector Adapters and Worker, queue, polling loop, and scheduler behavior remain excluded; Workers are CP10 scope. `CP9-Gate-API-Contracts` is merged in PR #61, the Auth Claims Gate is merged in PR #62, Tenant-Organization Binding Governance is merged in PR #63, and the binding implementation is pending review. Production Runtime routes remain Planned / Blocked on the separate blockers above.
 
 Runtime permission definitions `runtime.read`, `runtime.invoke`, and `runtime.reconcile` are persisted by definition-only migration `20260807_0019`; a definition is not authority. Explicit `RolePermission` plus `MembershipRole`, active user/membership/binding, exact organization/tenant scope, and classification within the ceiling are required. No automatic grants, including admin/system grants, or existing role/membership backfill occurs. Wildcard and cross-organization substitution fail closed. Grant link deletion is visible on the next database resolution. Permission facts are not accepted from an HTTP body, and no raw bearer token, signing secret, or provider body is stored. Production grant/revoke authority and evidence remain blocked. CP9 Runtime API: Planned / Blocked. CP10: Planned.
+## Sprint 15 CP9 Runtime permission grant/revoke governance
+
+ADR-088 defines exact `runtime.grant.manage` authority as definition-only with automatic grant 0;
+broad `rbac:manage`, wildcard, prefix, and substring forms cannot substitute for it. The service
+may target only `runtime.read`, `runtime.invoke`, and `runtime.reconcile` and cannot grant its own
+management permission. Self-escalation and automatic admin/system grants are prohibited. Initial
+management authority belongs to a separately trusted bootstrap/operator procedure outside the
+public Runtime API; no break-glass path is introduced.
+
+The transaction revalidates the active actor, user, membership, exact organization, active
+Tenant-Organization binding, exact tenant, exact management authority, organization-scoped target
+role, and permission ID/key pair before storage. Inactive/revoked actors, memberships, or bindings
+and cross-scope substitution fail closed. The classification ceiling is evidence and never expands
+authority. HTTP values cannot supply trusted actor, authority, permission, tenant, binding, digest,
+timestamp, or receipt facts.
+
+Existing `RolePermission` remains the active projection. A later checkpoint adds immutable
+append-only `runtime_permission_grant_events` evidence for provenance, receipt, history, request
+digest, exact replay, and monotonic revision. Same-request identical facts return the original
+receipt; changed facts, digest, or operation conflict. Fixed lock order, expected revision,
+projection uniqueness, and scoped request uniqueness linearize concurrent grant, revoke, and
+authority-revocation races. Projection and evidence commit atomically.
+
+No inferred existing-grant backfill, hidden UUID/time generation, arbitrary JSON authority fact,
+raw token, signing secret, credential, or provider body is permitted. Generic audit retention
+cannot delete authoritative grant evidence. Planned migration
+`20260808_0020_runtime_permission_grant_governance.py`, production provisioning, permission-fact
+resolver, transport idempotency persistence, facade, and routes remain unimplemented. Production
+Runtime routes and CP10 worker/queue/polling/scheduler behavior are outside this governance gate.
