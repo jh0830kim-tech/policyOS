@@ -1,0 +1,399 @@
+"""PostgreSQL integration for the transaction-owning Runtime API facade."""
+
+import os
+import subprocess
+import sys
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from uuid import UUID, uuid4
+
+import pytest
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+from app.ai.privacy import DataClassification
+from app.core.auth_claims import VerifiedAccessTokenClaims
+from app.models.identity import (
+    Membership,
+    MembershipRole,
+    Organization,
+    Role,
+    RolePermission,
+    TenantOrganizationBinding,
+    User,
+)
+from app.models.runtime_api_idempotency import RuntimeApiIdempotencyReceiptRecord
+from app.services.runtime_api_contracts import (
+    RuntimeApiCommandIdentity,
+    RuntimeApiContractConflict,
+    RuntimeApiInvocationQuery,
+    RuntimeApiInvocationQueryFacts,
+    RuntimeApiInvocationQueryInput,
+    RuntimeApiOperation,
+    RuntimeApiOrganizationSelector,
+    RuntimeApiPublicStatus,
+    RuntimeApiReconciliationCommand,
+    RuntimeApiReconciliationFacts,
+    RuntimeApiReconciliationInput,
+    RuntimeApiSafeResult,
+    RuntimeApiStatusProjection,
+    RuntimeApiSubmissionCommand,
+    RuntimeApiSubmissionFacts,
+    RuntimeApiSubmissionInput,
+    RuntimeApiTrustedContextFacts,
+)
+from app.services.runtime_api_facade import (
+    RuntimeApiFacadeError,
+    SQLAlchemyRuntimeApiApplicationFacade,
+)
+from app.services.runtime_api_idempotency import RuntimeApiIdempotencyPersistenceError
+from app.services.runtime_permission_facts import RuntimePermissionDeniedError
+from app.services.runtime_tenant_binding import RuntimeScopeNotFoundError
+
+NOW = datetime(2026, 8, 8, tzinfo=UTC)
+AUDIENCE = "policyos-api-test"
+PERMISSION_IDS = {
+    "runtime.read": UUID("00000000-0000-0000-0000-000000001901"),
+    "runtime.invoke": UUID("00000000-0000-0000-0000-000000001902"),
+    "runtime.reconcile": UUID("00000000-0000-0000-0000-000000001903"),
+}
+
+
+@pytest.fixture(scope="module")
+def database_url() -> str:
+    value = os.getenv("POLICYOS_TEST_DATABASE_URL")
+    if value is None:
+        pytest.skip("POLICYOS_TEST_DATABASE_URL is required for PostgreSQL integration")
+    return value
+
+
+@pytest.fixture(scope="module", autouse=True)
+def migrated_database(database_url: str) -> None:
+    environment = os.environ.copy()
+    environment["DATABASE_URL"] = database_url
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        check=True,
+        cwd=Path(__file__).resolve().parents[1],
+        env=environment,
+    )
+
+
+def context() -> RuntimeApiTrustedContextFacts:
+    return RuntimeApiTrustedContextFacts(
+        authentication_reference="authentication:persistence",
+        validation_reference="validation:persistence",
+        authenticated_at=NOW,
+        validated_at=NOW,
+    )
+
+
+class Binder:
+    def __init__(self, session):
+        assert session.in_transaction()
+
+    async def bind_submission(self, principal, scope, permission, request, facts, digest):
+        return RuntimeApiSubmissionCommand(
+            identity=RuntimeApiCommandIdentity(
+                command_id=facts.command_id,
+                operation=RuntimeApiOperation.SUBMIT_INVOCATION,
+                tenant_id=scope.tenant_id,
+                organization_id=scope.organization_id,
+                principal_id=principal.principal_id,
+                command_version=facts.command_version,
+                idempotency_key=request.idempotency_key,
+                command_digest=digest,
+                correlation_reference=facts.correlation_reference,
+            ),
+            principal=principal,
+            scope=scope,
+            permission=permission,
+            action_reference=request.action_reference,
+            command_reference=request.command_reference,
+            input_reference=request.input_reference,
+            classification=request.classification,
+        )
+
+    async def bind_query(self, principal, scope, permission, request, facts):
+        return RuntimeApiInvocationQuery(
+            query_id=facts.query_id,
+            principal=principal,
+            scope=scope,
+            permission=permission,
+            invocation_reference=request.invocation_reference,
+            correlation_reference=facts.correlation_reference,
+        )
+
+    async def bind_reconciliation(self, principal, scope, permission, request, facts, digest):
+        return RuntimeApiReconciliationCommand(
+            identity=RuntimeApiCommandIdentity(
+                command_id=facts.command_id,
+                operation=RuntimeApiOperation.REQUEST_RECONCILIATION,
+                tenant_id=scope.tenant_id,
+                organization_id=scope.organization_id,
+                principal_id=principal.principal_id,
+                command_version=facts.command_version,
+                idempotency_key=request.idempotency_key,
+                command_digest=digest,
+                correlation_reference=facts.correlation_reference,
+            ),
+            principal=principal,
+            scope=scope,
+            permission=permission,
+            invocation_reference=request.invocation_reference,
+            reconciliation_reference=request.reconciliation_reference,
+        )
+
+
+class LocalOperation:
+    calls = 0
+    fail = False
+
+    def __init__(self, session):
+        assert session.in_transaction()
+        self.session = session
+
+    def result(self, reference="invocation:persistence"):
+        return RuntimeApiSafeResult(
+            result_reference="result:persistence",
+            projection=RuntimeApiStatusProjection(
+                invocation_reference=reference,
+                status=RuntimeApiPublicStatus.ACCEPTED,
+                status_reference="status:persistence",
+                correlation_reference="correlation:persistence",
+                observed_at=NOW,
+            ),
+        )
+
+    async def submit_invocation(self, command):
+        type(self).calls += 1
+        organization = await self.session.get(Organization, command.scope.organization_id)
+        organization.name = "mutated"
+        if type(self).fail:
+            raise RuntimeError("sensitive database failure")
+        return self.result()
+
+    async def get_invocation(self, query):
+        type(self).calls += 1
+        return self.result(query.invocation_reference).projection
+
+    async def request_reconciliation(self, command):
+        type(self).calls += 1
+        return self.result(command.invocation_reference)
+
+
+async def seed(factory):
+    organization_id, user_id, membership_id, tenant_id, role_id = (uuid4() for _ in range(5))
+    async with factory() as session, session.begin():
+        session.add(
+            Organization(id=organization_id, name="original", slug=f"facade-{organization_id}")
+        )
+        session.add(User(id=user_id, email=f"{user_id}@test.invalid", display_name="Facade User"))
+        await session.flush()
+        session.add(
+            Membership(
+                id=membership_id,
+                organization_id=organization_id,
+                user_id=user_id,
+                status="active",
+                joined_at=NOW,
+            )
+        )
+        session.add(
+            Role(
+                id=role_id,
+                organization_id=organization_id,
+                key=f"role-{role_id}",
+                name="Facade Role",
+            )
+        )
+        session.add(
+            TenantOrganizationBinding(
+                id=uuid4(),
+                organization_id=organization_id,
+                runtime_tenant_id=tenant_id,
+                status="active",
+                classification_ceiling="internal",
+                provisioning_reference="test:facade",
+                provisioned_by_user_id=user_id,
+                created_at=NOW,
+                status_changed_at=NOW,
+            )
+        )
+        await session.flush()
+        session.add(MembershipRole(membership_id=membership_id, role_id=role_id))
+        for permission_id in PERMISSION_IDS.values():
+            session.add(RolePermission(role_id=role_id, permission_id=permission_id))
+    claims = VerifiedAccessTokenClaims(
+        subject=str(user_id),
+        jti_reference="jti:persistence",
+        verified_issuer="https://issuer.policyos.test",
+        verified_audiences=(AUDIENCE,),
+        issued_at=NOW,
+        expires_at=NOW + timedelta(minutes=5),
+    )
+    return organization_id, tenant_id, role_id, claims
+
+
+def facade(session):
+    return SQLAlchemyRuntimeApiApplicationFacade(
+        session,
+        required_audience=AUDIENCE,
+        binder_factory=Binder,
+        local_operation_factory=LocalOperation,
+    )
+
+
+def submission(key, receipt_id):
+    return (
+        RuntimeApiSubmissionInput(
+            action_reference="action:persistence",
+            command_reference="command:persistence",
+            classification=DataClassification.INTERNAL,
+            idempotency_key=key,
+        ),
+        RuntimeApiSubmissionFacts(
+            command_id=uuid4(),
+            command_version="v1",
+            receipt_id=receipt_id,
+            committed_at=NOW,
+            correlation_reference="correlation:persistence",
+            context=context(),
+        ),
+    )
+
+
+@pytest.mark.asyncio
+async def test_postgresql_submission_replay_conflict_and_rollback(database_url):
+    engine = create_async_engine(database_url)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    organization_id, _, _, claims = await seed(factory)
+    selector = RuntimeApiOrganizationSelector(organization_id=organization_id)
+    request, facts = submission(f"key-{uuid4()}", uuid4())
+    LocalOperation.calls = 0
+    async with factory() as session:
+        first = await facade(session).submit_invocation(request, claims, selector, facts)
+    async with factory() as session:
+        replay = await facade(session).submit_invocation(
+            request,
+            claims,
+            selector,
+            facts.model_copy(update={"command_id": uuid4(), "receipt_id": uuid4()}),
+        )
+    assert first.idempotency.receipt == replay.idempotency.receipt
+    assert LocalOperation.calls == 1
+    with pytest.raises(RuntimeApiContractConflict):
+        async with factory() as session:
+            await facade(session).submit_invocation(
+                request.model_copy(update={"command_reference": "different"}),
+                claims,
+                selector,
+                facts.model_copy(update={"command_id": uuid4(), "receipt_id": uuid4()}),
+            )
+    assert LocalOperation.calls == 1
+
+    failed_request, failed_facts = submission(f"key-{uuid4()}", uuid4())
+    LocalOperation.fail = True
+    with pytest.raises(RuntimeApiFacadeError, match="runtime facade operation failed"):
+        async with factory() as session:
+            await facade(session).submit_invocation(failed_request, claims, selector, failed_facts)
+    LocalOperation.fail = False
+    async with factory() as session:
+        count = await session.scalar(
+            select(func.count())
+            .select_from(RuntimeApiIdempotencyReceiptRecord)
+            .where(RuntimeApiIdempotencyReceiptRecord.receipt_id == failed_facts.receipt_id)
+        )
+    assert count == 0
+
+    async with factory() as session, session.begin():
+        organization = await session.get(Organization, organization_id)
+        organization.name = "before-receipt-failure"
+    duplicate_request, duplicate_facts = submission(f"key-{uuid4()}", facts.receipt_id)
+    with pytest.raises(
+        RuntimeApiIdempotencyPersistenceError,
+        match="transport idempotency persistence failed",
+    ):
+        async with factory() as session:
+            await facade(session).submit_invocation(
+                duplicate_request, claims, selector, duplicate_facts
+            )
+    async with factory() as session:
+        organization = await session.get(Organization, organization_id)
+        assert organization.name == "before-receipt-failure"
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_postgresql_revocation_cross_scope_query_and_reconciliation(database_url):
+    engine = create_async_engine(database_url)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    organization_id, tenant_id, role_id, claims = await seed(factory)
+    selector = RuntimeApiOrganizationSelector(organization_id=organization_id)
+    query = RuntimeApiInvocationQueryInput(invocation_reference="invocation:persistence")
+    query_facts = RuntimeApiInvocationQueryFacts(
+        query_id=uuid4(),
+        requested_at=NOW,
+        correlation_reference="correlation:persistence",
+        context=context(),
+    )
+    LocalOperation.calls = 0
+    async with factory() as session:
+        projection = await facade(session).get_invocation(query, claims, selector, query_facts)
+    assert projection.invocation_reference == query.invocation_reference
+    assert LocalOperation.calls == 1
+
+    async with factory() as session, session.begin():
+        await session.delete(
+            await session.get(RolePermission, (role_id, PERMISSION_IDS["runtime.read"]))
+        )
+    with pytest.raises(RuntimePermissionDeniedError):
+        async with factory() as session:
+            await facade(session).get_invocation(query, claims, selector, query_facts)
+    assert LocalOperation.calls == 1
+    with pytest.raises(RuntimeScopeNotFoundError):
+        async with factory() as session:
+            await facade(session).get_invocation(
+                query, claims, RuntimeApiOrganizationSelector(organization_id=uuid4()), query_facts
+            )
+    assert LocalOperation.calls == 1
+
+    reconciliation = RuntimeApiReconciliationInput(
+        invocation_reference="invocation:persistence",
+        reconciliation_reference="reconciliation:persistence",
+        idempotency_key=f"key-{uuid4()}",
+    )
+    facts = RuntimeApiReconciliationFacts(
+        command_id=uuid4(),
+        command_version="v1",
+        receipt_id=uuid4(),
+        committed_at=NOW,
+        correlation_reference="correlation:persistence",
+        context=context(),
+    )
+    async with factory() as session:
+        first = await facade(session).request_reconciliation(
+            reconciliation, claims, selector, facts
+        )
+    async with factory() as session:
+        replay = await facade(session).request_reconciliation(
+            reconciliation,
+            claims,
+            selector,
+            facts.model_copy(update={"command_id": uuid4(), "receipt_id": uuid4()}),
+        )
+    assert first.idempotency.receipt == replay.idempotency.receipt
+    assert tenant_id == first.idempotency.receipt.identity.tenant_id
+    calls_after_replay = LocalOperation.calls
+    with pytest.raises(RuntimeApiContractConflict):
+        async with factory() as session:
+            await facade(session).request_reconciliation(
+                reconciliation.model_copy(
+                    update={"reconciliation_reference": "reconciliation:different"}
+                ),
+                claims,
+                selector,
+                facts.model_copy(update={"command_id": uuid4(), "receipt_id": uuid4()}),
+            )
+    assert LocalOperation.calls == calls_after_replay
+    await engine.dispose()

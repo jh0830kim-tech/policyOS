@@ -268,7 +268,7 @@ length-prefixed UTF-8 submission or reconciliation fact set. Query operations ha
 digest. The remaining order is contract amendment, production facade, routes, PostgreSQL/HTTP
 acceptance, CP9 closeout, then separately approved CP10.
 
-The fact-binding contracts gate is implemented, pending review. A strict frozen
+The fact-binding contracts gate is merged in PR #77. A strict frozen
 `RuntimeApiTrustedContextFacts` supplies authentication and validation references and aware
 timestamps explicitly to all facade operations. The SQLAlchemy trusted-context resolver consumes
 those facts exactly and has no clock dependency or implicit time read. Additive orchestration-binder
@@ -276,5 +276,8 @@ and local-operation Protocols receive resolved principal, scope, exact permissio
 explicit facts, and canonical digest where applicable. They cannot commit, roll back, create UUIDs
 or timestamps, infer governance facts, or invoke adapters, providers, MCP, queues, workers, or
 external effects. Missing, stale, ambiguous, revoked, and cross-scope persisted facts fail closed.
-The required order remains fact-binding contracts, production facade, routes, combined
-PostgreSQL/HTTP acceptance, CP9 closeout, then separately approved CP10.
+The production facade is implemented, pending review, and owns the transaction across these
+resolutions, exact binding, local operation, and idempotency receipt persistence. Concrete binder
+and local-operation implementations and production routes remain Planned / Blocked. The required
+order is facade review/merge, concrete local binding implementation, routes, combined PostgreSQL/HTTP
+acceptance, CP9 closeout, then separately approved CP10.

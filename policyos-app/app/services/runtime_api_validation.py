@@ -9,13 +9,18 @@ from app.services.runtime_api_contracts import (
     RuntimeApiContractConflict,
     RuntimeApiIdempotencyCommitResult,
     RuntimeApiIdempotencyReceipt,
+    RuntimeApiInvocationQuery,
+    RuntimeApiInvocationQueryFacts,
+    RuntimeApiInvocationQueryInput,
     RuntimeApiOperation,
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
     RuntimeApiPublicStatus,
+    RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationInput,
     RuntimeApiSafeError,
+    RuntimeApiStatusProjection,
     RuntimeApiSubmissionCommand,
     RuntimeApiSubmissionFacts,
     RuntimeApiSubmissionInput,
@@ -162,6 +167,161 @@ def validate_runtime_api_submission(
     return command
 
 
+def validate_runtime_api_submission_binding(
+    command: RuntimeApiSubmissionCommand,
+    *,
+    request: RuntimeApiSubmissionInput,
+    facts: RuntimeApiSubmissionFacts,
+    principal: RuntimeApiTrustedPrincipal,
+    scope: RuntimeApiTrustedScope,
+    permission: RuntimeApiPermissionFact,
+    command_digest: str,
+    required_audience: str,
+) -> RuntimeApiSubmissionCommand:
+    validate_runtime_api_submission(command, required_audience=required_audience)
+    if (
+        command.identity.command_id,
+        command.identity.operation,
+        command.identity.tenant_id,
+        command.identity.organization_id,
+        command.identity.principal_id,
+        command.identity.command_version,
+        command.identity.idempotency_key,
+        command.identity.command_digest,
+        command.identity.correlation_reference,
+        command.principal,
+        command.scope,
+        command.permission,
+        command.action_reference,
+        command.command_reference,
+        command.input_reference,
+        command.classification,
+    ) != (
+        facts.command_id,
+        RuntimeApiOperation.SUBMIT_INVOCATION,
+        scope.tenant_id,
+        scope.organization_id,
+        principal.principal_id,
+        facts.command_version,
+        request.idempotency_key,
+        command_digest,
+        facts.correlation_reference,
+        principal,
+        scope,
+        permission,
+        request.action_reference,
+        request.command_reference,
+        request.input_reference,
+        request.classification,
+    ):
+        raise RuntimeApiContractConflict("submission binding differs")
+    return command
+
+
+def validate_runtime_api_invocation_query_binding(
+    query: RuntimeApiInvocationQuery,
+    *,
+    request: RuntimeApiInvocationQueryInput,
+    facts: RuntimeApiInvocationQueryFacts,
+    principal: RuntimeApiTrustedPrincipal,
+    scope: RuntimeApiTrustedScope,
+    permission: RuntimeApiPermissionFact,
+    required_audience: str,
+) -> RuntimeApiInvocationQuery:
+    validate_runtime_api_principal(principal, required_audience=required_audience)
+    validate_runtime_api_permission(
+        RuntimeApiOperation.GET_INVOCATION,
+        permission,
+        principal=principal,
+        scope=scope,
+    )
+    if (
+        query.query_id,
+        query.principal,
+        query.scope,
+        query.permission,
+        query.invocation_reference,
+        query.correlation_reference,
+    ) != (
+        facts.query_id,
+        principal,
+        scope,
+        permission,
+        request.invocation_reference,
+        facts.correlation_reference,
+    ):
+        raise RuntimeApiContractConflict("invocation query binding differs")
+    return query
+
+
+def validate_runtime_api_reconciliation_binding(
+    command: RuntimeApiReconciliationCommand,
+    *,
+    request: RuntimeApiReconciliationInput,
+    facts: RuntimeApiReconciliationFacts,
+    principal: RuntimeApiTrustedPrincipal,
+    scope: RuntimeApiTrustedScope,
+    permission: RuntimeApiPermissionFact,
+    command_digest: str,
+    required_audience: str,
+) -> RuntimeApiReconciliationCommand:
+    validate_runtime_api_principal(principal, required_audience=required_audience)
+    validate_runtime_api_permission(
+        RuntimeApiOperation.REQUEST_RECONCILIATION,
+        permission,
+        principal=principal,
+        scope=scope,
+    )
+    if (
+        command.identity.command_id,
+        command.identity.operation,
+        command.identity.tenant_id,
+        command.identity.organization_id,
+        command.identity.principal_id,
+        command.identity.command_version,
+        command.identity.idempotency_key,
+        command.identity.command_digest,
+        command.identity.correlation_reference,
+        command.principal,
+        command.scope,
+        command.permission,
+        command.invocation_reference,
+        command.reconciliation_reference,
+    ) != (
+        facts.command_id,
+        RuntimeApiOperation.REQUEST_RECONCILIATION,
+        scope.tenant_id,
+        scope.organization_id,
+        principal.principal_id,
+        facts.command_version,
+        request.idempotency_key,
+        command_digest,
+        facts.correlation_reference,
+        principal,
+        scope,
+        permission,
+        request.invocation_reference,
+        request.reconciliation_reference,
+    ):
+        raise RuntimeApiContractConflict("reconciliation binding differs")
+    return command
+
+
+def validate_runtime_api_projection_binding(
+    projection: RuntimeApiStatusProjection,
+    *,
+    request: RuntimeApiInvocationQueryInput,
+    facts: RuntimeApiInvocationQueryFacts,
+) -> RuntimeApiStatusProjection:
+    validate_runtime_api_public_status(projection.status)
+    if (
+        projection.invocation_reference != request.invocation_reference
+        or projection.correlation_reference != facts.correlation_reference
+    ):
+        raise RuntimeApiContractConflict("status projection binding differs")
+    return projection
+
+
 def validate_runtime_api_idempotency_replay(
     current: RuntimeApiCommandIdentity,
     stored: RuntimeApiIdempotencyReceipt,
@@ -216,11 +376,15 @@ __all__ = (
     "required_runtime_api_permission",
     "validate_runtime_api_commit_result",
     "validate_runtime_api_idempotency_replay",
+    "validate_runtime_api_invocation_query_binding",
     "validate_runtime_api_permission",
     "validate_runtime_api_principal",
     "validate_runtime_api_public_status",
+    "validate_runtime_api_projection_binding",
+    "validate_runtime_api_reconciliation_binding",
     "validate_runtime_api_safe_error",
     "validate_runtime_api_scope",
     "validate_runtime_api_submission",
+    "validate_runtime_api_submission_binding",
     "validate_runtime_api_trusted_context_facts",
 )

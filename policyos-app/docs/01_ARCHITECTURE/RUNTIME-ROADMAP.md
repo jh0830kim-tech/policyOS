@@ -149,7 +149,8 @@ grants permission or causes automatic execution.
 | CP9-Transport-Idempotency | Merged, PR #74 | Mutation replay persistence | Immutable `runtime_api_idempotency_receipts`, migration `20260808_0021`, and caller-owned transaction service | Facade and routes remain blocked |
 | CP9-Gate-Trusted-Application-Facade-Governance | Merged, PR #75 | Facade trust boundary | ADR-091 fixes transaction ownership, trusted fact binding, canonical digest construction, and safe errors | Governance only; no facade or route |
 | CP9-Gate-Trusted-Application-Facade-Contracts | Merged, PR #76 | Facade contracts | Transport-safe inputs, verified claims, organization selector, explicit server facts, exact permissions, and canonical digests | No production facade or route |
-| CP9-Gate-Trusted-Application-Facade-Fact-Binding-Contracts | Implemented, pending review | Fact-binding contracts | Explicit trusted-context facts, clock-free resolver input, orchestration binder Protocol, and local-operation Protocol | No concrete binder, facade, or route |
+| CP9-Gate-Trusted-Application-Facade-Fact-Binding-Contracts | Merged, PR #77 | Fact-binding contracts | Explicit trusted-context facts, clock-free resolver input, orchestration binder Protocol, and local-operation Protocol | No concrete binder, facade, or route |
+| CP9-Trusted-Application-Facade | Implemented, pending review | Production facade | One SQLAlchemy transaction binds trusted context, exact permission, canonical digest, idempotency, and a bounded local operation | Concrete binder/local-operation implementation and routes remain blocked |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires production facade implementation and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -165,8 +166,8 @@ remain prohibited.
 
 The required implementation order is:
 
-1. Review and merge the fact-binding contract amendment.
-2. Implement the production trusted application facade.
+1. Review and merge the production trusted application facade.
+2. Implement concrete local fact binding and local-operation integration.
 3. Implement production Runtime routes.
 4. Run combined CP9 PostgreSQL and HTTP acceptance.
 5. Complete CP9 closeout.
