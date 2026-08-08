@@ -10,7 +10,7 @@ from alembic.script import ScriptDirectory
 def test_alembic_has_single_head() -> None:
     config = Config("alembic.ini")
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["20260807_0019"]
+    assert scripts.get_heads() == ["20260808_0020"]
 
 
 def test_initial_migration_contains_foundation_tables() -> None:
@@ -277,3 +277,15 @@ def test_runtime_permission_migration_preserves_0018() -> None:
         hashlib.sha256(normalized).hexdigest()
         == "7ea8a5d32e06718d8559fcbf617c0483425416d4fa619c5bd1a4daab847f7f6b"
     )
+
+
+def test_runtime_permission_grant_governance_migration_is_fail_closed() -> None:
+    source = Path(
+        "alembic/versions/20260808_0020_runtime_permission_grant_governance.py"
+    ).read_text(encoding="utf-8")
+    assert 'down_revision: str | None = "20260807_0019"' in source
+    assert "runtime_permission_grant_events" in source
+    assert "runtime.grant.manage" in source
+    assert "Existing Runtime permission grants prohibit governance upgrade" in source
+    assert "Populated Runtime grant governance cannot be downgraded" in source
+    assert "RolePermission" not in source

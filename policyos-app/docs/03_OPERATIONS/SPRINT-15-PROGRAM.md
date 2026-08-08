@@ -640,7 +640,7 @@ does not imply a Git tag, release publication, production enablement, or Sprint 
 
 PR #65 merged the definition-only Runtime permission gate at baseline merge commit `876d14f6` and
 left migration head `20260807_0019`. `CP9-Gate-Runtime-Grant-Governance` is Implemented, pending
-review through proposed ADR-088. Production Grant Provisioning remains Planned / Blocked: the
+review through proposed ADR-088. Production Grant Provisioning is Implemented / Validated / Pending Review: the
 contracts, `runtime_permission_grant_events` ledger, service, model, PostgreSQL acceptance, and
 planned migration `20260808_0020_runtime_permission_grant_governance.py` begin only in a separate
 implementation checkpoint after governance merges. The migration must add `runtime.grant.manage`
@@ -652,3 +652,12 @@ bootstrap/operator procedure outside the public Runtime API. Production routes r
 until grant provisioning, the production Runtime permission fact resolver, transport idempotency
 persistence, and the trusted application facade are complete. CP9 Runtime API: Planned / Blocked.
 CP10: Planned.
+
+### CP9 governed Runtime permission provisioning
+
+Production provisioning preserves `RolePermission` as the active projection and records every
+committed grant or revoke in the append-only `runtime_permission_grant_events` ledger in the same
+transaction. `runtime.grant.manage` is definition-only with zero automatic grants; only
+`runtime.read`, `runtime.invoke`, and `runtime.reconcile` are eligible targets. Exact replay is
+receipt-stable, conflicting replay and concurrent state changes fail closed, and transport,
+permission-fact resolution, application facade/routes, outbox, and CP10 remain deferred.

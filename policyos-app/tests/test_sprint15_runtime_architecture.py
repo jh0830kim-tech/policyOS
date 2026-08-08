@@ -407,13 +407,34 @@ def test_cp9_runtime_grant_revoke_governance_precedes_production_provisioning() 
     assert "20260808_0020_runtime_permission_grant_governance.py" in normalized
     assert "Planned / Blocked" in combined
 
-    forbidden_paths = (
+    production_paths = (
         "alembic/versions/20260808_0020_runtime_permission_grant_governance.py",
         "app/models/runtime_permission_grants.py",
         "app/services/runtime_permission_grants.py",
         "app/services/runtime_permission_grants_contracts.py",
+    )
+    assert all((ROOT / path).is_file() for path in production_paths)
+
+    forbidden_paths = (
         "app/api/routes/runtime.py",
         "app/runtime/api",
         "app/runtime/outbox",
     )
     assert all(not (ROOT / path).exists() for path in forbidden_paths)
+    production_paths = (
+        "alembic/versions/20260808_0020_runtime_permission_grant_governance.py",
+        "app/models/runtime_permission_grants.py",
+        "app/services/runtime_permission_grants.py",
+        "app/services/runtime_permission_grants_contracts.py",
+    )
+    assert all((ROOT / path).is_file() for path in production_paths)
+
+
+def test_cp9_grant_provisioning_keeps_transport_and_resolver_deferred() -> None:
+    files = (
+        ROOT / "app" / "services" / "runtime_permission_grants.py",
+        ROOT / "app" / "services" / "runtime_permission_grants_contracts.py",
+    )
+    source = "\n".join(path.read_text(encoding="utf-8") for path in files)
+    for forbidden in ("FastAPI", "app.runtime.api", "outbox", "Idempotency", "resolver"):
+        assert forbidden not in source
