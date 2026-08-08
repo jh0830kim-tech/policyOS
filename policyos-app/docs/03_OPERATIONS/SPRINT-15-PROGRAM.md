@@ -82,7 +82,8 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9-Gate-Runtime-Permission-Fact-Resolver-Governance | Merged, PR #69 | ADR-089 fixes exact server-owned permission mapping, live projection resolution, non-disclosure, transaction use, and revocation linearization. |
 | CP9-Gate-Runtime-Permission-Fact-Resolver | Merged, PR #70 | Caller-owned transaction, fixed lock order, exact live `RolePermission`, no cache or ledger authority. |
 | CP9-Gate-Transport-Idempotency-Governance | Merged, PR #71 | ADR-090 fixes mutation scope, trusted scoped replay identity, explicit command version, canonical digest, immutable receipt, and advisory-lock linearization. |
-| CP9-Gate-Transport-Idempotency-Contracts | Implemented, pending review | Bounded command version, explicit commit facts, atomic commit protocol, and exact replay equality; no production persistence. |
+| CP9-Gate-Transport-Idempotency-Contracts | Merged, PR #72 | Bounded command version, explicit commit facts, atomic commit protocol, and exact replay equality; no production persistence. |
+| CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction | Implemented, pending review | Lock and receipt resolution precede one bounded local mutation; replay and conflict invoke none. |
 | CP9 Production Transport Idempotency | Planned / Blocked | Model, service, contract change, and planned migration `20260808_0021_runtime_api_idempotency.py` remain unimplemented. |
 | CP9 Runtime API | Planned / Blocked | Production routes remain blocked on transport idempotency persistence and the trusted application facade. |
 | CP10 Workers | Planned | Worker implementation is not present. |
@@ -662,6 +663,11 @@ CP10: Planned.
 ADR-090 governance merged in PR #71. The contracts gate adds an immutable bounded command version,
 explicit caller-supplied receipt ID and committed time, a single atomic commit protocol, and exact
 replay equality. It creates no model, service, migration, facade, or route.
+
+The contracts gate merged in PR #72. Its atomic commit contract correction supplies a bounded local
+mutation to the caller-transaction-owned port. Lock and receipt lookup occur first; exact replay or
+conflict invokes no mutation, while a new identity awaits it once and stages a receipt only after
+success. The port owns neither commit nor rollback and makes no external exactly-once guarantee.
 
 ADR-090 applies only to `submit_invocation` and `request_reconciliation`; read/status queries do
 not use the mutation idempotency gate. The client supplies only a bounded ASCII `Idempotency-Key`.

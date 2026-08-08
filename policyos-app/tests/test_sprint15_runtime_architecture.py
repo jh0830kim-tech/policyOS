@@ -565,6 +565,30 @@ def test_cp9_transport_idempotency_contracts_gate_is_additive_only() -> None:
     combined = " ".join("".join((roadmap, program, security)).split())
 
     assert "CP9-Gate-Transport-Idempotency-Contracts" in combined
+    assert "Merged, PR #72" in combined
+    assert "CP9 Production Transport Idempotency | Planned / Blocked" in combined
+    assert "CP9 Runtime API | Planned / Blocked" in combined
+    assert "CP10 Workers | Planned" in combined
+    assert not any(
+        path.name.startswith("20260808_0021")
+        for path in (ROOT / "alembic" / "versions").glob("*.py")
+    )
+    assert not (ROOT / "app" / "models" / "runtime_api_idempotency.py").exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_idempotency.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "app" / "runtime" / "api").exists()
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()
+    assert not (ROOT / "app" / "runtime" / "workers").exists()
+    assert not (ROOT / "app" / "runtime" / "scheduler").exists()
+
+
+def test_cp9_atomic_commit_contract_correction_precedes_persistence() -> None:
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
+    combined = " ".join("".join((roadmap, program, security)).split())
+
+    assert "CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction" in combined
     assert "Implemented, pending review" in combined
     assert "CP9 Production Transport Idempotency | Planned / Blocked" in combined
     assert "CP9 Runtime API | Planned / Blocked" in combined

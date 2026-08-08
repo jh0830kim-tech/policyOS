@@ -144,7 +144,8 @@ grants permission or causes automatic execution.
 | CP9-Gate-Runtime-Permission-Fact-Resolver-Governance | Merged, PR #69 | RBAC resolution governance | ADR-089 fixes server-owned operation mapping, live projection authority, non-disclosure, and revocation linearization | Governance baseline; no facade or route |
 | CP9-Gate-Runtime-Permission-Fact-Resolver | Merged, PR #70 | RBAC resolution | Transaction-bound SQLAlchemy resolution of exact live `RolePermission` facts | No cache, migration, facade, route, or transport |
 | CP9-Gate-Transport-Idempotency-Governance | Merged, PR #71 | Mutation replay governance | ADR-090 fixes scoped identity, explicit command version, canonical digest, immutable receipts, and transaction linearization | Migration `0021` is planned only |
-| CP9-Gate-Transport-Idempotency-Contracts | Implemented, pending review | Mutation replay contracts | Adds bounded command version, explicit commit facts, atomic commit protocol, and exact replay equality | No persistence, migration, facade, or route |
+| CP9-Gate-Transport-Idempotency-Contracts | Merged, PR #72 | Mutation replay contracts | Adds bounded command version, explicit commit facts, atomic commit protocol, and exact replay equality | No persistence, migration, facade, or route |
+| CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction | Implemented, pending review | Mutation callback ordering | Requires lock and replay/conflict resolution before invoking one bounded local mutation | No persistence, migration, facade, or route |
 | CP9-Transport-Idempotency | Planned / Blocked | Mutation replay persistence | Planned `runtime_api_idempotency_receipts` and migration `20260808_0021_runtime_api_idempotency.py` | Governance must merge first |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires transport idempotency persistence, stable facade, and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
@@ -482,6 +483,11 @@ exist in this governance gate.
 ADR-090 governance merged in PR #71. `CP9-Gate-Transport-Idempotency-Contracts` adds only immutable
 bounded contracts, explicit caller-supplied commit facts, one atomic commit protocol, and exact
 replay equality. Production persistence, migration `0021`, facade, and routes remain blocked.
+
+The contracts gate merged in PR #72. The atomic commit contract correction passes an immutable
+local-mutation Protocol into the transaction port so lock and receipt resolution precede mutation.
+Exact replay and conflict invoke no mutation; a new identity awaits it exactly once before staging
+the bounded receipt. The caller owns commit and rollback, and external exactly-once is not claimed.
 
 ### CP9 governed Runtime permission provisioning
 

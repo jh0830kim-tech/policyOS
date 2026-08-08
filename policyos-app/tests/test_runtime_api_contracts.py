@@ -1,5 +1,6 @@
 """Focused CP9 Runtime API contract-gate tests."""
 
+from asyncio import run
 from datetime import UTC, datetime
 from inspect import signature
 from uuid import UUID
@@ -30,6 +31,7 @@ from app.services.runtime_api_contracts import (
 from app.services.runtime_api_protocols import (
     RuntimeApiApplicationFacade,
     RuntimeApiIdempotencyTransactionPort,
+    RuntimeApiLocalMutation,
     RuntimeApiTrustedContextResolver,
 )
 from app.services.runtime_api_validation import (
@@ -248,8 +250,29 @@ class Facade:
         return None
 
 
+class LocalMutation:
+    def __init__(self, result=None):
+        self.calls = 0
+        self.result = result or safe_result()
+
+    async def __call__(self):
+        self.calls += 1
+        return self.result
+
+
 class IdempotencyTransaction:
-    async def commit(self, identity, result, facts):
+    def __init__(self, stored=None):
+        self.stored = stored
+
+    async def commit(self, identity, facts, mutation):
+        if self.stored is not None:
+            first = validate_runtime_api_idempotency_replay(identity, self.stored)
+            return RuntimeApiIdempotencyCommitResult(
+                disposition=RuntimeApiIdempotencyDisposition.EXACT_REPLAY,
+                receipt=first,
+                safe_result=first.safe_result,
+            )
+        result = await mutation()
         item = RuntimeApiIdempotencyReceipt(
             receipt_id=facts.receipt_id,
             identity=identity,
@@ -266,13 +289,49 @@ class IdempotencyTransaction:
 def test_protocol_structural_conformance() -> None:
     assert isinstance(Facade(), RuntimeApiApplicationFacade)
     assert not isinstance(object(), RuntimeApiApplicationFacade)
+    assert isinstance(LocalMutation(), RuntimeApiLocalMutation)
+    assert not isinstance(object(), RuntimeApiLocalMutation)
     assert isinstance(IdempotencyTransaction(), RuntimeApiIdempotencyTransactionPort)
     assert tuple(signature(RuntimeApiIdempotencyTransactionPort.commit).parameters) == (
         "self",
         "identity",
-        "result",
         "facts",
+        "mutation",
     )
+
+
+def test_atomic_idempotency_port_calls_mutation_only_for_new_identity() -> None:
+    facts = RuntimeApiIdempotencyCommitFacts(
+        receipt_id=UUID("00000000-0000-0000-0000-000000000107"), committed_at=NOW
+    )
+    mutation = LocalMutation()
+    committed = run(IdempotencyTransaction().commit(identity(), facts, mutation))
+    assert mutation.calls == 1
+    assert committed.disposition is RuntimeApiIdempotencyDisposition.COMMITTED
+
+    first = committed.receipt
+    replay_mutation = LocalMutation(safe_result(RuntimeApiPublicStatus.FAILED))
+    replay = run(
+        IdempotencyTransaction(first).commit(
+            identity(command_id=ORG, correlation_reference="correlation-2"),
+            facts,
+            replay_mutation,
+        )
+    )
+    assert replay_mutation.calls == 0
+    assert replay.receipt is first
+    assert replay.safe_result is first.safe_result
+
+    conflict_mutation = LocalMutation()
+    with pytest.raises(RuntimeApiContractConflict):
+        run(
+            IdempotencyTransaction(first).commit(
+                identity(command_digest="sha256:fedcba9876543210"),
+                facts,
+                conflict_mutation,
+            )
+        )
+    assert conflict_mutation.calls == 0
 
 
 def test_explicit_immutable_exports() -> None:
@@ -287,6 +346,7 @@ def test_explicit_immutable_exports() -> None:
         assert all(hasattr(module, name) for name in module.__all__)
     assert "CommandVersion" in contracts.__all__
     assert "RuntimeApiIdempotencyCommitFacts" in contracts.__all__
+    assert "RuntimeApiLocalMutation" in protocols.__all__
 
 
 def test_trusted_context_protocol_remains_transport_tenant_free() -> None:
