@@ -1,4 +1,4 @@
-# Sprint 15 Runtime Program
+ Sprint 15 Runtime Program
 
 ## 1. Purpose and authority
 
@@ -76,6 +76,7 @@ The baseline is `main` after merged CP8 Runtime Delivery closeout PR #59.
 | CP9-Gate-Auth-Claims | Merged, PR #62 | Required issuer/audience settings, issued trust claims, HS256-only zero-leeway verification, immutable verified claims, legacy-token rejection, generic bearer failures, and focused authentication regression. |
 | CP9-Gate-Tenant-Organization-Binding-Governance | Merged, PR #63 | ADR-087 amendment fixes lifetime one-to-one binding and fail-closed provisioning, lifecycle, classification, bypass, and downgrade policy. |
 | CP9-Gate-Tenant-Organization-Binding | Implemented, pending review | Lifetime one-to-one model, explicit persistence, self-contained migration `20260807_0018`, fail-closed downgrade, trusted resolver, and PostgreSQL 16 verification. |
+| CP9-Gate-Runtime-Permission-Definitions | Implemented, pending review | Definition-only exact Runtime permissions. No automatic grants, wildcard, or existing role/membership backfill. |
 | CP9 Runtime API | Planned / Blocked | Production routes remain blocked on Tenant-Organization binding, Runtime permission persistence and grants, transport idempotency persistence, and the trusted application facade. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
@@ -84,7 +85,7 @@ governed CP7 Orchestration; deterministic fake and dry-run Adapters; and Postgre
 CP8 delivery Persistence now includes lifecycle, claim, retry, dead-letter, and reconciliation
 storage. Persistence PR #53, Lifecycle Port conformance PR #54, Governed Delivery Orchestration PR #55,
 Alembic blocker PR #56, projection-cardinality blocker PR #57, and Runtime Delivery Acceptance
-PR #58 are merged. Migration head is `20260807_0018`, and CP8 Runtime Delivery is complete. No real external adapter, runtime API, Worker, queue, polling
+PR #58 are merged. Migration head is `20260807_0019`, and CP8 Runtime Delivery is complete. No real external adapter, runtime API, Worker, queue, polling
 loop, scheduler, live credential resolution, or external side effect exists.
 
 ## 5. Program work structure
@@ -633,3 +634,5 @@ does not imply a Git tag, release publication, production enablement, or Sprint 
 - Decide real-adapter enablement and credential-broker rules before external effects are activated.
 - Decide CP10 worker package placement, queue, lease, identity, and scheduling model; workers
   remain outside the `app.runtime` domain unless a superseding ADR approves otherwise.
+
+Runtime permission definitions are definition-only. Fresh install authority is zero. Production grant/revoke commands, grant actor/provenance/audit/idempotency, the Runtime permission fact production resolver, facade, and routes are unimplemented. No automatic grants or existing role/membership backfill. CP9 Runtime API: Planned / Blocked. CP10: Planned.

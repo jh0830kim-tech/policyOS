@@ -1,4 +1,4 @@
-﻿import uuid
+import uuid
 from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock
 
@@ -12,7 +12,7 @@ from app.core.security import create_access_token
 from app.db.session import get_db
 from app.main import app
 from app.models.audit import AuditEvent
-from app.models.identity import Membership, User
+from app.models.identity import Membership, MembershipRole, Permission, RolePermission, User
 
 REQUIRED_PERMISSION = "policy.read"
 PROTECTED_PATH = "/_test/organizations/{organization_id}/policy-read"
@@ -157,3 +157,84 @@ async def test_permission_names_are_evaluated_exactly() -> None:
     assert "permissions.key =" in sql
     assert "policy.read" in params.values()
     assert "policy.read.all" not in params.values()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("permission_key", ("runtime.read", "runtime.invoke", "runtime.reconcile"))
+async def test_exact_runtime_permissions_reuse_grant_resolution(permission_key: str) -> None:
+    user, membership, organization_id = make_identity()
+    context = OrganizationContext(organization_id, user, membership)
+    db = AsyncMock(spec=AsyncSession)
+    db.scalar.return_value = uuid.UUID("00000000-0000-0000-0000-000000001901")
+    assert await require_permission(permission_key)(context, db) is context
+    sql = str(db.scalar.await_args.args[0])
+    assert all(
+        value in sql
+        for value in (
+            "membership_roles.membership_id",
+            "roles.organization_id",
+            "role_permissions.permission_id",
+            "permissions.key =",
+        )
+    )
+    assert permission_key in db.scalar.await_args.args[0].compile().params.values()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "permission_key", ("runtime.*", "runtime", "time.read", "runtime.read.extra")
+)
+async def test_non_exact_runtime_permissions_fail_closed(permission_key: str) -> None:
+    user, membership, organization_id = make_identity()
+    db = AsyncMock(spec=AsyncSession)
+    db.scalar.return_value = None
+    with pytest.raises(HTTPException) as exc_info:
+        await require_permission(permission_key)(
+            OrganizationContext(organization_id, user, membership), db
+        )
+    assert exc_info.value.status_code == 403
+    assert isinstance(db.add.call_args.args[0], AuditEvent)
+    assert db.add.call_args.args[0].details_json == {}
+
+
+@pytest.mark.asyncio
+async def test_definition_without_both_grant_links_has_no_authority() -> None:
+    user, membership, organization_id = make_identity()
+    db = AsyncMock(spec=AsyncSession)
+    db.scalar.return_value = None
+    with pytest.raises(HTTPException):
+        await require_permission("runtime.read")(
+            OrganizationContext(organization_id, user, membership), db
+        )
+    sql = str(db.scalar.await_args.args[0])
+    assert "membership_roles" in sql and "role_permissions" in sql
+
+
+def test_runtime_grant_links_are_unique_and_safe() -> None:
+    assert tuple(RolePermission.__table__.primary_key.columns.keys()) == (
+        "role_id",
+        "permission_id",
+    )
+    assert tuple(MembershipRole.__table__.primary_key.columns.keys()) == (
+        "membership_id",
+        "role_id",
+    )
+    assert not set(Permission.__table__.columns.keys()) & {
+        "raw_token",
+        "signing_secret",
+        "provider_body",
+        "payload",
+    }
+
+
+@pytest.mark.asyncio
+async def test_grant_revocation_is_visible_on_next_resolution() -> None:
+    user, membership, organization_id = make_identity()
+    dependency = require_permission("runtime.reconcile")
+    context = OrganizationContext(organization_id, user, membership)
+    db = AsyncMock(spec=AsyncSession)
+    db.scalar.side_effect = [uuid.uuid4(), None]
+    assert await dependency(context, db) is context
+    with pytest.raises(HTTPException):
+        await dependency(context, db)
+    assert db.scalar.await_count == 2

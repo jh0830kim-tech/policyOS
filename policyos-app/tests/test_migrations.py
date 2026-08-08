@@ -10,7 +10,7 @@ from alembic.script import ScriptDirectory
 def test_alembic_has_single_head() -> None:
     config = Config("alembic.ini")
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["20260807_0018"]
+    assert scripts.get_heads() == ["20260807_0019"]
 
 
 def test_initial_migration_contains_foundation_tables() -> None:
@@ -174,3 +174,106 @@ def test_tenant_organization_binding_migration_declares_required_invariants() ->
     ):
         assert name in source
     assert source.count('ondelete="RESTRICT"') == 2
+
+
+def test_runtime_permission_migration_is_definition_only_and_fail_closed() -> None:
+    path = Path("alembic/versions/20260807_0019_runtime_api_permissions.py")
+    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    values = (
+        "20260807_0019",
+        "20260807_0018",
+        "runtime.read",
+        "runtime.invoke",
+        "runtime.reconcile",
+        "00000000-0000-0000-0000-000000001901",
+        "00000000-0000-0000-0000-000000001902",
+        "00000000-0000-0000-0000-000000001903",
+        "Runtime read",
+        "Read governed Runtime invocation status.",
+        "Runtime invoke",
+        "Submit governed Runtime invocations.",
+        "Runtime reconcile",
+        "Request governed Runtime reconciliation.",
+    )
+    assert all(value in source for value in values)
+    assert not any(
+        isinstance(node, (ast.Import, ast.ImportFrom))
+        and (
+            any(alias.name.startswith("app.") for alias in node.names)
+            if isinstance(node, ast.Import)
+            else (node.module or "").startswith("app.")
+        )
+        for node in ast.walk(tree)
+    )
+    assert all(
+        value not in source
+        for value in (
+            "uuid4",
+            "datetime.now",
+            "func.now",
+            "on_conflict_do_nothing",
+            "membership_roles",
+            "tenant_organization_bindings",
+            "role_permissions.insert",
+        )
+    )
+    downgrade_functions = [
+        node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "downgrade"
+    ]
+    assert len(downgrade_functions) == 1
+    downgrade = downgrade_functions[0]
+    grants_assignments = [
+        node
+        for node in ast.walk(downgrade)
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "grants" for target in node.targets)
+    ]
+    assert len(grants_assignments) == 1
+    grants_ifs = [
+        node
+        for node in ast.walk(downgrade)
+        if isinstance(node, ast.If)
+        and any(
+            isinstance(child, ast.Name) and child.id == "grants" and isinstance(child.ctx, ast.Load)
+            for child in ast.walk(node.test)
+        )
+    ]
+    assert len(grants_ifs) == 1
+    grant_raises = [node for node in ast.walk(grants_ifs[0]) if isinstance(node, ast.Raise)]
+    assert len(grant_raises) == 1
+    assert isinstance(grant_raises[0].exc, ast.Call)
+    assert isinstance(grant_raises[0].exc.func, ast.Name)
+    assert grant_raises[0].exc.func.id == "RuntimeError"
+    permission_deletes = [
+        node
+        for node in ast.walk(downgrade)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "delete"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "table"
+    ]
+    assert len(permission_deletes) == 1
+    first_delete = permission_deletes[0]
+    definition_raises = [
+        node
+        for node in ast.walk(downgrade)
+        if isinstance(node, ast.Raise) and node is not grant_raises[0]
+    ]
+    assert definition_raises
+    assert grants_assignments[0].lineno < grants_ifs[0].lineno
+    assert grants_ifs[0].lineno <= grant_raises[0].lineno < first_delete.lineno
+    assert all(node.lineno < first_delete.lineno for node in definition_raises)
+
+
+def test_runtime_permission_migration_preserves_0018() -> None:
+    normalized = (
+        Path("alembic/versions/20260807_0018_tenant_organization_binding.py")
+        .read_bytes()
+        .replace(b"\r\n", b"\n")
+    )
+    assert (
+        hashlib.sha256(normalized).hexdigest()
+        == "7ea8a5d32e06718d8559fcbf617c0483425416d4fa619c5bd1a4daab847f7f6b"
+    )
