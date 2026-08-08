@@ -146,8 +146,9 @@ grants permission or causes automatic execution.
 | CP9-Gate-Transport-Idempotency-Governance | Merged, PR #71 | Mutation replay governance | ADR-090 fixes scoped identity, explicit command version, canonical digest, immutable receipts, and transaction linearization | Migration `0021` is planned only |
 | CP9-Gate-Transport-Idempotency-Contracts | Merged, PR #72 | Mutation replay contracts | Adds bounded command version, explicit commit facts, atomic commit protocol, and exact replay equality | No persistence, migration, facade, or route |
 | CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction | Merged, PR #73 | Mutation callback ordering | Requires lock and replay/conflict resolution before invoking one bounded local mutation | No facade or route |
-| CP9-Transport-Idempotency | Implemented, pending review | Mutation replay persistence | Immutable `runtime_api_idempotency_receipts`, migration `20260808_0021`, and caller-owned transaction service | Facade and routes remain blocked |
-| CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires transport idempotency persistence, stable facade, and routes |
+| CP9-Transport-Idempotency | Merged, PR #74 | Mutation replay persistence | Immutable `runtime_api_idempotency_receipts`, migration `20260808_0021`, and caller-owned transaction service | Facade and routes remain blocked |
+| CP9-Gate-Trusted-Application-Facade-Governance | Implemented, pending review | Facade trust boundary | ADR-091 fixes transaction ownership, trusted fact binding, canonical digest construction, and safe errors | Governance only; no facade or route |
+| CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires the facade contract amendment, production facade implementation, and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
 CP9 Governance / ADR-087 is merged in PR #60, API Contracts in PR #61, Auth Claims in PR #62,
@@ -162,10 +163,13 @@ remain prohibited.
 
 The required implementation order is:
 
-1. Review and merge the transport idempotency contracts gate.
-2. Review and merge transport idempotency persistence.
-3. Implement the trusted application facade.
+1. Review and merge the trusted application facade governance gate.
+2. Amend the application-facade contracts.
+3. Implement the production trusted application facade.
 4. Implement production Runtime routes.
+5. Run combined CP9 PostgreSQL and HTTP acceptance.
+6. Complete CP9 closeout.
+7. Begin CP10 only after separate approval.
 
 
 ## 6. Boundary input and output contracts

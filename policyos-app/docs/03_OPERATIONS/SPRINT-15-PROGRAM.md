@@ -84,8 +84,9 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9-Gate-Transport-Idempotency-Governance | Merged, PR #71 | ADR-090 fixes mutation scope, trusted scoped replay identity, explicit command version, canonical digest, immutable receipt, and advisory-lock linearization. |
 | CP9-Gate-Transport-Idempotency-Contracts | Merged, PR #72 | Bounded command version, explicit commit facts, atomic commit protocol, and exact replay equality; no production persistence. |
 | CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction | Merged, PR #73 | Lock and receipt resolution precede one bounded local mutation; replay and conflict invoke none. |
-| CP9 Production Transport Idempotency | Implemented, pending review | Immutable model, transaction-bound service, and migration `20260808_0021_runtime_api_idempotency.py` are implemented. |
-| CP9 Runtime API | Planned / Blocked | Production routes remain blocked on transport idempotency persistence and the trusted application facade. |
+| CP9 Production Transport Idempotency | Merged, PR #74 | Immutable model, transaction-bound service, and migration `20260808_0021_runtime_api_idempotency.py` are merged. |
+| CP9 Trusted Application Facade Governance | Implemented, pending review | ADR-091 fixes facade transaction ownership, fact binding, digest construction, and error non-disclosure. |
+| CP9 Runtime API | Planned / Blocked | The facade contract amendment, production facade, and production routes remain ordered blockers. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
@@ -464,9 +465,9 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP9 - Runtime API
 
-- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` in PR #61, `CP9-Gate-Auth-Claims` in PR #62, Tenant-Organization Binding Governance in PR #63, Binding in PR #64, Runtime permission definitions in PR #65, grant governance in PR #66, grant provisioning in PR #67, permission-fact resolver governance in PR #69, and the resolver in PR #70. ADR-090 transport idempotency governance is implemented, pending review. No Runtime production idempotency, route, or facade implementation exists.
+- **Status:** Planned / Blocked. Governance is merged in PR #60 through the approved intermediate gates, and production transport idempotency with migration `20260808_0021` is merged in PR #74. ADR-091 trusted application facade governance is implemented, pending review. The facade contract amendment, production facade, and production routes remain blocked in that order.
 - **Purpose:** Expose authenticated, organization-scoped transport schemas over the approved trusted application facade and Runtime Orchestration boundary.
-- **Entry conditions:** The persisted lifetime binding, exact Runtime permissions, governed grant/revoke provisioning, and live permission-fact resolver are merged through PR #70. ADR-090 governs mutation-only replay, trusted scoped identity, explicit command version, canonical digest, immutable receipts, and transaction-bound advisory-lock linearization. Transport idempotency persistence and a stable trusted application facade remain production blockers.
+- **Entry conditions:** The persisted lifetime binding, exact Runtime permissions, governed grant/revoke provisioning, live permission-fact resolver, and transport idempotency persistence are merged through PR #74. ADR-091 must merge before the facade contract amendment, production facade, production routes, combined PostgreSQL/HTTP acceptance, and CP9 closeout.
 - **Binding implementation acceptance:** Model/migration parity; PostgreSQL 16 fresh and existing upgrade; lifetime 1:1 uniqueness; concurrent provisioning conflict; missing, inactive, and revoked binding rejection; exact trusted-scope equality; cross-tenant and cross-organization non-disclosure; and no route, facade, or permission expansion.
 - **Allowed outputs:** After the contracts gate, bounded routes in `app.api`, strict schemas in `app.schemas`, trusted application-facade integration, dependencies, and transport tests.
 - **Package placement:** Routes belong in `app.api`, schemas in `app.schemas`, and the trusted facade sits between API and Runtime Orchestration. `app.runtime.api` is prohibited.
@@ -683,8 +684,26 @@ and store no raw payload, token, secret, credential, provider body, arbitrary JS
 SQL detail. This does not promise external business-effect exactly-once.
 
 Production transport idempotency and migration `20260808_0021_runtime_api_idempotency.py` are
-implemented, pending review. The trusted facade and routes remain Planned / Blocked; no Worker,
+merged in PR #74. The trusted facade and routes remain Planned / Blocked; no Worker,
 queue, scheduler, `app.runtime.api`, `app.runtime.outbox`, or CP10 implementation is created.
+
+### CP9 trusted application facade governance
+
+ADR-091 makes the facade the outer application boundary for transport-safe input, immutable
+verified claims, the organization selector, and explicit trusted server facts. Routes call only the
+facade and cannot construct trusted principal, scope, permission, identity, or digest facts. The
+facade owns one `AsyncSession` transaction across principal and scope resolution, exact permission,
+the bounded local operation, and idempotency staging; helpers never commit or roll back.
+
+The exact server mapping is `get_invocation → runtime.read`, `submit_invocation → runtime.invoke`,
+and `request_reconciliation → runtime.reconcile`. Canonical mutation digests use fixed-order,
+length-prefixed UTF-8 fields and `sha256:<64 lowercase hex>`. Replay or conflict invokes no local
+mutation; a new request invokes it exactly once after lock and lookup. Missing, stale, revoked,
+ambiguous, or cross-scope persisted facts fail closed without inference or disclosure.
+
+The required order is governance, facade contract amendment, production facade, production routes,
+combined CP9 PostgreSQL/HTTP acceptance, CP9 closeout, then separately approved CP10. CP9 remains
+Planned / Blocked and CP10 remains Planned.
 
 ### CP9 Runtime permission-fact resolver governance
 

@@ -211,7 +211,7 @@ The caller-transaction-owned port must lock and resolve replay or conflict befor
 local mutation. Replay and conflict invoke it zero times; a new identity awaits it exactly once and
 stages a receipt only after success. Explicit receipt ID and committed time remain trusted inputs;
 the port owns no commit or rollback and claims no external exactly-once. Production persistence
-and migration `0021` are implemented, pending review. Facade and routes remain Planned / Blocked.
+and migration `0021` are merged in PR #74. Facade and routes remain Planned / Blocked.
 CP10 remains Planned.
 
 ADR-090 permits a client to provide only a bounded ASCII `Idempotency-Key` for
@@ -232,3 +232,28 @@ secret, credential, arbitrary JSON, internal exception, and SQL/error detail are
 receipt and local mutation commit or roll back together. This boundary does not guarantee external
 business-effect exactly-once. The trusted facade, routes, `app.runtime.api`, outbox, Workers, and
 CP10 remain unimplemented.
+
+## Sprint 15 CP9 trusted application facade security boundary
+
+ADR-091 requires routes to call only the trusted application facade and forbids routes from
+constructing principal, scope, permission, replay identity, or digest facts. The facade owns the
+single `AsyncSession` transaction spanning principal and scope resolution, exact permission, the
+bounded local read or mutation, and idempotency lookup and staging. Permission locks remain held
+through the operation; helpers do not commit or roll back. Replay and conflict perform zero local
+mutations, while a new request performs exactly one after lock and lookup.
+
+The server fixes `get_invocation → runtime.read`, `submit_invocation → runtime.invoke`, and
+`request_reconciliation → runtime.reconcile`; neither the client nor dependency injection selects
+the permission. Trusted identifiers, timestamps, tenant, principal, authority, permit,
+classification, revision, and lineage are never client supplied. Canonical mutation digests are
+computed after validation from fixed-order, length-prefixed UTF-8 facts and emitted as
+`sha256:<64 lowercase hex>`; raw HTTP bytes, bearer tokens, whitespace, and provider responses are
+excluded.
+
+Current persisted orchestration facts must match tenant, organization, principal, classification,
+revision, lineage, action, plan, state, registry, and permit exactly. Missing, ambiguous, stale,
+revoked, or cross-scope facts fail closed, and the facade cannot infer Authority, Permit, admission,
+Plan, State progression, Registry, or Audit. Errors remain bounded as generic `401`, non-disclosing
+`404`, bounded `403`/other `4xx`, `429`, `503`, or generic `500`, with no secret, raw body, SQL,
+topology, receipt internals, or chain-of-thought disclosure. Production facade, routes, CP10,
+external effects, `app.runtime.api`, and `app.runtime.outbox` remain blocked.

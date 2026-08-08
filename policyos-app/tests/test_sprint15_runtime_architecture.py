@@ -521,7 +521,7 @@ def test_cp9_transport_idempotency_governance_is_implemented_by_persistence() ->
         "CP9-Gate-Transport-Idempotency-Governance",
         "Merged, PR #71",
         "Production Transport Idempotency",
-        "Implemented, pending review",
+        "Merged, PR #74",
         "Merged, PR #69",
         "Merged, PR #70",
     ):
@@ -563,7 +563,7 @@ def test_cp9_transport_idempotency_contracts_gate_is_additive_only() -> None:
 
     assert "CP9-Gate-Transport-Idempotency-Contracts" in combined
     assert "Merged, PR #72" in combined
-    assert "CP9 Production Transport Idempotency | Implemented, pending review" in combined
+    assert "CP9 Production Transport Idempotency | Merged, PR #74" in combined
     assert "CP9 Runtime API | Planned / Blocked" in combined
     assert "CP10 Workers | Planned" in combined
     assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
@@ -584,7 +584,7 @@ def test_cp9_atomic_commit_contract_correction_is_merged_before_persistence() ->
 
     assert "CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction" in combined
     assert "Merged, PR #73" in combined
-    assert "CP9 Production Transport Idempotency | Implemented, pending review" in combined
+    assert "CP9 Production Transport Idempotency | Merged, PR #74" in combined
     assert "CP9 Runtime API | Planned / Blocked" in combined
     assert "CP10 Workers | Planned" in combined
     assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
@@ -595,3 +595,58 @@ def test_cp9_atomic_commit_contract_correction_is_merged_before_persistence() ->
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
     assert not (ROOT / "app" / "runtime" / "workers").exists()
     assert not (ROOT / "app" / "runtime" / "scheduler").exists()
+
+
+def test_cp9_trusted_application_facade_governance_precedes_facade_and_routes() -> None:
+    adr = ADR / ("ADR-091-CP9-RUNTIME-TRUSTED-APPLICATION-FACADE-TRANSACTION-AND-FACT-BINDING.md")
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
+    text = adr.read_text(encoding="utf-8")
+    normalized = " ".join(text.split())
+    combined = " ".join("".join((roadmap, program, security)).split())
+
+    assert adr.is_file()
+    assert "**Status:** Proposed" in text
+    for phrase in (
+        "facade owns the caller `AsyncSession` transaction",
+        "Routes call the facade only",
+        "do not construct a trusted principal, scope, permission, identity, or digest",
+        "explicit trusted server facts",
+        "length-prefixes each UTF-8 field",
+        "sha256:<64 lowercase hex>",
+        "same session and the same transaction",
+        "zero times for replay or conflict",
+        "exactly once",
+        "does not infer or create Authority, Permit, admission, Plan, State progression",
+        "generic `401`",
+        "non-disclosing `404`",
+        "generic `500`",
+        "chain-of-thought",
+    ):
+        assert phrase in normalized
+    for mapping in (
+        "`get_invocation` | `runtime.read`",
+        "`submit_invocation` | `runtime.invoke`",
+        "`request_reconciliation` | `runtime.reconcile`",
+    ):
+        assert mapping in normalized
+    for phrase in (
+        "CP9 Production Transport Idempotency | Merged, PR #74",
+        "20260808_0021",
+        "facade contract amendment",
+        "CP9 Runtime API | Planned / Blocked",
+        "CP10 Workers | Planned",
+    ):
+        assert phrase in combined
+
+    assert not (ROOT / "app" / "services" / "runtime_api_facade.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "app" / "runtime" / "api").exists()
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()
+    assert not any(
+        path.name.startswith("20260808_0022")
+        for path in (ROOT / "alembic" / "versions").glob("*.py")
+    )
+    for package in ("workers", "worker", "queue", "scheduler"):
+        assert not (ROOT / "app" / "runtime" / package).exists()
