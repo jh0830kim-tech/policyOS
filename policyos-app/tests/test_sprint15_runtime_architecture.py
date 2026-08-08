@@ -405,7 +405,7 @@ def test_cp9_runtime_grant_revoke_governance_precedes_production_provisioning() 
     assert "EXACT_REPLAY" in normalized
     assert "no automatic backfill" in normalized
     assert "20260808_0020_runtime_permission_grant_governance.py" in normalized
-    assert "current migration head is `20260808_0020`" in combined
+    assert "current `20260808_0021` head" in combined
     assert "Planned / Blocked" in combined
 
     production_paths = (
@@ -479,7 +479,7 @@ def test_cp9_permission_fact_resolver_governance_precedes_production_resolution(
     assert "RuntimePermissionGrantEvent" not in resolver_source
     assert "commit(" not in resolver_source and "rollback(" not in resolver_source
     assert not any(
-        path.name.startswith("20260808_0021")
+        path.name.startswith("20260808_0022")
         for path in (ROOT / "alembic" / "versions").glob("*.py")
     )
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
@@ -498,7 +498,7 @@ def test_cp9_permission_fact_resolver_is_additive_and_transport_free() -> None:
     for forbidden in ("FastAPI", "cache", "uuid4", "datetime.now", "RuntimePermissionGrantEvent"):
         assert forbidden not in resolver
     assert not any(
-        path.name.startswith("20260808_0021")
+        path.name.startswith("20260808_0022")
         for path in (ROOT / "alembic" / "versions").glob("*.py")
     )
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
@@ -506,7 +506,7 @@ def test_cp9_permission_fact_resolver_is_additive_and_transport_free() -> None:
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
 
 
-def test_cp9_transport_idempotency_governance_precedes_production_persistence() -> None:
+def test_cp9_transport_idempotency_governance_is_implemented_by_persistence() -> None:
     adr = ADR / "ADR-090-CP9-RUNTIME-TRANSPORT-IDEMPOTENCY-PERSISTENCE-AND-REPLAY.md"
     roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
     program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
@@ -521,7 +521,7 @@ def test_cp9_transport_idempotency_governance_precedes_production_persistence() 
         "CP9-Gate-Transport-Idempotency-Governance",
         "Merged, PR #71",
         "Production Transport Idempotency",
-        "Planned / Blocked",
+        "Implemented, pending review",
         "Merged, PR #69",
         "Merged, PR #70",
     ):
@@ -545,12 +545,9 @@ def test_cp9_transport_idempotency_governance_precedes_production_persistence() 
 
     contracts = (ROOT / "app" / "services" / "runtime_api_contracts.py").read_text(encoding="utf-8")
     assert "command_version" in contracts
-    assert not any(
-        path.name.startswith("20260808_0021")
-        for path in (ROOT / "alembic" / "versions").glob("*.py")
-    )
-    assert not (ROOT / "app" / "models" / "runtime_api_idempotency.py").exists()
-    assert not (ROOT / "app" / "services" / "runtime_api_idempotency.py").exists()
+    assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
+    assert (ROOT / "app" / "models" / "runtime_api_idempotency.py").is_file()
+    assert (ROOT / "app" / "services" / "runtime_api_idempotency.py").is_file()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
@@ -566,15 +563,12 @@ def test_cp9_transport_idempotency_contracts_gate_is_additive_only() -> None:
 
     assert "CP9-Gate-Transport-Idempotency-Contracts" in combined
     assert "Merged, PR #72" in combined
-    assert "CP9 Production Transport Idempotency | Planned / Blocked" in combined
+    assert "CP9 Production Transport Idempotency | Implemented, pending review" in combined
     assert "CP9 Runtime API | Planned / Blocked" in combined
     assert "CP10 Workers | Planned" in combined
-    assert not any(
-        path.name.startswith("20260808_0021")
-        for path in (ROOT / "alembic" / "versions").glob("*.py")
-    )
-    assert not (ROOT / "app" / "models" / "runtime_api_idempotency.py").exists()
-    assert not (ROOT / "app" / "services" / "runtime_api_idempotency.py").exists()
+    assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
+    assert (ROOT / "app" / "models" / "runtime_api_idempotency.py").is_file()
+    assert (ROOT / "app" / "services" / "runtime_api_idempotency.py").is_file()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
@@ -582,23 +576,20 @@ def test_cp9_transport_idempotency_contracts_gate_is_additive_only() -> None:
     assert not (ROOT / "app" / "runtime" / "scheduler").exists()
 
 
-def test_cp9_atomic_commit_contract_correction_precedes_persistence() -> None:
+def test_cp9_atomic_commit_contract_correction_is_merged_before_persistence() -> None:
     roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
     program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
     security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
     combined = " ".join("".join((roadmap, program, security)).split())
 
     assert "CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction" in combined
-    assert "Implemented, pending review" in combined
-    assert "CP9 Production Transport Idempotency | Planned / Blocked" in combined
+    assert "Merged, PR #73" in combined
+    assert "CP9 Production Transport Idempotency | Implemented, pending review" in combined
     assert "CP9 Runtime API | Planned / Blocked" in combined
     assert "CP10 Workers | Planned" in combined
-    assert not any(
-        path.name.startswith("20260808_0021")
-        for path in (ROOT / "alembic" / "versions").glob("*.py")
-    )
-    assert not (ROOT / "app" / "models" / "runtime_api_idempotency.py").exists()
-    assert not (ROOT / "app" / "services" / "runtime_api_idempotency.py").exists()
+    assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
+    assert (ROOT / "app" / "models" / "runtime_api_idempotency.py").is_file()
+    assert (ROOT / "app" / "services" / "runtime_api_idempotency.py").is_file()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()

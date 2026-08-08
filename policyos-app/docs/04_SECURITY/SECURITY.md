@@ -201,17 +201,18 @@ gate adds no production resolver, migration, facade, route, Worker, queue, polli
 caller-owned transaction and locks active user, organization, membership, binding,
 organization-scoped roles, exact permission, and `RolePermission` facts in fixed order. It neither
 queries the grant ledger nor caches allow or deny outcomes. This resolver is implemented, pending
-review; CP9 remains Planned / Blocked on idempotency persistence, facade, and routes.
+review; CP9 remains Planned / Blocked on the trusted facade and routes.
 
 ## Sprint 15 CP9 Transport Idempotency security boundary
 
 ADR-090 governance merged in PR #71 and its contracts gate merged in PR #72.
-`CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction` is implemented, pending review.
+`CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction` merged in PR #73.
 The caller-transaction-owned port must lock and resolve replay or conflict before invoking a bounded
 local mutation. Replay and conflict invoke it zero times; a new identity awaits it exactly once and
 stages a receipt only after success. Explicit receipt ID and committed time remain trusted inputs;
-the port owns no commit or rollback and claims no external exactly-once. Production persistence,
-migration `0021`, facade, and routes remain Planned / Blocked. CP10 remains Planned.
+the port owns no commit or rollback and claims no external exactly-once. Production persistence
+and migration `0021` are implemented, pending review. Facade and routes remain Planned / Blocked.
+CP10 remains Planned.
 
 ADR-090 permits a client to provide only a bounded ASCII `Idempotency-Key` for
 `submit_invocation` and `request_reconciliation`. The server constructs the trusted scoped replay
@@ -229,5 +230,5 @@ DELETE, cascade delete, expiry, and key reuse are prohibited during Sprint 15.
 Receipts contain bounded structured facts only. Raw request or provider payload, bearer token,
 secret, credential, arbitrary JSON, internal exception, and SQL/error detail are prohibited. A
 receipt and local mutation commit or roll back together. This boundary does not guarantee external
-business-effect exactly-once. Production persistence, migration `0021`, facade, routes,
-`app.runtime.api`, outbox, Workers, and CP10 remain unimplemented.
+business-effect exactly-once. The trusted facade, routes, `app.runtime.api`, outbox, Workers, and
+CP10 remain unimplemented.

@@ -83,8 +83,8 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9-Gate-Runtime-Permission-Fact-Resolver | Merged, PR #70 | Caller-owned transaction, fixed lock order, exact live `RolePermission`, no cache or ledger authority. |
 | CP9-Gate-Transport-Idempotency-Governance | Merged, PR #71 | ADR-090 fixes mutation scope, trusted scoped replay identity, explicit command version, canonical digest, immutable receipt, and advisory-lock linearization. |
 | CP9-Gate-Transport-Idempotency-Contracts | Merged, PR #72 | Bounded command version, explicit commit facts, atomic commit protocol, and exact replay equality; no production persistence. |
-| CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction | Implemented, pending review | Lock and receipt resolution precede one bounded local mutation; replay and conflict invoke none. |
-| CP9 Production Transport Idempotency | Planned / Blocked | Model, service, contract change, and planned migration `20260808_0021_runtime_api_idempotency.py` remain unimplemented. |
+| CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction | Merged, PR #73 | Lock and receipt resolution precede one bounded local mutation; replay and conflict invoke none. |
+| CP9 Production Transport Idempotency | Implemented, pending review | Immutable model, transaction-bound service, and migration `20260808_0021_runtime_api_idempotency.py` are implemented. |
 | CP9 Runtime API | Planned / Blocked | Production routes remain blocked on transport idempotency persistence and the trusted application facade. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
@@ -93,7 +93,7 @@ governed CP7 Orchestration; deterministic fake and dry-run Adapters; and Postgre
 CP8 delivery Persistence now includes lifecycle, claim, retry, dead-letter, and reconciliation
 storage. Persistence PR #53, Lifecycle Port conformance PR #54, Governed Delivery Orchestration PR #55,
 Alembic blocker PR #56, projection-cardinality blocker PR #57, and Runtime Delivery Acceptance
-PR #58 are merged. Migration head is `20260808_0020`, and CP8 Runtime Delivery is complete. No real external adapter, runtime API, Worker, queue, polling
+PR #58 are merged. Migration head is `20260808_0021`, and CP8 Runtime Delivery is complete. No real external adapter, runtime API, Worker, queue, polling
 loop, scheduler, live credential resolution, or external side effect exists.
 
 ## 5. Program work structure
@@ -648,7 +648,7 @@ does not imply a Git tag, release publication, production enablement, or Sprint 
 PR #65 merged the definition-only Runtime permission gate. PR #66 accepted ADR-088 governance and
 PR #67 merged the contracts, `runtime_permission_grant_events` ledger, service, model, migration
 `20260808_0020_runtime_permission_grant_governance.py`, and PostgreSQL acceptance. The current
-migration head is `20260808_0020`. `runtime.grant.manage` remains definition-only with automatic
+migration `20260808_0020` is preserved below the current `20260808_0021` head. `runtime.grant.manage` remains definition-only with automatic
 grant 0; the migration infers no actor/provenance backfill and fails closed for existing managed
 grants and populated downgrade.
 
@@ -682,9 +682,9 @@ mutation and immutable receipt write. Receipts are append-only, have no expiry o
 and store no raw payload, token, secret, credential, provider body, arbitrary JSON, exception, or
 SQL detail. This does not promise external business-effect exactly-once.
 
-Production transport idempotency and migration `20260808_0021_runtime_api_idempotency.py` remain
-Planned / Blocked. The migration is planned only; this gate creates no model, service, facade,
-route, Worker, queue, scheduler, `app.runtime.api`, `app.runtime.outbox`, or CP10 implementation.
+Production transport idempotency and migration `20260808_0021_runtime_api_idempotency.py` are
+implemented, pending review. The trusted facade and routes remain Planned / Blocked; no Worker,
+queue, scheduler, `app.runtime.api`, `app.runtime.outbox`, or CP10 implementation is created.
 
 ### CP9 Runtime permission-fact resolver governance
 
