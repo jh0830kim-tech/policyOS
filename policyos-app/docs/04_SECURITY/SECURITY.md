@@ -235,7 +235,8 @@ CP10 remain unimplemented.
 
 ## Sprint 15 CP9 trusted application facade security boundary
 
-ADR-091 requires routes to call only the trusted application facade and forbids routes from
+ADR-091 governance merged in PR #75. Its contract amendment is implemented, pending review, without
+creating a production facade or route. ADR-091 requires routes to call only the trusted application facade and forbids routes from
 constructing principal, scope, permission, replay identity, or digest facts. The facade owns the
 single `AsyncSession` transaction spanning principal and scope resolution, exact permission, the
 bounded local read or mutation, and idempotency lookup and staging. Permission locks remain held
@@ -257,3 +258,12 @@ Plan, State progression, Registry, or Audit. Errors remain bounded as generic `4
 `404`, bounded `403`/other `4xx`, `429`, `503`, or generic `500`, with no secret, raw body, SQL,
 topology, receipt internals, or chain-of-thought disclosure. Production facade, routes, CP10,
 external effects, `app.runtime.api`, and `app.runtime.outbox` remain blocked.
+
+The service-layer input contracts are strict, frozen, transport-safe, and independent of FastAPI or
+HTTP objects. Verified claims, the organization selector, and explicit immutable server facts are
+separate facade parameters. Inputs cannot select tenant, principal, membership, permission,
+authority, digest, receipt identity, UUID, or timestamp. Server facts have no defaults, generated
+identifiers, or hidden clocks. Pure digest builders use only the approved fixed-order,
+length-prefixed UTF-8 submission or reconciliation fact set. Query operations have no mutation
+digest. The remaining order is contract amendment, production facade, routes, PostgreSQL/HTTP
+acceptance, CP9 closeout, then separately approved CP10.

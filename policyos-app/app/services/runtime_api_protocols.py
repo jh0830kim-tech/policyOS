@@ -2,18 +2,23 @@
 
 from typing import Protocol, runtime_checkable
 
+from app.core.auth_claims import VerifiedAccessTokenClaims
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
     RuntimeApiIdempotencyCommitFacts,
     RuntimeApiIdempotencyCommitResult,
-    RuntimeApiInvocationQuery,
+    RuntimeApiInvocationQueryFacts,
+    RuntimeApiInvocationQueryInput,
+    RuntimeApiOrganizationSelector,
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
-    RuntimeApiReconciliationCommand,
+    RuntimeApiReconciliationFacts,
+    RuntimeApiReconciliationInput,
     RuntimeApiReconciliationResult,
     RuntimeApiSafeResult,
     RuntimeApiStatusProjection,
-    RuntimeApiSubmissionCommand,
+    RuntimeApiSubmissionFacts,
+    RuntimeApiSubmissionInput,
     RuntimeApiSubmissionResult,
     RuntimeApiTrustedPrincipal,
     RuntimeApiTrustedScope,
@@ -23,15 +28,27 @@ from app.services.runtime_api_contracts import (
 @runtime_checkable
 class RuntimeApiApplicationFacade(Protocol):
     async def submit_invocation(
-        self, command: RuntimeApiSubmissionCommand
+        self,
+        request: RuntimeApiSubmissionInput,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        facts: RuntimeApiSubmissionFacts,
     ) -> RuntimeApiSubmissionResult: ...
 
     async def get_invocation(
-        self, query: RuntimeApiInvocationQuery
+        self,
+        request: RuntimeApiInvocationQueryInput,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        facts: RuntimeApiInvocationQueryFacts,
     ) -> RuntimeApiStatusProjection: ...
 
     async def request_reconciliation(
-        self, command: RuntimeApiReconciliationCommand
+        self,
+        request: RuntimeApiReconciliationInput,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        facts: RuntimeApiReconciliationFacts,
     ) -> RuntimeApiReconciliationResult: ...
 
 

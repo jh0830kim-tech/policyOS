@@ -26,6 +26,10 @@ class RuntimeApiPermission(StrEnum):
     RECONCILE = "runtime.reconcile"
 
 
+class RuntimeApiOrganizationSelector(RuntimeApiModel):
+    organization_id: UUID
+
+
 class RuntimeApiOperation(StrEnum):
     SUBMIT_INVOCATION = "submit_invocation"
     GET_INVOCATION = "get_invocation"
@@ -116,6 +120,67 @@ class RuntimeApiCommandIdentity(RuntimeApiModel):
     idempotency_key: IdempotencyKey
     command_digest: BoundedDigest
     correlation_reference: BoundedReference
+
+
+class RuntimeApiSubmissionInput(RuntimeApiModel):
+    action_reference: BoundedReference
+    command_reference: BoundedReference
+    input_reference: BoundedReference | None = None
+    classification: DataClassification
+    idempotency_key: IdempotencyKey
+
+
+class RuntimeApiInvocationQueryInput(RuntimeApiModel):
+    invocation_reference: BoundedReference
+
+
+class RuntimeApiReconciliationInput(RuntimeApiModel):
+    invocation_reference: BoundedReference
+    reconciliation_reference: BoundedReference
+    idempotency_key: IdempotencyKey
+
+
+class RuntimeApiSubmissionFacts(RuntimeApiModel):
+    command_id: UUID
+    command_version: CommandVersion
+    receipt_id: UUID
+    committed_at: datetime
+    correlation_reference: BoundedReference
+
+    @field_validator("committed_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("committed_at must be timezone-aware")
+        return value
+
+
+class RuntimeApiInvocationQueryFacts(RuntimeApiModel):
+    query_id: UUID
+    requested_at: datetime
+    correlation_reference: BoundedReference
+
+    @field_validator("requested_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("requested_at must be timezone-aware")
+        return value
+
+
+class RuntimeApiReconciliationFacts(RuntimeApiModel):
+    command_id: UUID
+    command_version: CommandVersion
+    receipt_id: UUID
+    committed_at: datetime
+    correlation_reference: BoundedReference
+
+    @field_validator("committed_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("committed_at must be timezone-aware")
+        return value
 
 
 class RuntimeApiSubmissionCommand(RuntimeApiModel):
@@ -231,18 +296,25 @@ __all__ = (
     "RuntimeApiIdempotencyCommitResult",
     "RuntimeApiIdempotencyDisposition",
     "RuntimeApiIdempotencyReceipt",
+    "RuntimeApiInvocationQueryFacts",
+    "RuntimeApiInvocationQueryInput",
     "RuntimeApiInvocationQuery",
     "RuntimeApiModel",
     "RuntimeApiOperation",
+    "RuntimeApiOrganizationSelector",
     "RuntimeApiPermission",
     "RuntimeApiPermissionFact",
     "RuntimeApiPublicStatus",
     "RuntimeApiReconciliationCommand",
+    "RuntimeApiReconciliationFacts",
+    "RuntimeApiReconciliationInput",
     "RuntimeApiReconciliationResult",
     "RuntimeApiSafeError",
     "RuntimeApiSafeResult",
     "RuntimeApiStatusProjection",
     "RuntimeApiSubmissionCommand",
+    "RuntimeApiSubmissionFacts",
+    "RuntimeApiSubmissionInput",
     "RuntimeApiSubmissionResult",
     "RuntimeApiTrustedPrincipal",
     "RuntimeApiTrustedScope",

@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.ai.privacy import DataClassification
+from app.core.auth_claims import VerifiedAccessTokenClaims
 from app.schemas.runtime_api import RuntimeInvocationSubmitRequest
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
@@ -17,13 +18,20 @@ from app.services.runtime_api_contracts import (
     RuntimeApiIdempotencyCommitResult,
     RuntimeApiIdempotencyDisposition,
     RuntimeApiIdempotencyReceipt,
+    RuntimeApiInvocationQueryFacts,
+    RuntimeApiInvocationQueryInput,
     RuntimeApiOperation,
+    RuntimeApiOrganizationSelector,
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
     RuntimeApiPublicStatus,
+    RuntimeApiReconciliationFacts,
+    RuntimeApiReconciliationInput,
     RuntimeApiSafeResult,
     RuntimeApiStatusProjection,
     RuntimeApiSubmissionCommand,
+    RuntimeApiSubmissionFacts,
+    RuntimeApiSubmissionInput,
     RuntimeApiSubmissionResult,
     RuntimeApiTrustedPrincipal,
     RuntimeApiTrustedScope,
@@ -35,6 +43,10 @@ from app.services.runtime_api_protocols import (
     RuntimeApiTrustedContextResolver,
 )
 from app.services.runtime_api_validation import (
+    RUNTIME_API_OPERATION_PERMISSIONS,
+    build_runtime_api_reconciliation_digest,
+    build_runtime_api_submission_digest,
+    required_runtime_api_permission,
     validate_runtime_api_commit_result,
     validate_runtime_api_idempotency_replay,
     validate_runtime_api_public_status,
@@ -46,6 +58,17 @@ TENANT = UUID("00000000-0000-0000-0000-000000000101")
 ORG = UUID("00000000-0000-0000-0000-000000000102")
 PRINCIPAL = UUID("00000000-0000-0000-0000-000000000103")
 MEMBERSHIP = UUID("00000000-0000-0000-0000-000000000104")
+
+
+def claims():
+    return VerifiedAccessTokenClaims(
+        subject="subject-1",
+        jti_reference="jti-1",
+        verified_issuer="issuer-1",
+        verified_audiences=("runtime-api",),
+        issued_at=NOW,
+        expires_at=datetime(2026, 8, 7, tzinfo=UTC),
+    )
 
 
 def principal():
@@ -233,8 +256,8 @@ def test_ambiguous_status_is_not_success() -> None:
 
 
 class Facade:
-    async def submit_invocation(self, command):
-        item = receipt(command.identity)
+    async def submit_invocation(self, request, claims, organization, facts):
+        item = receipt()
         return RuntimeApiSubmissionResult(
             idempotency=RuntimeApiIdempotencyCommitResult(
                 disposition=RuntimeApiIdempotencyDisposition.COMMITTED,
@@ -243,10 +266,10 @@ class Facade:
             )
         )
 
-    async def get_invocation(self, query):
+    async def get_invocation(self, request, claims, organization, facts):
         return safe_result().projection
 
-    async def request_reconciliation(self, command):
+    async def request_reconciliation(self, request, claims, organization, facts):
         return None
 
 
@@ -297,6 +320,178 @@ def test_protocol_structural_conformance() -> None:
         "identity",
         "facts",
         "mutation",
+    )
+
+
+def test_facade_accepts_only_outer_boundary_contracts_and_explicit_facts() -> None:
+    expected = ("self", "request", "claims", "organization", "facts")
+    assert tuple(signature(RuntimeApiApplicationFacade.submit_invocation).parameters) == expected
+    assert tuple(signature(RuntimeApiApplicationFacade.get_invocation).parameters) == expected
+    assert (
+        tuple(signature(RuntimeApiApplicationFacade.request_reconciliation).parameters) == expected
+    )
+    annotations = RuntimeApiApplicationFacade.submit_invocation.__annotations__
+    assert annotations["request"] is RuntimeApiSubmissionInput
+    assert annotations["claims"] is VerifiedAccessTokenClaims
+    assert annotations["organization"] is RuntimeApiOrganizationSelector
+    assert annotations["facts"] is RuntimeApiSubmissionFacts
+    assert "command" not in signature(RuntimeApiApplicationFacade.submit_invocation).parameters
+    assert "query" not in signature(RuntimeApiApplicationFacade.get_invocation).parameters
+
+
+def test_transport_safe_service_inputs_are_strict_frozen_and_untrusted_only() -> None:
+    submission = RuntimeApiSubmissionInput(
+        action_reference="action-1",
+        command_reference="command-1",
+        classification=DataClassification.INTERNAL,
+        idempotency_key="key-1",
+    )
+    with pytest.raises(ValidationError):
+        submission.action_reference = "action-2"
+    forbidden = {
+        "tenant_id",
+        "principal_id",
+        "membership_id",
+        "permission",
+        "authority",
+        "command_digest",
+        "receipt_id",
+        "command_id",
+        "trusted_scope",
+        "timestamp",
+        "committed_at",
+    }
+    for model in (
+        RuntimeApiSubmissionInput,
+        RuntimeApiInvocationQueryInput,
+        RuntimeApiReconciliationInput,
+    ):
+        assert forbidden.isdisjoint(model.model_fields)
+    assert claims().subject == "subject-1"
+
+
+def test_explicit_facade_facts_are_strict_complete_and_timezone_aware() -> None:
+    submission = RuntimeApiSubmissionFacts(
+        command_id=UUID("00000000-0000-0000-0000-000000000108"),
+        command_version="v1",
+        receipt_id=UUID("00000000-0000-0000-0000-000000000109"),
+        committed_at=NOW,
+        correlation_reference="correlation-1",
+    )
+    assert submission.committed_at is NOW
+    with pytest.raises(ValidationError):
+        RuntimeApiSubmissionFacts.model_validate(
+            {**submission.model_dump(), "committed_at": datetime(2026, 8, 8)}
+        )
+    with pytest.raises(ValidationError):
+        RuntimeApiSubmissionFacts.model_validate(
+            {key: value for key, value in submission.model_dump().items() if key != "receipt_id"}
+        )
+    with pytest.raises(ValidationError):
+        RuntimeApiSubmissionFacts.model_validate({**submission.model_dump(), "extra": "no"})
+    query = RuntimeApiInvocationQueryFacts(
+        query_id=UUID("00000000-0000-0000-0000-000000000110"),
+        requested_at=NOW,
+        correlation_reference="correlation-1",
+    )
+    reconciliation = RuntimeApiReconciliationFacts(
+        command_id=UUID("00000000-0000-0000-0000-000000000111"),
+        command_version="v1",
+        receipt_id=UUID("00000000-0000-0000-0000-000000000112"),
+        committed_at=NOW,
+        correlation_reference="correlation-1",
+    )
+    assert query.requested_at is NOW
+    assert reconciliation.committed_at is NOW
+
+
+def test_operation_permission_mapping_is_exact_and_server_owned() -> None:
+    assert RUNTIME_API_OPERATION_PERMISSIONS == (
+        (RuntimeApiOperation.GET_INVOCATION, RuntimeApiPermission.READ),
+        (RuntimeApiOperation.SUBMIT_INVOCATION, RuntimeApiPermission.INVOKE),
+        (RuntimeApiOperation.REQUEST_RECONCILIATION, RuntimeApiPermission.RECONCILE),
+    )
+    for operation, permission_value in RUNTIME_API_OPERATION_PERMISSIONS:
+        assert required_runtime_api_permission(operation) is permission_value
+
+
+def test_canonical_mutation_digests_are_deterministic_and_operation_specific() -> None:
+    submission = RuntimeApiSubmissionInput(
+        action_reference="action-1",
+        command_reference="command-1",
+        classification=DataClassification.INTERNAL,
+        idempotency_key="key-1",
+    )
+    submission_facts = RuntimeApiSubmissionFacts(
+        command_id=UUID("00000000-0000-0000-0000-000000000108"),
+        command_version="v1",
+        receipt_id=UUID("00000000-0000-0000-0000-000000000109"),
+        committed_at=NOW,
+        correlation_reference="correlation-1",
+    )
+    first = build_runtime_api_submission_digest(submission, facts=submission_facts)
+    assert first == build_runtime_api_submission_digest(submission, facts=submission_facts)
+    assert first.startswith("sha256:") and len(first) == 71
+    present = submission.model_copy(update={"input_reference": "input-1"})
+    assert first != build_runtime_api_submission_digest(present, facts=submission_facts)
+    reconciliation = RuntimeApiReconciliationInput(
+        invocation_reference="invocation-1",
+        reconciliation_reference="reconciliation-1",
+        idempotency_key="key-1",
+    )
+    reconciliation_facts = RuntimeApiReconciliationFacts(
+        command_id=UUID("00000000-0000-0000-0000-000000000111"),
+        command_version="v1",
+        receipt_id=UUID("00000000-0000-0000-0000-000000000112"),
+        committed_at=NOW,
+        correlation_reference="correlation-1",
+    )
+    reconciliation_digest = build_runtime_api_reconciliation_digest(
+        reconciliation, facts=reconciliation_facts
+    )
+    assert reconciliation_digest.startswith("sha256:")
+    assert reconciliation_digest != first
+    assert "command_digest" not in RuntimeApiInvocationQueryInput.model_fields
+    assert "command_digest" not in RuntimeApiInvocationQueryFacts.model_fields
+
+    changed_submission_fields = (
+        submission.model_copy(update={"action_reference": "action-2"}),
+        submission.model_copy(update={"command_reference": "command-2"}),
+        submission.model_copy(update={"classification": DataClassification.CONFIDENTIAL}),
+    )
+    assert all(
+        build_runtime_api_submission_digest(item, facts=submission_facts) != first
+        for item in changed_submission_fields
+    )
+    assert (
+        build_runtime_api_submission_digest(
+            submission.model_copy(update={"idempotency_key": "key-2"}), facts=submission_facts
+        )
+        == first
+    )
+    assert (
+        build_runtime_api_submission_digest(
+            submission,
+            facts=submission_facts.model_copy(update={"command_version": "v2"}),
+        )
+        != first
+    )
+    for field, value in (
+        ("invocation_reference", "invocation-2"),
+        ("reconciliation_reference", "reconciliation-2"),
+    ):
+        assert (
+            build_runtime_api_reconciliation_digest(
+                reconciliation.model_copy(update={field: value}), facts=reconciliation_facts
+            )
+            != reconciliation_digest
+        )
+    assert (
+        build_runtime_api_reconciliation_digest(
+            reconciliation.model_copy(update={"idempotency_key": "key-2"}),
+            facts=reconciliation_facts,
+        )
+        == reconciliation_digest
     )
 
 

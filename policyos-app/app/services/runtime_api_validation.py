@@ -1,5 +1,6 @@
 """Pure fail-closed validation for CP9 Runtime API contracts."""
 
+from hashlib import sha256
 from uuid import UUID
 
 from app.ai.privacy import DataClassification
@@ -12,23 +13,76 @@ from app.services.runtime_api_contracts import (
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
     RuntimeApiPublicStatus,
+    RuntimeApiReconciliationFacts,
+    RuntimeApiReconciliationInput,
     RuntimeApiSafeError,
     RuntimeApiSubmissionCommand,
+    RuntimeApiSubmissionFacts,
+    RuntimeApiSubmissionInput,
     RuntimeApiTrustedPrincipal,
     RuntimeApiTrustedScope,
 )
 
-_REQUIRED_PERMISSION = {
-    RuntimeApiOperation.SUBMIT_INVOCATION: RuntimeApiPermission.INVOKE,
-    RuntimeApiOperation.GET_INVOCATION: RuntimeApiPermission.READ,
-    RuntimeApiOperation.REQUEST_RECONCILIATION: RuntimeApiPermission.RECONCILE,
-}
 _CLASSIFICATION_RANK = {
     DataClassification.PUBLIC: 0,
     DataClassification.INTERNAL: 1,
     DataClassification.CONFIDENTIAL: 2,
     DataClassification.RESTRICTED: 3,
 }
+RUNTIME_API_OPERATION_PERMISSIONS = (
+    (RuntimeApiOperation.GET_INVOCATION, RuntimeApiPermission.READ),
+    (RuntimeApiOperation.SUBMIT_INVOCATION, RuntimeApiPermission.INVOKE),
+    (RuntimeApiOperation.REQUEST_RECONCILIATION, RuntimeApiPermission.RECONCILE),
+)
+
+
+def required_runtime_api_permission(operation: RuntimeApiOperation) -> RuntimeApiPermission:
+    for candidate, permission in RUNTIME_API_OPERATION_PERMISSIONS:
+        if operation is candidate:
+            return permission
+    raise RuntimeApiContractConflict("unsupported Runtime API operation")
+
+
+def _canonical_digest(fields: tuple[tuple[str, str], ...]) -> str:
+    encoded = bytearray()
+    for name, value in fields:
+        name_bytes = name.encode("utf-8")
+        value_bytes = value.encode("utf-8")
+        encoded.extend(len(name_bytes).to_bytes(4, "big"))
+        encoded.extend(name_bytes)
+        encoded.extend(len(value_bytes).to_bytes(4, "big"))
+        encoded.extend(value_bytes)
+    return f"sha256:{sha256(bytes(encoded)).hexdigest()}"
+
+
+def build_runtime_api_submission_digest(
+    request: RuntimeApiSubmissionInput, *, facts: RuntimeApiSubmissionFacts
+) -> str:
+    present = request.input_reference is not None
+    return _canonical_digest(
+        (
+            ("operation", RuntimeApiOperation.SUBMIT_INVOCATION.value),
+            ("command_version", facts.command_version),
+            ("action_reference", request.action_reference),
+            ("command_reference", request.command_reference),
+            ("input_reference_present", "true" if present else "false"),
+            ("input_reference_value", request.input_reference if present else ""),
+            ("classification", request.classification.value),
+        )
+    )
+
+
+def build_runtime_api_reconciliation_digest(
+    request: RuntimeApiReconciliationInput, *, facts: RuntimeApiReconciliationFacts
+) -> str:
+    return _canonical_digest(
+        (
+            ("operation", RuntimeApiOperation.REQUEST_RECONCILIATION.value),
+            ("command_version", facts.command_version),
+            ("invocation_reference", request.invocation_reference),
+            ("reconciliation_reference", request.reconciliation_reference),
+        )
+    )
 
 
 def validate_runtime_api_principal(
@@ -63,7 +117,7 @@ def validate_runtime_api_permission(
     principal: RuntimeApiTrustedPrincipal,
     scope: RuntimeApiTrustedScope,
 ) -> RuntimeApiPermissionFact:
-    if fact.permission is not _REQUIRED_PERMISSION[operation]:
+    if fact.permission is not required_runtime_api_permission(operation):
         raise RuntimeApiContractConflict("operation requires an exact Runtime permission")
     if (
         fact.principal_id != principal.principal_id
@@ -146,6 +200,10 @@ def validate_runtime_api_safe_error(error: RuntimeApiSafeError) -> RuntimeApiSaf
 
 
 __all__ = (
+    "RUNTIME_API_OPERATION_PERMISSIONS",
+    "build_runtime_api_reconciliation_digest",
+    "build_runtime_api_submission_digest",
+    "required_runtime_api_permission",
     "validate_runtime_api_commit_result",
     "validate_runtime_api_idempotency_replay",
     "validate_runtime_api_permission",
