@@ -171,3 +171,30 @@ transaction. `runtime.grant.manage` is definition-only with zero automatic grant
 receipt-stable, conflicting replay and concurrent state changes fail closed, and transport,
 permission-fact resolution, application facade/routes, outbox, and CP10 remain deferred.
 Production grant/revoke provisioning merged in PR #67; bootstrap authority remains external.
+
+## Sprint 15 CP9 Runtime permission-fact resolution governance
+
+ADR-089 requires the trusted application facade, not HTTP transport, to choose the exact Runtime
+permission for each operation: `get_invocation` requires `runtime.read`, `submit_invocation`
+requires `runtime.invoke`, and `request_reconciliation` requires `runtime.reconcile`. A client
+cannot provide or override this mapping. Wildcard, prefix, substring, `rbac:manage`, and
+`runtime.grant.manage` forms cannot substitute.
+
+The production resolver will read the current `RolePermission` projection through an active user,
+active membership, active organization, exact active Tenant-Organization binding, one or more
+organization-scoped roles, and the exact permission definition. The append-only grant ledger is
+provenance and history, not active authority. Multiple valid role paths do not broaden the fact,
+and the public response discloses no role topology, grant history, tenant existence, or SQL detail.
+
+Permission resolution occurs for every operation with no positive or negative cache. Resolution
+and the bounded local application read or commit must share a database transaction and fixed lock
+order. A revoke committed first denies; a request holding the active projection lock completes its
+bounded local operation before revoke commits. Permission facts are ephemeral decision evidence,
+never bearer capabilities or reusable session facts, and are neither returned to nor accepted
+from transport.
+
+Missing, inactive, revoked, mismatched, or cross-scope facts fail closed. Authentication remains a
+generic `401`, trusted scope failures remain non-disclosing `404`, and missing permission maps to a
+bounded `403` without membership, binding, role, grant, tenant, or database details. The governance
+gate adds no production resolver, migration, facade, route, Worker, queue, polling loop, scheduler,
+`app.runtime.api`, or `app.runtime.outbox`. CP9 remains Planned / Blocked.

@@ -6,7 +6,7 @@ This document is the operational control plane for the Sprint 15 Runtime program
 checkpoint work, defines evidence required to enter and complete each checkpoint, and prevents a
 later runtime layer from being implemented before its dependencies and governance decisions are
 ready. It does not supersede `AGENTS.md`, the normative Sprint 15 Runtime Architecture Rules, or
-ADR-065 through ADR-087. A conflict is recorded under Governance decisions and resolved
+ADR-065 through ADR-089. A conflict is recorded under Governance decisions and resolved
 before implementation through the appropriate governance change.
 
 Status terms are used precisely:
@@ -46,7 +46,7 @@ revalidated immediately before the effect.
 
 ## 4. Current baseline
 
-The baseline is `main` after merged governed Runtime grant provisioning PR #67.
+The baseline is `main` after merged grant-provisioning closeout PR #68.
 
 | Checkpoint | Status | Evidence |
 | --- | --- | --- |
@@ -79,6 +79,7 @@ The baseline is `main` after merged governed Runtime grant provisioning PR #67.
 | CP9-Gate-Runtime-Permission-Definitions | Merged in PR #65 | Definition-only exact Runtime permissions. No automatic grants, wildcard, or existing role/membership backfill. |
 | CP9-Gate-Runtime-Grant-Governance | Merged in PR #66 | ADR-088 fixes `runtime.grant.manage`, append-only evidence, replay, scope, bootstrap, and atomic transaction policy. |
 | CP9-Gate-Runtime-Grant-Provisioning | Merged in PR #67 | Governed projection and ledger persistence, exact replay, scoped authority revalidation, fail-closed migration, concurrency, and PostgreSQL 16 evidence. |
+| CP9-Gate-Runtime-Permission-Fact-Resolver-Governance | Implemented, pending review | ADR-089 fixes exact server-owned permission mapping, live projection resolution, non-disclosure, transaction use, and revocation linearization. |
 | CP9 Runtime API | Planned / Blocked | Production routes remain blocked on the Runtime permission-fact resolver, transport idempotency persistence, and the trusted application facade. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
@@ -458,9 +459,9 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP9 - Runtime API
 
-- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` in PR #61, `CP9-Gate-Auth-Claims` in PR #62, Tenant-Organization Binding Governance in PR #63, Binding in PR #64, Runtime permission definitions in PR #65, grant governance in PR #66, and grant provisioning in PR #67. No Runtime production route or facade implementation exists.
+- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` in PR #61, `CP9-Gate-Auth-Claims` in PR #62, Tenant-Organization Binding Governance in PR #63, Binding in PR #64, Runtime permission definitions in PR #65, grant governance in PR #66, grant provisioning in PR #67, and its closeout in PR #68. ADR-089 permission-fact resolver governance is implemented, pending review. No Runtime production resolver, route, or facade implementation exists.
 - **Purpose:** Expose authenticated, organization-scoped transport schemas over the approved trusted application facade and Runtime Orchestration boundary.
-- **Entry conditions:** The persisted lifetime binding and trusted binding resolver are merged, and exact Runtime permission definitions plus governed grant/revoke provisioning are merged through PR #67. Sprint 15 uses a lifetime one-to-one binding, explicit administrative provisioning, no automatic backfill, no transport tenant-ID input, no privileged bypass, an immutable persisted classification ceiling, and fail-closed organizations without bindings. The production Runtime permission-fact resolver, transport idempotency persistence, and a stable trusted application facade remain production blockers.
+- **Entry conditions:** The persisted lifetime binding and trusted binding resolver are merged, and exact Runtime permission definitions plus governed grant/revoke provisioning are merged through PR #67. Sprint 15 uses a lifetime one-to-one binding, explicit administrative provisioning, no automatic backfill, no transport tenant-ID input, no privileged bypass, an immutable persisted classification ceiling, and fail-closed organizations without bindings. ADR-089 governs server-owned exact permission mapping, live `RolePermission` projection resolution, per-operation no-cache behavior, and transaction-bound revocation linearization. The production Runtime permission-fact resolver, transport idempotency persistence, and a stable trusted application facade remain production blockers.
 - **Binding implementation acceptance:** Model/migration parity; PostgreSQL 16 fresh and existing upgrade; lifetime 1:1 uniqueness; concurrent provisioning conflict; missing, inactive, and revoked binding rejection; exact trusted-scope equality; cross-tenant and cross-organization non-disclosure; and no route, facade, or permission expansion.
 - **Allowed outputs:** After the contracts gate, bounded routes in `app.api`, strict schemas in `app.schemas`, trusted application-facade integration, dependencies, and transport tests.
 - **Package placement:** Routes belong in `app.api`, schemas in `app.schemas`, and the trusted facade sits between API and Runtime Orchestration. `app.runtime.api` is prohibited.
@@ -651,6 +652,20 @@ bootstrap/operator procedure outside the public Runtime API. Production routes r
 until the production Runtime permission fact resolver, transport idempotency persistence, and the
 trusted application facade are complete. CP9 Runtime API: Planned / Blocked.
 CP10: Planned.
+
+### CP9 Runtime permission-fact resolver governance
+
+ADR-089 fixes `get_invocation → runtime.read`, `submit_invocation → runtime.invoke`, and
+`request_reconciliation → runtime.reconcile` as server-owned mappings. Resolution uses the live
+`RolePermission` projection through an active membership, organization-scoped role, and exact
+permission definition inside the trusted principal, organization, tenant, membership, and binding
+scope. The append-only grant ledger is history and cannot substitute for active authority.
+
+Positive and negative permission results are not cached. Resolution and the bounded local
+application read or commit share one database transaction so grant/revoke races linearize without
+a stale permission fact crossing requests. Missing, inactive, revoked, cross-scope, wildcard,
+prefix, substring, and permission-substitution cases fail closed without role, grant, tenant, or
+SQL disclosure. This governance gate adds no resolver, migration, facade, route, Worker, or queue.
 
 ### CP9 governed Runtime permission provisioning
 

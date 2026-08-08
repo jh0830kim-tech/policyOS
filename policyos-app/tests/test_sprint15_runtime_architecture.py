@@ -439,3 +439,45 @@ def test_cp9_grant_provisioning_keeps_transport_and_resolver_deferred() -> None:
     source = "\n".join(path.read_text(encoding="utf-8") for path in files)
     for forbidden in ("FastAPI", "app.runtime.api", "outbox", "Idempotency", "resolver"):
         assert forbidden not in source
+
+
+def test_cp9_permission_fact_resolver_governance_precedes_production_resolution() -> None:
+    adr = ADR / "ADR-089-CP9-RUNTIME-PERMISSION-FACT-RESOLUTION-AND-REVOCATION-LINEARIZATION.md"
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
+    text = adr.read_text(encoding="utf-8")
+    normalized = " ".join(text.split())
+    combined = " ".join("".join((roadmap, program, security)).split())
+
+    assert adr.is_file()
+    assert "**Status:** Proposed" in text
+    assert "CP9-Gate-Runtime-Permission-Fact-Resolver-Governance" in combined
+    assert "Implemented, pending review" in combined
+    for mapping in (
+        "get_invocation` | `runtime.read",
+        "submit_invocation` | `runtime.invoke",
+        "request_reconciliation` | `runtime.reconcile",
+    ):
+        assert mapping in normalized
+    for phrase in (
+        "server-owned operation mapping",
+        "RolePermission` is the only active permission projection",
+        "Positive and negative permission results are not cached",
+        "share one database transaction and session",
+        "if revocation commits first, resolution denies",
+        "runtime_permission_denied",
+        "requires no migration",
+    ):
+        assert phrase in normalized
+
+    assert (ROOT / "app" / "services" / "runtime_api_contracts.py").is_file()
+    assert (ROOT / "app" / "services" / "runtime_api_protocols.py").is_file()
+    assert not (ROOT / "app" / "services" / "runtime_permission_facts.py").exists()
+    assert not any(
+        path.name.startswith("20260808_0021")
+        for path in (ROOT / "alembic" / "versions").glob("*.py")
+    )
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "app" / "runtime" / "api").exists()
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()

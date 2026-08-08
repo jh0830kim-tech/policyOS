@@ -141,6 +141,7 @@ grants permission or causes automatic execution.
 | CP9-Gate-Runtime-Permission-Definitions | Merged, PR #65 | RBAC definitions | Definition-only persistence of exact `runtime.read`, `runtime.invoke`, and `runtime.reconcile` permissions in migration `20260807_0019` | No automatic grants or existing role/membership backfill |
 | CP9-Gate-Runtime-Grant-Governance | Merged, PR #66 | RBAC grant governance | ADR-088 fixes exact management authority, immutable append-only ledger, replay, scope, and transaction semantics | Governance precedes production provisioning |
 | CP9-Gate-Runtime-Grant-Provisioning | Merged, PR #67 | RBAC grant persistence | Atomic projection and append-only ledger, exact replay, scoped authority revalidation, concurrency, and PostgreSQL 16 evidence | Automatic management grants remain zero |
+| CP9-Gate-Runtime-Permission-Fact-Resolver-Governance | Implemented, pending review | RBAC resolution governance | ADR-089 fixes server-owned operation mapping, live projection authority, non-disclosure, and revocation linearization | No production resolver, facade, or route |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires a Runtime permission-fact resolver, transport idempotency persistence, and stable facade |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -155,10 +156,11 @@ remain prohibited.
 
 The required implementation order is:
 
-1. Production Runtime permission fact resolver.
-2. Transport idempotency persistence.
-3. Trusted application facade.
-4. Production Runtime routes.
+1. Merge ADR-089 Runtime permission-fact resolver governance.
+2. Implement and validate the production Runtime permission-fact resolver.
+3. Transport idempotency persistence.
+4. Trusted application facade.
+5. Production Runtime routes.
 
 
 ## 6. Boundary input and output contracts
@@ -461,6 +463,11 @@ CP9-Gate-Runtime-Permission-Definitions merged in PR #65, grant governance merge
 governed grant provisioning merged in PR #67. CP9 Runtime API remains Planned / Blocked pending the
 permission-fact resolver, transport idempotency persistence, trusted application facade, and
 production routes. CP10 remains Planned.
+
+ADR-089 proposes live permission-fact resolution from the current `RolePermission` projection,
+server-owned operation-to-permission mapping, per-operation resolution without caches, and a shared
+transaction boundary that linearizes local requests with grant and revoke commits. The governance
+gate is implemented, pending review; no production resolver, facade, route, or migration is added.
 
 ### CP9 governed Runtime permission provisioning
 
