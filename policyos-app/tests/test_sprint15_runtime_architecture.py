@@ -473,7 +473,30 @@ def test_cp9_permission_fact_resolver_governance_precedes_production_resolution(
 
     assert (ROOT / "app" / "services" / "runtime_api_contracts.py").is_file()
     assert (ROOT / "app" / "services" / "runtime_api_protocols.py").is_file()
-    assert not (ROOT / "app" / "services" / "runtime_permission_facts.py").exists()
+    resolver = ROOT / "app" / "services" / "runtime_permission_facts.py"
+    assert resolver.is_file()
+    resolver_source = resolver.read_text(encoding="utf-8")
+    assert "RuntimePermissionGrantEvent" not in resolver_source
+    assert "commit(" not in resolver_source and "rollback(" not in resolver_source
+    assert not any(
+        path.name.startswith("20260808_0021")
+        for path in (ROOT / "alembic" / "versions").glob("*.py")
+    )
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "app" / "runtime" / "api").exists()
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()
+
+
+def test_cp9_permission_fact_resolver_is_additive_and_transport_free() -> None:
+    protocols = (ROOT / "app" / "services" / "runtime_api_protocols.py").read_text(encoding="utf-8")
+    resolver = (ROOT / "app" / "services" / "runtime_permission_facts.py").read_text(
+        encoding="utf-8"
+    )
+    assert "class RuntimeApiPermissionFactResolver(Protocol)" in protocols
+    assert "class SQLAlchemyRuntimeApiPermissionFactResolver" in resolver
+    assert "caller-owned transaction is required" in resolver
+    for forbidden in ("FastAPI", "cache", "uuid4", "datetime.now", "RuntimePermissionGrantEvent"):
+        assert forbidden not in resolver
     assert not any(
         path.name.startswith("20260808_0021")
         for path in (ROOT / "alembic" / "versions").glob("*.py")
