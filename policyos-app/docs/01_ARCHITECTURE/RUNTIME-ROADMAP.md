@@ -141,26 +141,29 @@ grants permission or causes automatic execution.
 | CP9-Gate-Runtime-Permission-Definitions | Merged, PR #65 | RBAC definitions | Definition-only persistence of exact `runtime.read`, `runtime.invoke`, and `runtime.reconcile` permissions in migration `20260807_0019` | No automatic grants or existing role/membership backfill |
 | CP9-Gate-Runtime-Grant-Governance | Merged, PR #66 | RBAC grant governance | ADR-088 fixes exact management authority, immutable append-only ledger, replay, scope, and transaction semantics | Governance precedes production provisioning |
 | CP9-Gate-Runtime-Grant-Provisioning | Merged, PR #67 | RBAC grant persistence | Atomic projection and append-only ledger, exact replay, scoped authority revalidation, concurrency, and PostgreSQL 16 evidence | Automatic management grants remain zero |
-| CP9-Gate-Runtime-Permission-Fact-Resolver-Governance | Implemented, pending review | RBAC resolution governance | ADR-089 fixes server-owned operation mapping, live projection authority, non-disclosure, and revocation linearization | Governance baseline; no facade or route |
-| CP9-Gate-Runtime-Permission-Fact-Resolver | Implemented, pending review | RBAC resolution | Transaction-bound SQLAlchemy resolution of exact live `RolePermission` facts | No cache, migration, facade, route, or transport |
-| CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires resolver review, transport idempotency persistence, and stable facade |
+| CP9-Gate-Runtime-Permission-Fact-Resolver-Governance | Merged, PR #69 | RBAC resolution governance | ADR-089 fixes server-owned operation mapping, live projection authority, non-disclosure, and revocation linearization | Governance baseline; no facade or route |
+| CP9-Gate-Runtime-Permission-Fact-Resolver | Merged, PR #70 | RBAC resolution | Transaction-bound SQLAlchemy resolution of exact live `RolePermission` facts | No cache, migration, facade, route, or transport |
+| CP9-Gate-Transport-Idempotency-Governance | Implemented, pending review | Mutation replay governance | ADR-090 fixes scoped identity, explicit command version, canonical digest, immutable receipts, and transaction linearization | Migration `0021` is planned only |
+| CP9-Transport-Idempotency | Planned / Blocked | Mutation replay persistence | Planned `runtime_api_idempotency_receipts` and migration `20260808_0021_runtime_api_idempotency.py` | Governance must merge first |
+| CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires transport idempotency persistence, stable facade, and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
 CP9 Governance / ADR-087 is merged in PR #60, API Contracts in PR #61, Auth Claims in PR #62,
 Tenant-Organization Binding Governance in PR #63, Binding in PR #64, and definition-only Runtime
 permissions in PR #65. ADR-088 governance merged in PR #66 and governed Runtime grant provisioning
-merged in PR #67 with migration head `20260808_0020`. No production Runtime permission-fact
-resolver is implemented without a route or facade. Routes remain in `app.api`; `app.runtime.api` and
+merged in PR #67 with migration head `20260808_0020`. Permission-fact resolver governance and its
+production resolver merged in PR #69 and PR #70 without a route or facade. Routes remain in
+`app.api`; `app.runtime.api` and
 `app.runtime.outbox` remain prohibited. CP9 remains Planned / Blocked, CP10 Workers remain Planned,
 and external business-effect exactly-once remains unguaranteed. Blind retry and automatic redrive
 remain prohibited.
 
 The required implementation order is:
 
-1. Review and merge the Runtime permission-fact resolver.
-2. Transport idempotency persistence.
-3. Trusted application facade.
-4. Production Runtime routes.
+1. Review and merge ADR-090 transport idempotency governance.
+2. Implement transport idempotency persistence.
+3. Implement the trusted application facade.
+4. Implement production Runtime routes.
 
 
 ## 6. Boundary input and output contracts
@@ -460,14 +463,20 @@ superseding ADRs approve different placement. Roadmap documentation does not res
 those later decisions.
 
 CP9-Gate-Runtime-Permission-Definitions merged in PR #65, grant governance merged in PR #66, and
-governed grant provisioning merged in PR #67. CP9 Runtime API remains Planned / Blocked pending the
-permission-fact resolver, transport idempotency persistence, trusted application facade, and
-production routes. CP10 remains Planned.
+governed grant provisioning merged in PR #67, permission-fact resolver governance merged in PR #69,
+and the resolver merged in PR #70. CP9 Runtime API remains Planned / Blocked pending transport
+idempotency persistence, the trusted application facade, and production routes. CP10 remains
+Planned.
 
 ADR-089 proposes live permission-fact resolution from the current `RolePermission` projection,
 server-owned operation-to-permission mapping, per-operation resolution without caches, and a shared
 transaction boundary that linearizes local requests with grant and revoke commits. The governance
-gate is implemented, pending review; no production resolver, facade, route, or migration is added.
+gate and resolver are merged; no facade or route is added.
+
+ADR-090 proposes mutation-only transport replay using a trusted scoped identity, explicit
+`command_version`, canonical digest, transaction-scoped PostgreSQL advisory lock, and immutable
+bounded receipt. Migration `20260808_0021_runtime_api_idempotency.py` is planned only and does not
+exist in this governance gate.
 
 ### CP9 governed Runtime permission provisioning
 

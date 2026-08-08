@@ -79,9 +79,11 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9-Gate-Runtime-Permission-Definitions | Merged in PR #65 | Definition-only exact Runtime permissions. No automatic grants, wildcard, or existing role/membership backfill. |
 | CP9-Gate-Runtime-Grant-Governance | Merged in PR #66 | ADR-088 fixes `runtime.grant.manage`, append-only evidence, replay, scope, bootstrap, and atomic transaction policy. |
 | CP9-Gate-Runtime-Grant-Provisioning | Merged in PR #67 | Governed projection and ledger persistence, exact replay, scoped authority revalidation, fail-closed migration, concurrency, and PostgreSQL 16 evidence. |
-| CP9-Gate-Runtime-Permission-Fact-Resolver-Governance | Implemented, pending review | ADR-089 fixes exact server-owned permission mapping, live projection resolution, non-disclosure, transaction use, and revocation linearization. |
-| CP9-Gate-Runtime-Permission-Fact-Resolver | Implemented, pending review | Caller-owned transaction, fixed lock order, exact live `RolePermission`, no cache or ledger authority. |
-| CP9 Runtime API | Planned / Blocked | Production routes remain blocked on the Runtime permission-fact resolver, transport idempotency persistence, and the trusted application facade. |
+| CP9-Gate-Runtime-Permission-Fact-Resolver-Governance | Merged, PR #69 | ADR-089 fixes exact server-owned permission mapping, live projection resolution, non-disclosure, transaction use, and revocation linearization. |
+| CP9-Gate-Runtime-Permission-Fact-Resolver | Merged, PR #70 | Caller-owned transaction, fixed lock order, exact live `RolePermission`, no cache or ledger authority. |
+| CP9-Gate-Transport-Idempotency-Governance | Implemented, pending review | ADR-090 fixes mutation scope, trusted scoped replay identity, explicit command version, canonical digest, immutable receipt, and advisory-lock linearization. |
+| CP9 Production Transport Idempotency | Planned / Blocked | Model, service, contract change, and planned migration `20260808_0021_runtime_api_idempotency.py` remain unimplemented. |
+| CP9 Runtime API | Planned / Blocked | Production routes remain blocked on transport idempotency persistence and the trusted application facade. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
@@ -460,9 +462,9 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 
 ### CP9 - Runtime API
 
-- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` in PR #61, `CP9-Gate-Auth-Claims` in PR #62, Tenant-Organization Binding Governance in PR #63, Binding in PR #64, Runtime permission definitions in PR #65, grant governance in PR #66, grant provisioning in PR #67, and its closeout in PR #68. ADR-089 permission-fact resolver governance is implemented, pending review. No Runtime production resolver, route, or facade implementation exists.
+- **Status:** Planned / Blocked. Governance is merged in PR #60, `CP9-Gate-API-Contracts` in PR #61, `CP9-Gate-Auth-Claims` in PR #62, Tenant-Organization Binding Governance in PR #63, Binding in PR #64, Runtime permission definitions in PR #65, grant governance in PR #66, grant provisioning in PR #67, permission-fact resolver governance in PR #69, and the resolver in PR #70. ADR-090 transport idempotency governance is implemented, pending review. No Runtime production idempotency, route, or facade implementation exists.
 - **Purpose:** Expose authenticated, organization-scoped transport schemas over the approved trusted application facade and Runtime Orchestration boundary.
-- **Entry conditions:** The persisted lifetime binding and trusted binding resolver are merged, and exact Runtime permission definitions plus governed grant/revoke provisioning are merged through PR #67. Sprint 15 uses a lifetime one-to-one binding, explicit administrative provisioning, no automatic backfill, no transport tenant-ID input, no privileged bypass, an immutable persisted classification ceiling, and fail-closed organizations without bindings. ADR-089 governs server-owned exact permission mapping, live `RolePermission` projection resolution, per-operation no-cache behavior, and transaction-bound revocation linearization. The production Runtime permission-fact resolver, transport idempotency persistence, and a stable trusted application facade remain production blockers.
+- **Entry conditions:** The persisted lifetime binding, exact Runtime permissions, governed grant/revoke provisioning, and live permission-fact resolver are merged through PR #70. ADR-090 governs mutation-only replay, trusted scoped identity, explicit command version, canonical digest, immutable receipts, and transaction-bound advisory-lock linearization. Transport idempotency persistence and a stable trusted application facade remain production blockers.
 - **Binding implementation acceptance:** Model/migration parity; PostgreSQL 16 fresh and existing upgrade; lifetime 1:1 uniqueness; concurrent provisioning conflict; missing, inactive, and revoked binding rejection; exact trusted-scope equality; cross-tenant and cross-organization non-disclosure; and no route, facade, or permission expansion.
 - **Allowed outputs:** After the contracts gate, bounded routes in `app.api`, strict schemas in `app.schemas`, trusted application-facade integration, dependencies, and transport tests.
 - **Package placement:** Routes belong in `app.api`, schemas in `app.schemas`, and the trusted facade sits between API and Runtime Orchestration. `app.runtime.api` is prohibited.
@@ -653,6 +655,25 @@ bootstrap/operator procedure outside the public Runtime API. Production routes r
 until the production Runtime permission fact resolver, transport idempotency persistence, and the
 trusted application facade are complete. CP9 Runtime API: Planned / Blocked.
 CP10: Planned.
+
+### CP9 Runtime transport idempotency governance
+
+ADR-090 applies only to `submit_invocation` and `request_reconciliation`; read/status queries do
+not use the mutation idempotency gate. The client supplies only a bounded ASCII `Idempotency-Key`.
+The trusted application layer constructs the tenant, organization, principal, operation, explicit
+command version, idempotency key identity and canonical digest after transport validation and
+current authentication, scope, binding, and exact permission resolution.
+
+Every replay revalidates those trust facts before receipt lookup. Exact scoped identity and digest
+return the original bounded safe result; any mismatch is a non-disclosing typed conflict. A
+caller-owned transaction and transaction-scoped stable PostgreSQL advisory lock serialize the
+mutation and immutable receipt write. Receipts are append-only, have no expiry or cascade delete,
+and store no raw payload, token, secret, credential, provider body, arbitrary JSON, exception, or
+SQL detail. This does not promise external business-effect exactly-once.
+
+Production transport idempotency and migration `20260808_0021_runtime_api_idempotency.py` remain
+Planned / Blocked. The migration is planned only; this gate creates no model, service, facade,
+route, Worker, queue, scheduler, `app.runtime.api`, `app.runtime.outbox`, or CP10 implementation.
 
 ### CP9 Runtime permission-fact resolver governance
 
