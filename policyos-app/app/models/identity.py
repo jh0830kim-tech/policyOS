@@ -54,6 +54,9 @@ class TenantOrganizationBinding(Base):
     __table_args__ = (
         UniqueConstraint("organization_id", name="uq_tenant_org_binding_organization"),
         UniqueConstraint("runtime_tenant_id", name="uq_tenant_org_binding_tenant"),
+        UniqueConstraint(
+            "runtime_tenant_id", "organization_id", name="uq_tenant_org_binding_scope"
+        ),
         CheckConstraint(
             "status IN ('active', 'inactive', 'revoked')",
             name="ck_tenant_org_binding_status",
@@ -88,6 +91,7 @@ class Membership(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "memberships"
     __table_args__ = (
         UniqueConstraint("organization_id", "user_id", name="uq_memberships_org_user"),
+        UniqueConstraint("id", "user_id", "organization_id", name="uq_memberships_actor_scope"),
         Index("ix_memberships_org_status", "organization_id", "status"),
     )
 
@@ -112,7 +116,10 @@ class Membership(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 class Role(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "roles"
-    __table_args__ = (UniqueConstraint("organization_id", "key", name="uq_roles_org_key"),)
+    __table_args__ = (
+        UniqueConstraint("organization_id", "key", name="uq_roles_org_key"),
+        UniqueConstraint("id", "organization_id", name="uq_roles_id_organization"),
+    )
 
     organization_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True

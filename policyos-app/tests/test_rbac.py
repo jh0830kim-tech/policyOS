@@ -238,3 +238,15 @@ async def test_grant_revocation_is_visible_on_next_resolution() -> None:
     with pytest.raises(HTTPException):
         await dependency(context, db)
     assert db.scalar.await_count == 2
+
+
+def test_runtime_grant_management_permission_is_definition_only() -> None:
+    from pathlib import Path
+
+    source = Path(
+        "alembic/versions/20260808_0020_runtime_permission_grant_governance.py"
+    ).read_text(encoding="utf-8")
+    assert '"runtime.grant.manage"' in source
+    assert '"runtime.read"' not in source
+    assert "table.insert().values(" in source
+    assert "role_permissions" in source

@@ -138,14 +138,14 @@ grants permission or causes automatic execution.
 | CP9-Gate-Tenant-Organization-Binding-Governance | Merged, PR #63 | Binding governance | Lifetime one-to-one cardinality, explicit provisioning, immutable classification ceiling, no rebinding or privileged bypass, and fail-closed downgrade | Governance baseline only |
 | CP9-Gate-Tenant-Organization-Binding | Merged, PR #64 | Binding persistence | Lifetime one-to-one model, explicit persistence, self-contained migration `20260807_0018`, fail-closed downgrade, trusted resolver, and PostgreSQL 16 verification | No production Runtime route or provisioning surface |
 | CP9-Gate-Runtime-Permission-Definitions | Merged, PR #65 | RBAC definitions | Definition-only persistence of exact `runtime.read`, `runtime.invoke`, and `runtime.reconcile` permissions in migration `20260807_0019` | No automatic grants or existing role/membership backfill |
-| CP9-Gate-Runtime-Grant-Governance | Implemented, pending review | RBAC grant governance | ADR-088 fixes exact management authority, immutable append-only ledger, replay, scope, and transaction semantics | Governance only; Production Grant Provisioning is Planned / Blocked |
+| CP9-Gate-Runtime-Grant-Governance | Implemented, pending review | RBAC grant governance | ADR-088 fixes exact management authority, immutable append-only ledger, replay, scope, and transaction semantics | Governance only; Production Grant Provisioning is Implemented / Validated / Pending Review |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires binding, Runtime permissions, transport idempotency, and stable facade |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
 CP9 Governance / ADR-087 is merged in PR #60, API Contracts in PR #61, Auth Claims in PR #62,
 Tenant-Organization Binding Governance in PR #63, Binding in PR #64, and definition-only Runtime
 permissions in PR #65. ADR-088 adds `CP9-Gate-Runtime-Grant-Governance` as Implemented, pending
-review. Production Grant Provisioning remains Planned / Blocked. No production Runtime route or
+review. Production Grant Provisioning is Implemented / Validated / Pending Review. No production Runtime route or
 facade exists. Routes remain in `app.api`; `app.runtime.api` and `app.runtime.outbox` remain
 prohibited. CP9 remains Planned / Blocked, CP10 Workers remain Planned, and
 external business-effect exactly-once remains unguaranteed. Blind retry and automatic redrive remain
@@ -457,3 +457,12 @@ superseding ADRs approve different placement. Roadmap documentation does not res
 those later decisions.
 
 CP9-Gate-Runtime-Permission-Definitions is implemented pending review: permission definitions are persisted while production grants are not provisioned. CP9 Runtime API: Planned / Blocked. CP10: Planned.
+
+### CP9 governed Runtime permission provisioning
+
+Production provisioning preserves `RolePermission` as the active projection and records every
+committed grant or revoke in the append-only `runtime_permission_grant_events` ledger in the same
+transaction. `runtime.grant.manage` is definition-only with zero automatic grants; only
+`runtime.read`, `runtime.invoke`, and `runtime.reconcile` are eligible targets. Exact replay is
+receipt-stable, conflicting replay and concurrent state changes fail closed, and transport,
+permission-fact resolution, application facade/routes, outbox, and CP10 remain deferred.

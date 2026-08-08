@@ -95,3 +95,13 @@ def test_tenant_organization_binding_has_no_sensitive_payload_columns() -> None:
     assert not column_names.intersection(
         {"raw_token", "token", "secret", "provider_body", "payload", "metadata"}
     )
+
+
+def test_runtime_permission_grant_event_is_registered_append_only_evidence() -> None:
+    table = Base.metadata.tables["runtime_permission_grant_events"]
+    assert table.c.event_id.primary_key
+    constraint_names = {item.name for item in table.constraints}
+    assert "uq_runtime_grant_event_request" in constraint_names
+    assert "uq_runtime_grant_event_receipt" in constraint_names
+    assert "payload" not in table.c
+    assert "metadata" not in table.c
