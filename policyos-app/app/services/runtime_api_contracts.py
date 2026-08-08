@@ -13,6 +13,7 @@ BoundedReference = Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:/-]{0
 BoundedDigest = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_.:-]{15,199}$")]
 BoundedMessage = Annotated[str, Field(min_length=1, max_length=300)]
 IdempotencyKey = Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,99}$")]
+CommandVersion = Annotated[str, Field(pattern=r"^[A-Za-z0-9_.-]{1,40}$")]
 
 
 class RuntimeApiModel(BaseModel):
@@ -111,6 +112,7 @@ class RuntimeApiCommandIdentity(RuntimeApiModel):
     tenant_id: UUID
     organization_id: UUID
     principal_id: UUID
+    command_version: CommandVersion
     idempotency_key: IdempotencyKey
     command_digest: BoundedDigest
     correlation_reference: BoundedReference
@@ -179,6 +181,18 @@ class RuntimeApiIdempotencyReceipt(RuntimeApiModel):
         return value
 
 
+class RuntimeApiIdempotencyCommitFacts(RuntimeApiModel):
+    receipt_id: UUID
+    committed_at: datetime
+
+    @field_validator("committed_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("committed_at must be timezone-aware")
+        return value
+
+
 class RuntimeApiIdempotencyCommitResult(RuntimeApiModel):
     disposition: RuntimeApiIdempotencyDisposition
     receipt: RuntimeApiIdempotencyReceipt
@@ -208,10 +222,12 @@ __all__ = (
     "BoundedDigest",
     "BoundedMessage",
     "BoundedReference",
+    "CommandVersion",
     "IdempotencyKey",
     "RuntimeApiCommandIdentity",
     "RuntimeApiContractConflict",
     "RuntimeApiErrorCode",
+    "RuntimeApiIdempotencyCommitFacts",
     "RuntimeApiIdempotencyCommitResult",
     "RuntimeApiIdempotencyDisposition",
     "RuntimeApiIdempotencyReceipt",

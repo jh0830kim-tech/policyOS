@@ -102,7 +102,24 @@ def validate_runtime_api_idempotency_replay(
     current: RuntimeApiCommandIdentity,
     stored: RuntimeApiIdempotencyReceipt,
 ) -> RuntimeApiIdempotencyReceipt:
-    if current != stored.identity:
+    stored_identity = stored.identity
+    if (
+        current.tenant_id,
+        current.organization_id,
+        current.principal_id,
+        current.operation,
+        current.command_version,
+        current.idempotency_key,
+        current.command_digest,
+    ) != (
+        stored_identity.tenant_id,
+        stored_identity.organization_id,
+        stored_identity.principal_id,
+        stored_identity.operation,
+        stored_identity.command_version,
+        stored_identity.idempotency_key,
+        stored_identity.command_digest,
+    ):
         raise RuntimeApiContractConflict("idempotency identity or digest conflicts")
     return stored
 

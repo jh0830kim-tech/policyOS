@@ -205,6 +205,11 @@ review; CP9 remains Planned / Blocked on idempotency persistence, facade, and ro
 
 ## Sprint 15 CP9 Transport Idempotency security boundary
 
+ADR-090 governance merged in PR #71. `CP9-Gate-Transport-Idempotency-Contracts` is implemented,
+pending review. It adds only bounded immutable command-version and commit-fact contracts, one
+atomic commit protocol, and exact replay comparison; production persistence, migration `0021`,
+facade, and routes remain Planned / Blocked. CP10 remains Planned.
+
 ADR-090 permits a client to provide only a bounded ASCII `Idempotency-Key` for
 `submit_invocation` and `request_reconciliation`. The server constructs the trusted scoped replay
 identity from tenant, organization, principal, operation, explicit `command_version`, and the key,

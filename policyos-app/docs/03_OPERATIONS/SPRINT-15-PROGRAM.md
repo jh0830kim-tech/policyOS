@@ -81,7 +81,8 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9-Gate-Runtime-Grant-Provisioning | Merged in PR #67 | Governed projection and ledger persistence, exact replay, scoped authority revalidation, fail-closed migration, concurrency, and PostgreSQL 16 evidence. |
 | CP9-Gate-Runtime-Permission-Fact-Resolver-Governance | Merged, PR #69 | ADR-089 fixes exact server-owned permission mapping, live projection resolution, non-disclosure, transaction use, and revocation linearization. |
 | CP9-Gate-Runtime-Permission-Fact-Resolver | Merged, PR #70 | Caller-owned transaction, fixed lock order, exact live `RolePermission`, no cache or ledger authority. |
-| CP9-Gate-Transport-Idempotency-Governance | Implemented, pending review | ADR-090 fixes mutation scope, trusted scoped replay identity, explicit command version, canonical digest, immutable receipt, and advisory-lock linearization. |
+| CP9-Gate-Transport-Idempotency-Governance | Merged, PR #71 | ADR-090 fixes mutation scope, trusted scoped replay identity, explicit command version, canonical digest, immutable receipt, and advisory-lock linearization. |
+| CP9-Gate-Transport-Idempotency-Contracts | Implemented, pending review | Bounded command version, explicit commit facts, atomic commit protocol, and exact replay equality; no production persistence. |
 | CP9 Production Transport Idempotency | Planned / Blocked | Model, service, contract change, and planned migration `20260808_0021_runtime_api_idempotency.py` remain unimplemented. |
 | CP9 Runtime API | Planned / Blocked | Production routes remain blocked on transport idempotency persistence and the trusted application facade. |
 | CP10 Workers | Planned | Worker implementation is not present. |
@@ -657,6 +658,10 @@ trusted application facade are complete. CP9 Runtime API: Planned / Blocked.
 CP10: Planned.
 
 ### CP9 Runtime transport idempotency governance
+
+ADR-090 governance merged in PR #71. The contracts gate adds an immutable bounded command version,
+explicit caller-supplied receipt ID and committed time, a single atomic commit protocol, and exact
+replay equality. It creates no model, service, migration, facade, or route.
 
 ADR-090 applies only to `submit_invocation` and `request_reconciliation`; read/status queries do
 not use the mutation idempotency gate. The client supplies only a bounded ASCII `Idempotency-Key`.
