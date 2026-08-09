@@ -640,7 +640,7 @@ def test_cp9_trusted_application_facade_governance_precedes_routes() -> None:
         "Merged, PR #75",
         "Trusted Application Facade Contracts | Merged, PR #76",
         "Fact-Binding Contracts | Merged, PR #77",
-        "Trusted Application Facade | Implemented, pending review",
+        "Trusted Application Facade | Merged, PR #78",
     ):
         assert phrase in combined
 
@@ -661,12 +661,60 @@ def test_cp9_trusted_application_facade_governance_precedes_routes() -> None:
     assert "RuntimeApiLocalOperationPort" in protocols
     assert "RuntimeClockPort" not in tenant_binding
     assert "clock.read" not in tenant_binding
-    assert "facade review/merge, concrete local binding implementation" in combined
+    assert "ADR-092 governance, additive binding and active-transaction contracts" in combined
 
     facade = ROOT / "app" / "services" / "runtime_api_facade.py"
     assert facade.is_file()
     source = facade.read_text(encoding="utf-8").lower()
     assert not any(item in source for item in ("fastapi", "provider", "mcp", "queue", "worker"))
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "app" / "runtime" / "api").exists()
+    assert not (ROOT / "app" / "runtime" / "outbox").exists()
+    assert not any(
+        path.name.startswith("20260808_0022")
+        for path in (ROOT / "alembic" / "versions").glob("*.py")
+    )
+    for package in ("workers", "worker", "queue", "scheduler"):
+        assert not (ROOT / "app" / "runtime" / package).exists()
+
+
+def test_cp9_local_fact_binding_governance_precedes_concrete_integration() -> None:
+    adr = ADR / "ADR-092-CP9-RUNTIME-LOCAL-FACT-BINDING-AND-TRANSACTION-INTEGRATION.md"
+    text = adr.read_text(encoding="utf-8")
+    normalized = " ".join(text.split())
+    documents = (
+        ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+        ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+        ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+    )
+    combined = " ".join("".join(path.read_text(encoding="utf-8") for path in documents).split())
+
+    assert "**Status:** Proposed" in text
+    assert "**Date:** 2026-08-08" in text
+    for phrase in (
+        "Opaque action, command, invocation, and reconciliation references are not authority",
+        "no complete persisted identifiers, expected revisions, lineage, and scope",
+        "Runtime Persistence has no `RuntimeActionRegistrySnapshot` read boundary",
+        "private Persistence helpers directly or inferring facts",
+        "active-transaction Persistence contract",
+        "both commit or both roll back",
+        "zero local mutations",
+        "performs exactly one",
+        "does not create migration `20260808_0022`",
+        "No route, binder, local operation, or Persistence integration creates or infers",
+    ):
+        assert phrase in normalized
+    assert "Trusted Application Facade | Merged, PR #78" in combined
+    assert (
+        "Local Fact Binding and Transaction Integration Governance | Implemented, pending review"
+        in combined
+    )
+    assert "CP9 Runtime API | Planned / Blocked" in combined
+    assert "CP10 Workers | Planned" in combined
+    assert "additive binding and active-transaction Persistence contracts" in combined
+    assert (ROOT / "app" / "services" / "runtime_api_facade.py").is_file()
+    assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()

@@ -150,7 +150,8 @@ grants permission or causes automatic execution.
 | CP9-Gate-Trusted-Application-Facade-Governance | Merged, PR #75 | Facade trust boundary | ADR-091 fixes transaction ownership, trusted fact binding, canonical digest construction, and safe errors | Governance only; no facade or route |
 | CP9-Gate-Trusted-Application-Facade-Contracts | Merged, PR #76 | Facade contracts | Transport-safe inputs, verified claims, organization selector, explicit server facts, exact permissions, and canonical digests | No production facade or route |
 | CP9-Gate-Trusted-Application-Facade-Fact-Binding-Contracts | Merged, PR #77 | Fact-binding contracts | Explicit trusted-context facts, clock-free resolver input, orchestration binder Protocol, and local-operation Protocol | No concrete binder, facade, or route |
-| CP9-Trusted-Application-Facade | Implemented, pending review | Production facade | One SQLAlchemy transaction binds trusted context, exact permission, canonical digest, idempotency, and a bounded local operation | Concrete binder/local-operation implementation and routes remain blocked |
+| CP9-Trusted-Application-Facade | Merged, PR #78 | Production facade | One SQLAlchemy transaction binds trusted context, exact permission, canonical digest, idempotency, and a bounded local operation | Concrete binder/local-operation implementation and routes remain blocked |
+| CP9-Gate-Local-Fact-Binding-and-Transaction-Integration-Governance | Implemented, pending review | Local integration governance | ADR-092 fixes exact persisted orchestration facts, Registry snapshot provenance, and active-transaction Persistence boundaries | Contract gate precedes concrete integration |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires production facade implementation and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -166,12 +167,13 @@ remain prohibited.
 
 The required implementation order is:
 
-1. Review and merge the production trusted application facade.
-2. Implement concrete local fact binding and local-operation integration.
-3. Implement production Runtime routes.
-4. Run combined CP9 PostgreSQL and HTTP acceptance.
-5. Complete CP9 closeout.
-6. Begin CP10 only after separate approval.
+1. Review and merge ADR-092 local integration governance.
+2. Define additive binding and active-transaction Persistence contracts.
+3. Decide the Registry snapshot boundary and implement concrete local integration.
+4. Implement production Runtime routes.
+5. Run combined CP9 PostgreSQL and HTTP acceptance.
+6. Complete CP9 closeout.
+7. Begin CP10 only after separate approval.
 
 
 ## 6. Boundary input and output contracts
