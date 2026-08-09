@@ -88,7 +88,8 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9 Trusted Application Facade Governance | Merged, PR #75 | ADR-091 fixes facade transaction ownership, fact binding, digest construction, and error non-disclosure. |
 | CP9 Trusted Application Facade Contracts | Merged, PR #76 | Adds transport-safe service inputs, explicit server facts, exact permissions, and canonical digest builders. |
 | CP9 Trusted Application Facade Fact-Binding Contracts | Merged, PR #77 | Adds explicit trusted-context facts, clock-free resolver input, and bounded binder/local-operation Protocols. |
-| CP9 Trusted Application Facade | Implemented, pending review | Owns one SQLAlchemy transaction across trusted context, exact permission, fact binding, local operation, and transport idempotency. |
+| CP9 Trusted Application Facade | Merged, PR #78 | Owns one SQLAlchemy transaction across trusted context, exact permission, fact binding, local operation, and transport idempotency. |
+| CP9 Local Fact Binding and Transaction Integration Governance | Implemented, pending review | ADR-092 fixes exact persisted fact provenance, Registry snapshot boundary analysis, and additive active-transaction Persistence contracts before concrete integration. |
 | CP9 Runtime API | Planned / Blocked | The production facade and production routes remain ordered blockers. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
@@ -714,7 +715,7 @@ service inputs, verified claims and organization-selector facade parameters, exp
 server facts, exact server-owned permission mapping, and pure canonical digest builders. It remains
 free of HTTP, ORM, transaction, persistence, and external-effect behavior.
 
-The remaining required order is facade review/merge, concrete local binding implementation, production routes, combined
+The remaining required order is ADR-092 governance, additive binding and active-transaction contracts, Registry snapshot boundary and concrete local integration, production routes, combined
 CP9 PostgreSQL/HTTP acceptance, CP9 closeout, then separately approved CP10. CP9 remains Planned /
 Blocked and CP10 remains Planned.
 

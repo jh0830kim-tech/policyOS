@@ -276,8 +276,18 @@ and local-operation Protocols receive resolved principal, scope, exact permissio
 explicit facts, and canonical digest where applicable. They cannot commit, roll back, create UUIDs
 or timestamps, infer governance facts, or invoke adapters, providers, MCP, queues, workers, or
 external effects. Missing, stale, ambiguous, revoked, and cross-scope persisted facts fail closed.
-The production facade is implemented, pending review, and owns the transaction across these
+The production facade is merged in PR #78 and owns the transaction across these
 resolutions, exact binding, local operation, and idempotency receipt persistence. Concrete binder
 and local-operation implementations and production routes remain Planned / Blocked. The required
-order is facade review/merge, concrete local binding implementation, routes, combined PostgreSQL/HTTP
+order is ADR-092 governance, additive binding and active-transaction Persistence contracts,
+Registry snapshot boundary analysis and concrete local integration, routes, combined PostgreSQL/HTTP
 acceptance, CP9 closeout, then separately approved CP10.
+
+ADR-092 fixes the next local integration boundary before production implementation. Opaque
+references are not authority, and no binder or local operation may infer Authority, Permit,
+admission, Plan, State progression, Registry, or Audit facts. Exact persisted identifiers,
+revisions, lineage, tenant, organization, principal, and classification must be supplied by
+approved infrastructure and validated fail closed. A `RuntimeActionRegistrySnapshot` may come only
+from an approved Persistence/read boundary; the existing Registry cannot be used to reconstruct a
+missing snapshot. The facade remains the sole transaction owner, while later additive Persistence
+contracts participate in its active session without begin, commit, rollback, or session replacement.
