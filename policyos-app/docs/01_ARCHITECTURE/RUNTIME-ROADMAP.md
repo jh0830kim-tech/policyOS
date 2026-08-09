@@ -151,7 +151,8 @@ grants permission or causes automatic execution.
 | CP9-Gate-Trusted-Application-Facade-Contracts | Merged, PR #76 | Facade contracts | Transport-safe inputs, verified claims, organization selector, explicit server facts, exact permissions, and canonical digests | No production facade or route |
 | CP9-Gate-Trusted-Application-Facade-Fact-Binding-Contracts | Merged, PR #77 | Fact-binding contracts | Explicit trusted-context facts, clock-free resolver input, orchestration binder Protocol, and local-operation Protocol | No concrete binder, facade, or route |
 | CP9-Trusted-Application-Facade | Merged, PR #78 | Production facade | One SQLAlchemy transaction binds trusted context, exact permission, canonical digest, idempotency, and a bounded local operation | Concrete binder/local-operation implementation and routes remain blocked |
-| CP9-Gate-Local-Fact-Binding-and-Transaction-Integration-Governance | Implemented, pending review | Local integration governance | ADR-092 fixes exact persisted orchestration facts, Registry snapshot provenance, and active-transaction Persistence boundaries | Contract gate precedes concrete integration |
+| CP9-Gate-Local-Fact-Binding-and-Transaction-Integration-Governance | Merged, PR #79 | Local integration governance | ADR-092 fixes exact persisted orchestration facts, Registry snapshot provenance, and active-transaction Persistence boundaries | Governance only |
+| CP9-Gate-Local-Fact-Binding-and-Active-Transaction-Persistence-Contracts | Implemented, pending review | Local integration contracts | Adds exact persisted record, permit, Registry, scope, lineage, operation-binding, and caller-owned active-transaction Ports contracts | No concrete binder, store, migration, or route |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires production facade implementation and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -167,8 +168,8 @@ remain prohibited.
 
 The required implementation order is:
 
-1. Review and merge ADR-092 local integration governance.
-2. Define additive binding and active-transaction Persistence contracts.
+1. Merge ADR-092 local integration governance.
+2. Review and merge additive binding and active-transaction Persistence contracts.
 3. Decide the Registry snapshot boundary and implement concrete local integration.
 4. Implement production Runtime routes.
 5. Run combined CP9 PostgreSQL and HTTP acceptance.

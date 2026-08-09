@@ -141,6 +141,17 @@ from app.runtime.ports.repositories import (
     RuntimeOutboxRepository,
     RuntimePermitRepository,
 )
+from app.runtime.ports.runtime_api_persistence import (
+    RuntimeApiActiveTransactionContext,
+    RuntimeApiActiveTransactionPersistencePort,
+    RuntimeApiLocalWriteSetStage,
+    RuntimeApiLocalWriteSetStageResult,
+    RuntimeApiPersistedPermitFact,
+    RuntimeApiPersistedRecordFact,
+    RuntimeApiPersistenceBindingRead,
+    RuntimeApiPersistenceScope,
+    RuntimeApiRegistryPersistenceFact,
+)
 from app.runtime.ports.transaction import RuntimeTransactionPort
 from app.runtime.ports.validation import (
     validate_runtime_adapter_invocation_envelope,
@@ -162,6 +173,15 @@ __all__ = (
     "RuntimeAdapterInvocationEnvelope",
     "RuntimeAdapterInvocationResult",
     "RuntimeAdapterPort",
+    "RuntimeApiActiveTransactionContext",
+    "RuntimeApiActiveTransactionPersistencePort",
+    "RuntimeApiLocalWriteSetStage",
+    "RuntimeApiLocalWriteSetStageResult",
+    "RuntimeApiPersistedPermitFact",
+    "RuntimeApiPersistedRecordFact",
+    "RuntimeApiPersistenceBindingRead",
+    "RuntimeApiPersistenceScope",
+    "RuntimeApiRegistryPersistenceFact",
     "RuntimeAdmissionRepository",
     "RuntimeAtomicWriteSet",
     "RuntimeAuditRepository",

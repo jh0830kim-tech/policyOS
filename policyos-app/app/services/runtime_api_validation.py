@@ -4,6 +4,7 @@ from hashlib import sha256
 from uuid import UUID
 
 from app.ai.privacy import DataClassification
+from app.runtime.ports import RuntimeApiPersistenceBindingRead
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
     RuntimeApiContractConflict,
@@ -28,6 +29,40 @@ from app.services.runtime_api_contracts import (
     RuntimeApiTrustedPrincipal,
     RuntimeApiTrustedScope,
 )
+
+
+def validate_runtime_api_persistence_binding(
+    binding: RuntimeApiPersistenceBindingRead,
+    *,
+    tenant_id,
+    organization_id,
+    classification,
+    root_lineage_id,
+    root_lineage_digest_reference,
+) -> RuntimeApiPersistenceBindingRead:
+    """Fail closed unless persisted facts match the exact trusted scope."""
+    if binding.scope.tenant_id != tenant_id:
+        raise RuntimeApiContractConflict("persisted fact tenant mismatch")
+    if binding.scope.organization_id != organization_id:
+        raise RuntimeApiContractConflict("persisted fact organization mismatch")
+    if binding.scope.classification != classification:
+        raise RuntimeApiContractConflict("persisted fact classification mismatch")
+    if binding.scope.root_lineage_id != root_lineage_id:
+        raise RuntimeApiContractConflict("persisted fact lineage mismatch")
+    if binding.scope.root_lineage_digest_reference != root_lineage_digest_reference:
+        raise RuntimeApiContractConflict("persisted fact lineage digest mismatch")
+    return binding
+
+
+def validate_runtime_api_persistence_resolution(
+    requested: RuntimeApiPersistenceBindingRead,
+    resolved: RuntimeApiPersistenceBindingRead | None,
+) -> RuntimeApiPersistenceBindingRead:
+    """Reject missing, stale, ambiguous, revoked, or substituted persisted facts."""
+    if resolved is None or resolved != requested:
+        raise RuntimeApiContractConflict("persisted facts are unavailable or conflict")
+    return resolved
+
 
 _CLASSIFICATION_RANK = {
     DataClassification.PUBLIC: 0,
@@ -370,6 +405,8 @@ def validate_runtime_api_safe_error(error: RuntimeApiSafeError) -> RuntimeApiSaf
 
 
 __all__ = (
+    "validate_runtime_api_persistence_binding",
+    "validate_runtime_api_persistence_resolution",
     "RUNTIME_API_OPERATION_PERMISSIONS",
     "build_runtime_api_reconciliation_digest",
     "build_runtime_api_submission_digest",

@@ -28,6 +28,7 @@ from app.runtime.persistence import (
 from app.runtime.persistence.serialization import RuntimePersistenceRecord
 from app.runtime.ports import (
     ExecutionRequestRepository,
+    RuntimeApiActiveTransactionPersistencePort,
     RuntimeClockReading,
     RuntimeOutboxEnqueueRecord,
     RuntimeRepositoryReadRequest,
@@ -134,6 +135,9 @@ def test_concrete_repositories_and_transaction_are_structural_ports() -> None:
     )
     assert isinstance(repository, ExecutionRequestRepository)
     assert isinstance(transaction, RuntimeTransactionPort)
+    assert "commit" not in RuntimeApiActiveTransactionPersistencePort.__dict__
+    assert "rollback" not in RuntimeApiActiveTransactionPersistencePort.__dict__
+    assert "close" not in RuntimeApiActiveTransactionPersistencePort.__dict__
 
 
 @pytest.mark.asyncio

@@ -9,17 +9,20 @@ from app.services.runtime_api_contracts import (
     RuntimeApiIdempotencyCommitFacts,
     RuntimeApiIdempotencyCommitResult,
     RuntimeApiInvocationQuery,
+    RuntimeApiInvocationQueryBindingFacts,
     RuntimeApiInvocationQueryFacts,
     RuntimeApiInvocationQueryInput,
     RuntimeApiOrganizationSelector,
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
+    RuntimeApiReconciliationBindingFacts,
     RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationInput,
     RuntimeApiReconciliationResult,
     RuntimeApiSafeResult,
     RuntimeApiStatusProjection,
+    RuntimeApiSubmissionBindingFacts,
     RuntimeApiSubmissionCommand,
     RuntimeApiSubmissionFacts,
     RuntimeApiSubmissionInput,
@@ -108,6 +111,21 @@ class RuntimeApiOrchestrationFactBinder(Protocol):
 
 
 @runtime_checkable
+class RuntimeApiPersistedOrchestrationFactBinder(Protocol):
+    async def bind_submission_facts(
+        self, facts: RuntimeApiSubmissionBindingFacts
+    ) -> RuntimeApiSubmissionBindingFacts: ...
+
+    async def bind_query_facts(
+        self, facts: RuntimeApiInvocationQueryBindingFacts
+    ) -> RuntimeApiInvocationQueryBindingFacts: ...
+
+    async def bind_reconciliation_facts(
+        self, facts: RuntimeApiReconciliationBindingFacts
+    ) -> RuntimeApiReconciliationBindingFacts: ...
+
+
+@runtime_checkable
 class RuntimeApiLocalOperationPort(Protocol):
     async def submit_invocation(
         self, command: RuntimeApiSubmissionCommand
@@ -144,5 +162,6 @@ __all__ = (
     "RuntimeApiLocalOperationPort",
     "RuntimeApiOrchestrationFactBinder",
     "RuntimeApiPermissionFactResolver",
+    "RuntimeApiPersistedOrchestrationFactBinder",
     "RuntimeApiTrustedContextResolver",
 )
