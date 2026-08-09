@@ -8,6 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.ai.privacy import DataClassification
+from app.runtime.ports import RuntimeApiPersistenceBindingRead
 
 BoundedReference = Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,199}$")]
 BoundedDigest = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_.:-]{15,199}$")]
@@ -200,6 +201,18 @@ class RuntimeApiReconciliationFacts(RuntimeApiModel):
         return value
 
 
+class RuntimeApiSubmissionBindingFacts(RuntimeApiModel):
+    persistence: RuntimeApiPersistenceBindingRead
+
+
+class RuntimeApiInvocationQueryBindingFacts(RuntimeApiModel):
+    persistence: RuntimeApiPersistenceBindingRead
+
+
+class RuntimeApiReconciliationBindingFacts(RuntimeApiModel):
+    persistence: RuntimeApiPersistenceBindingRead
+
+
 class RuntimeApiSubmissionCommand(RuntimeApiModel):
     identity: RuntimeApiCommandIdentity
     principal: RuntimeApiTrustedPrincipal
@@ -314,6 +327,7 @@ __all__ = (
     "RuntimeApiIdempotencyDisposition",
     "RuntimeApiIdempotencyReceipt",
     "RuntimeApiInvocationQueryFacts",
+    "RuntimeApiInvocationQueryBindingFacts",
     "RuntimeApiInvocationQueryInput",
     "RuntimeApiInvocationQuery",
     "RuntimeApiModel",
@@ -323,6 +337,7 @@ __all__ = (
     "RuntimeApiPermissionFact",
     "RuntimeApiPublicStatus",
     "RuntimeApiReconciliationCommand",
+    "RuntimeApiReconciliationBindingFacts",
     "RuntimeApiReconciliationFacts",
     "RuntimeApiReconciliationInput",
     "RuntimeApiReconciliationResult",
@@ -330,6 +345,7 @@ __all__ = (
     "RuntimeApiSafeResult",
     "RuntimeApiStatusProjection",
     "RuntimeApiSubmissionCommand",
+    "RuntimeApiSubmissionBindingFacts",
     "RuntimeApiSubmissionFacts",
     "RuntimeApiSubmissionInput",
     "RuntimeApiSubmissionResult",

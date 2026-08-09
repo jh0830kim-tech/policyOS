@@ -705,9 +705,10 @@ def test_cp9_local_fact_binding_governance_precedes_concrete_integration() -> No
     ):
         assert phrase in normalized
     assert "Trusted Application Facade | Merged, PR #78" in combined
+    assert "Local Fact Binding and Transaction Integration Governance | Merged, PR #79" in combined
     assert (
-        "Local Fact Binding and Transaction Integration Governance | Implemented, pending review"
-        in combined
+        "Local Fact Binding and Active-Transaction Persistence Contracts | "
+        "Implemented, pending review" in combined
     )
     assert "CP9 Runtime API | Planned / Blocked" in combined
     assert "CP10 Workers | Planned" in combined
@@ -724,3 +725,34 @@ def test_cp9_local_fact_binding_governance_precedes_concrete_integration() -> No
     )
     for package in ("workers", "worker", "queue", "scheduler"):
         assert not (ROOT / "app" / "runtime" / package).exists()
+
+
+def test_cp9_local_fact_binding_contract_gate_is_additive_only() -> None:
+    ports = ROOT / "app" / "runtime" / "ports" / "runtime_api_persistence.py"
+    contracts = ROOT / "app" / "services" / "runtime_api_contracts.py"
+    protocols = ROOT / "app" / "services" / "runtime_api_protocols.py"
+    combined = "\n".join(path.read_text(encoding="utf-8") for path in (ports, contracts, protocols))
+
+    for name in (
+        "RuntimeApiPersistenceBindingRead",
+        "RuntimeApiPersistedPermitFact",
+        "RuntimeApiRegistryPersistenceFact",
+        "RuntimeApiActiveTransactionPersistencePort",
+        "RuntimeApiSubmissionBindingFacts",
+        "RuntimeApiInvocationQueryBindingFacts",
+        "RuntimeApiReconciliationBindingFacts",
+    ):
+        assert name in combined
+    for forbidden in (
+        "session.begin(",
+        "session.commit(",
+        "session.rollback(",
+        "create_async_engine",
+        "async_sessionmaker",
+        "RuntimeActionRegistrySnapshot(",
+    ):
+        assert forbidden not in combined
+    assert not any(
+        path.name.startswith("20260808_0022")
+        for path in (ROOT / "alembic" / "versions").glob("*.py")
+    )

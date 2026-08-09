@@ -279,7 +279,17 @@ external effects. Missing, stale, ambiguous, revoked, and cross-scope persisted 
 The production facade is merged in PR #78 and owns the transaction across these
 resolutions, exact binding, local operation, and idempotency receipt persistence. Concrete binder
 and local-operation implementations and production routes remain Planned / Blocked. The required
-order is ADR-092 governance, additive binding and active-transaction Persistence contracts,
+order is ADR-092 governance (merged in PR #79), additive binding and active-transaction Persistence
+contracts, Registry snapshot boundary analysis and concrete local integration, routes, combined
+PostgreSQL/HTTP acceptance, CP9 closeout, then separately approved CP10.
+
+The local fact-binding and active-transaction Persistence contracts gate is implemented, pending
+review. Its strict frozen contracts require exact persisted record IDs and expected revisions,
+canonical permit facts, Registry snapshot and resolution identities, tenant, organization,
+classification, lineage, and caller-supplied aware timestamps. The active-transaction Port exposes
+only exact scoped reads and one bounded local write-set stage; it exposes no begin, commit,
+rollback, close, session, or engine operation. It adds no Registry store, database model, migration,
+concrete binder, local operation, route, or external effect. The remaining order is
 Registry snapshot boundary analysis and concrete local integration, routes, combined PostgreSQL/HTTP
 acceptance, CP9 closeout, then separately approved CP10.
 
