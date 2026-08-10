@@ -151,6 +151,7 @@ from app.runtime.ports.runtime_api_persistence import (
     RuntimeApiPersistenceBindingRead,
     RuntimeApiPersistenceScope,
     RuntimeApiRegistryPersistenceFact,
+    RuntimeApiRegistryResolutionAdmissionFact,
 )
 from app.runtime.ports.transaction import RuntimeTransactionPort
 from app.runtime.ports.validation import (
@@ -182,6 +183,7 @@ __all__ = (
     "RuntimeApiPersistenceBindingRead",
     "RuntimeApiPersistenceScope",
     "RuntimeApiRegistryPersistenceFact",
+    "RuntimeApiRegistryResolutionAdmissionFact",
     "RuntimeAdmissionRepository",
     "RuntimeAtomicWriteSet",
     "RuntimeAuditRepository",

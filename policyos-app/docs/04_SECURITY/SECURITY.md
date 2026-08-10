@@ -293,6 +293,18 @@ concrete binder, local operation, route, or external effect. The remaining order
 Registry snapshot boundary analysis and concrete local integration, routes, combined PostgreSQL/HTTP
 acceptance, CP9 closeout, then separately approved CP10.
 
+The Registry Resolution and Admission Exactness Contract Correction Gate is implemented and
+validated, pending review. It binds the approved persisted Registry snapshot and reference,
+resolution request and decision, exact resolved action, and `ADMITTED` admission decision to the
+same tenant, organization, classification, lineage, lineage digest, Registry revision, execution
+request, and canonical permit facts. Missing, stale, substituted, revoked, cross-scope, or lineage
+mismatches fail closed. All identifiers, revisions, digests, and aware times remain caller supplied;
+the contracts generate none. The caller-owned active transaction and facade outer transaction
+ownership remain unchanged: replay and conflict perform zero local mutations, while a new request
+performs exactly one. This gate adds no Registry snapshot persistence, database model, migration,
+concrete binder or local operation, production route, external effect, Worker, queue, retry, or
+scheduler. CP9 Runtime API remains Planned / Blocked, and CP10 remains Planned.
+
 ADR-092 fixes the next local integration boundary before production implementation. Opaque
 references are not authority, and no binder or local operation may infer Authority, Permit,
 admission, Plan, State progression, Registry, or Audit facts. Exact persisted identifiers,

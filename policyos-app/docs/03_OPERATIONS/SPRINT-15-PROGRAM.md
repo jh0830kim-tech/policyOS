@@ -91,6 +91,7 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9 Trusted Application Facade | Merged, PR #78 | Owns one SQLAlchemy transaction across trusted context, exact permission, fact binding, local operation, and transport idempotency. |
 | CP9 Local Fact Binding and Transaction Integration Governance | Merged, PR #79 | ADR-092 fixes exact persisted fact provenance, Registry snapshot boundary analysis, and additive active-transaction Persistence contracts before concrete integration. |
 | CP9 Local Fact Binding and Active-Transaction Persistence Contracts | Implemented, pending review | Adds immutable exact persisted record, permit, Registry, scope, lineage, operation-binding, and active-transaction Port contracts without production integration. |
+| CP9 Registry Resolution and Admission Exactness Contracts Gate | Implemented / Validated, pending review | Binds persisted Registry snapshot/reference, resolution request/decision, and admission decision identities, revisions, scope, lineage, action resolution, and permit facts without production integration. |
 | CP9 Runtime API | Planned / Blocked | The production facade and production routes remain ordered blockers. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
