@@ -453,7 +453,7 @@ def test_cp9_permission_fact_resolver_governance_precedes_production_resolution(
     assert adr.is_file()
     assert "**Status:** Proposed" in text
     assert "CP9-Gate-Runtime-Permission-Fact-Resolver-Governance" in combined
-    assert "Implemented, pending review" in combined
+    assert "CP9-Gate-Runtime-Permission-Fact-Resolver | Merged, PR #70" in combined
     for mapping in (
         "get_invocation` | `runtime.read",
         "submit_invocation` | `runtime.invoke",
@@ -661,7 +661,10 @@ def test_cp9_trusted_application_facade_governance_precedes_routes() -> None:
     assert "RuntimeApiLocalOperationPort" in protocols
     assert "RuntimeClockPort" not in tenant_binding
     assert "clock.read" not in tenant_binding
-    assert "ADR-092 governance, additive binding and active-transaction contracts" in combined
+    assert (
+        "Local Fact Binding and Active-Transaction Persistence Contracts | Merged, PR #80"
+        in combined
+    )
 
     facade = ROOT / "app" / "services" / "runtime_api_facade.py"
     assert facade.is_file()
@@ -707,8 +710,8 @@ def test_cp9_local_fact_binding_governance_precedes_concrete_integration() -> No
     assert "Trusted Application Facade | Merged, PR #78" in combined
     assert "Local Fact Binding and Transaction Integration Governance | Merged, PR #79" in combined
     assert (
-        "Local Fact Binding and Active-Transaction Persistence Contracts | "
-        "Implemented, pending review" in combined
+        "Local Fact Binding and Active-Transaction Persistence Contracts | Merged, PR #80"
+        in combined
     )
     assert "CP9 Runtime API | Planned / Blocked" in combined
     assert "CP10 Workers | Planned" in combined
@@ -725,6 +728,54 @@ def test_cp9_local_fact_binding_governance_precedes_concrete_integration() -> No
     )
     for package in ("workers", "worker", "queue", "scheduler"):
         assert not (ROOT / "app" / "runtime" / package).exists()
+
+
+def test_cp9_registry_snapshot_persistence_governance_precedes_implementation() -> None:
+    adr = ADR / (
+        "ADR-093-CP9-RUNTIME-REGISTRY-SNAPSHOT-PERSISTENCE-AND-ACTIVE-TRANSACTION-INTEGRATION.md"
+    )
+    text = adr.read_text(encoding="utf-8")
+    normalized = " ".join(text.split())
+    documents = (
+        ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+        ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+        ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+    )
+    combined = " ".join("".join(path.read_text(encoding="utf-8") for path in documents).split())
+
+    assert "**Status:** Proposed" in text
+    assert "**Date:** 2026-08-10" in text
+    for phrase in (
+        "A separate Registry persistence store is required",
+        "Migration `20260808_0022` is therefore required",
+        "performs no INSERT, UPDATE, DELETE, deduplication, normalization, inferred backfill",
+        "If any row exists, it raises a bounded migration error",
+        "facade remains the sole owner of the outer `AsyncSession` transaction",
+        "No helper may call `begin`, `begin_nested`, `commit`, `rollback`, `close`",
+        "Exact replay returns the original safe receipt and invokes the concrete local "
+        "mutation zero times",
+        "invokes the bounded local mutation exactly once",
+        "schema/persistence checkpoint and the concrete binder/local-operation checkpoint "
+        "are distinct",
+    ):
+        assert phrase in normalized
+    assert "Registry Snapshot Persistence and Active-Transaction Integration Governance" in combined
+    assert "Governed, pending review" in combined
+    assert (
+        "Local Fact Binding and Active-Transaction Persistence Contracts | Merged, PR #80"
+        in combined
+    )
+    assert "Registry Resolution and Admission Exactness Contracts Gate | Merged, PR #81" in combined
+    assert "CP9 Runtime API | Planned / Blocked" in combined
+    assert "CP10 Workers | Planned" in combined
+    assert not any(
+        path.name.startswith("20260808_0022")
+        for path in (ROOT / "alembic" / "versions").glob("*.py")
+    )
+    assert not (ROOT / "app" / "runtime" / "persistence" / "registry.py").exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_local_fact_binding_contract_gate_is_additive_only() -> None:
