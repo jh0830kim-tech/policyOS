@@ -4,7 +4,16 @@ from hashlib import sha256
 from uuid import UUID
 
 from app.ai.privacy import DataClassification
-from app.runtime.ports import RuntimeApiPersistenceBindingRead
+from app.runtime.authority import RuntimeAuthorityDecisionStatus
+from app.runtime.ports import (
+    RuntimeApiPersistenceBindingRead,
+    RuntimeApiRegistryResolutionAdmissionFact,
+)
+from app.runtime.registry import (
+    RuntimeActionResolutionStatus,
+    validate_runtime_action_resolution_decision,
+    validate_runtime_registry_snapshot,
+)
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
     RuntimeApiContractConflict,
@@ -62,6 +71,89 @@ def validate_runtime_api_persistence_resolution(
     if resolved is None or resolved != requested:
         raise RuntimeApiContractConflict("persisted facts are unavailable or conflict")
     return resolved
+
+
+def validate_runtime_api_registry_resolution_admission(
+    binding: RuntimeApiPersistenceBindingRead,
+) -> RuntimeApiRegistryResolutionAdmissionFact:
+    """Require one exact persisted Registry resolution and active admission."""
+    facts = binding.registry_resolution_admission
+    snapshot = facts.snapshot
+    request = facts.resolution_request
+    decision = facts.resolution_decision
+    admission = facts.admission_decision
+    registry = binding.registry
+    scope = binding.scope
+
+    validate_runtime_registry_snapshot(snapshot)
+    validate_runtime_action_resolution_decision(decision, request, snapshot)
+    if decision.decision_status is not RuntimeActionResolutionStatus.RESOLVED:
+        raise RuntimeApiContractConflict("persisted Registry action is not resolved")
+    if admission.decision_status is not RuntimeAuthorityDecisionStatus.ADMITTED:
+        raise RuntimeApiContractConflict("persisted admission is not active")
+    if (
+        snapshot.runtime_registry_snapshot_id,
+        snapshot.registry_revision,
+        snapshot.snapshot_digest_reference,
+        request.runtime_action_resolution_request_id,
+        decision.runtime_action_resolution_decision_id,
+    ) != (
+        registry.runtime_registry_snapshot_id,
+        registry.registry_revision,
+        registry.snapshot_digest_reference,
+        registry.runtime_action_resolution_request_id,
+        registry.runtime_action_resolution_decision_id,
+    ):
+        raise RuntimeApiContractConflict("persisted Registry identity is substituted or stale")
+    expected_scope = (
+        scope.tenant_id,
+        scope.organization_id,
+        scope.classification,
+        scope.root_lineage_id,
+        scope.root_lineage_digest_reference,
+    )
+    if any(
+        candidate != expected_scope
+        for candidate in (
+            (
+                snapshot.tenant_id,
+                snapshot.organization_id,
+                snapshot.classification,
+                snapshot.root_lineage_id,
+                snapshot.root_lineage_digest_reference,
+            ),
+            (
+                request.tenant_id,
+                request.organization_id,
+                request.classification,
+                request.root_lineage_id,
+                request.root_lineage_digest_reference,
+            ),
+            (
+                decision.tenant_id,
+                decision.organization_id,
+                decision.classification,
+                decision.root_lineage_id,
+                decision.root_lineage_digest_reference,
+            ),
+            (
+                admission.tenant_id,
+                admission.organization_id,
+                admission.classification,
+                admission.root_lineage_id,
+                admission.root_lineage_digest_reference,
+            ),
+        )
+    ):
+        raise RuntimeApiContractConflict("Registry or admission scope differs")
+    if (
+        admission.runtime_admission_decision_id != binding.admission.record_id
+        or admission.runtime_execution_request_id != binding.execution_request.record_id
+        or admission.registry_revision != registry.registry_revision
+        or admission.permit_reference_ids != tuple(item.permit_id for item in binding.permits)
+    ):
+        raise RuntimeApiContractConflict("admission identity or permit set differs")
+    return facts
 
 
 _CLASSIFICATION_RANK = {
@@ -407,6 +499,7 @@ def validate_runtime_api_safe_error(error: RuntimeApiSafeError) -> RuntimeApiSaf
 __all__ = (
     "validate_runtime_api_persistence_binding",
     "validate_runtime_api_persistence_resolution",
+    "validate_runtime_api_registry_resolution_admission",
     "RUNTIME_API_OPERATION_PERMISSIONS",
     "build_runtime_api_reconciliation_digest",
     "build_runtime_api_submission_digest",

@@ -153,6 +153,7 @@ grants permission or causes automatic execution.
 | CP9-Trusted-Application-Facade | Merged, PR #78 | Production facade | One SQLAlchemy transaction binds trusted context, exact permission, canonical digest, idempotency, and a bounded local operation | Concrete binder/local-operation implementation and routes remain blocked |
 | CP9-Gate-Local-Fact-Binding-and-Transaction-Integration-Governance | Merged, PR #79 | Local integration governance | ADR-092 fixes exact persisted orchestration facts, Registry snapshot provenance, and active-transaction Persistence boundaries | Governance only |
 | CP9-Gate-Local-Fact-Binding-and-Active-Transaction-Persistence-Contracts | Implemented, pending review | Local integration contracts | Adds exact persisted record, permit, Registry, scope, lineage, operation-binding, and caller-owned active-transaction Ports contracts | No concrete binder, store, migration, or route |
+| CP9-Gate-Registry-Resolution-and-Admission-Exactness-Contracts | Implemented / Validated, pending review | Exactness contract correction | Binds persisted Registry snapshot/reference, resolution request/decision, and admission decision identities and scope fail closed | No Registry snapshot persistence, concrete binder/local operation, migration, or route |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires production facade implementation and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -170,11 +171,12 @@ The required implementation order is:
 
 1. Merge ADR-092 local integration governance.
 2. Review and merge additive binding and active-transaction Persistence contracts.
-3. Decide the Registry snapshot boundary and implement concrete local integration.
-4. Implement production Runtime routes.
-5. Run combined CP9 PostgreSQL and HTTP acceptance.
-6. Complete CP9 closeout.
-7. Begin CP10 only after separate approval.
+3. Review the Registry resolution and admission exactness contract correction gate.
+4. Decide the Registry snapshot persistence boundary and implement concrete local integration.
+5. Implement production Runtime routes.
+6. Run combined CP9 PostgreSQL and HTTP acceptance.
+7. Complete CP9 closeout.
+8. Begin CP10 only after separate approval.
 
 
 ## 6. Boundary input and output contracts

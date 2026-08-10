@@ -7,7 +7,13 @@ from uuid import UUID
 from pydantic import field_validator, model_validator
 
 from app.ai.privacy import DataClassification
+from app.runtime.authority import RuntimeAdmissionDecision
 from app.runtime.ports._base import BoundedId, PositiveInt, RuntimePortModel, aware, canonical
+from app.runtime.registry import (
+    RuntimeActionRegistrySnapshot,
+    RuntimeActionResolutionDecision,
+    RuntimeActionResolutionRequest,
+)
 
 
 class RuntimeApiPersistedRecordFact(RuntimePortModel):
@@ -26,6 +32,15 @@ class RuntimeApiRegistryPersistenceFact(RuntimePortModel):
     snapshot_digest_reference: BoundedId
     runtime_action_resolution_request_id: UUID
     runtime_action_resolution_decision_id: UUID
+
+
+class RuntimeApiRegistryResolutionAdmissionFact(RuntimePortModel):
+    """Exact domain facts returned by an approved persisted read boundary."""
+
+    snapshot: RuntimeActionRegistrySnapshot
+    resolution_request: RuntimeActionResolutionRequest
+    resolution_decision: RuntimeActionResolutionDecision
+    admission_decision: RuntimeAdmissionDecision
 
 
 class RuntimeApiPersistenceScope(RuntimePortModel):
@@ -51,6 +66,7 @@ class RuntimeApiPersistenceBindingRead(RuntimePortModel):
     audit_trail: RuntimeApiPersistedRecordFact
     permits: tuple[RuntimeApiPersistedPermitFact, ...]
     registry: RuntimeApiRegistryPersistenceFact
+    registry_resolution_admission: RuntimeApiRegistryResolutionAdmissionFact
     scope: RuntimeApiPersistenceScope
     requested_at: datetime
 
@@ -132,4 +148,5 @@ __all__ = (
     "RuntimeApiPersistenceBindingRead",
     "RuntimeApiPersistenceScope",
     "RuntimeApiRegistryPersistenceFact",
+    "RuntimeApiRegistryResolutionAdmissionFact",
 )
