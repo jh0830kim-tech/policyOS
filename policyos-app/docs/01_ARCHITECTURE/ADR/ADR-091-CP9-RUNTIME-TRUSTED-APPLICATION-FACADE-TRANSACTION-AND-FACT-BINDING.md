@@ -1,7 +1,7 @@
 # ADR-091: CP9 Runtime Trusted Application Facade Transaction and Fact Binding
 
-**Status:** Proposed  
-**Date:** 2026-08-08  
+**Status:** Proposed
+**Date:** 2026-08-08
 **Depends on:** ADR-087, ADR-088, ADR-089, ADR-090, and migrations `20260807_0018` through `20260808_0021`
 
 ## Context
@@ -113,3 +113,9 @@ The transaction and trust boundary is reviewable before production transport exi
 no production facade, route, schema, persistence, migration, outbox, worker, queue, scheduler, or
 external effect. The additional contract amendment is an explicit blocker rather than an implicit
 implementation detail.
+
+## ADR-096 clarification
+
+ADR-096 preserves every facade method at exactly five parameters. Required operation-specific
+integration facts travel only as a nested strict value inside the existing facts parameter; no
+route, dependency provider, binder, or persistence adapter may infer them or add a sixth parameter.

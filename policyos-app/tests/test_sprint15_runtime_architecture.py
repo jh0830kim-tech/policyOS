@@ -908,3 +908,41 @@ def test_cp9_registry_and_reconciliation_persistence_implementation_is_bounded()
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
+
+def test_cp9_explicit_integration_facts_governance_precedes_contracts() -> None:
+    adr = ADR / (
+        "ADR-096-CP9-RUNTIME-EXPLICIT-INTEGRATION-FACTS-AND-REQUEST-SCOPED-PERSISTENCE-BINDING.md"
+    )
+    text = adr.read_text(encoding="utf-8")
+    normalized = " ".join(text.split())
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+
+    for phrase in (
+        "existing public facade methods keep exactly five parameters",
+        "RuntimeApiSubmissionFacts.integration_facts",
+        "RuntimeApiReconciliationFacts.integration_facts",
+        "RuntimeApiInvocationQueryFacts.integration_facts",
+        "request-scoped, server-owned integration-fact preparation boundary",
+        "performs zero persistence-binding database reads",
+        "stages its closed write set exactly once",
+        "actual `AsyncSession` or root transaction objects",
+        "additive-but-breaking construction change",
+    ):
+        assert phrase in normalized
+    assert "CP9-Gate-Explicit-Integration-Facts-and-Request-Scoped-Persistence-Binding" in combined
+    assert "Governed, validated, pending review" in combined
+    assert "CP9 remains Planned / Blocked" in combined
+    assert "CP10 remains Planned" in combined
+    assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
