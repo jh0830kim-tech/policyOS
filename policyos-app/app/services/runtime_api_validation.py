@@ -9,6 +9,7 @@ from app.ai.privacy import DataClassification
 from app.runtime.authority import RuntimeAuthorityDecisionStatus
 from app.runtime.ports import (
     RuntimeApiLocalWriteSetOperation,
+    RuntimeApiLogicalExecutionResultMutationPresent,
     RuntimeApiPersistenceBindingRead,
     RuntimeApiRegistryResolutionAdmissionFact,
 )
@@ -623,6 +624,17 @@ def validate_runtime_api_domain_operation_result(
             or projection.invocation_reference != command.invocation_reference
         ):
             raise RuntimeApiContractConflict("domain operation submission stage differs")
+        write_set = result.stage.write_set
+        if write_set is None:
+            raise RuntimeApiContractConflict("domain operation submission write set is missing")
+        state = write_set.state_record.current_state
+        present = isinstance(
+            result.stage.logical_execution_result,
+            RuntimeApiLogicalExecutionResultMutationPresent,
+        )
+        validate_runtime_api_result_count(state, int(present))
+        if projection.status is not runtime_api_public_status_for_execution_state(state):
+            raise RuntimeApiContractConflict("domain operation status differs from exact state")
     else:
         if (
             result.stage.operation is not RuntimeApiLocalWriteSetOperation.REQUEST_RECONCILIATION

@@ -10,6 +10,10 @@ from pydantic import ValidationError
 
 from app.ai.privacy import DataClassification
 from app.core.auth_claims import VerifiedAccessTokenClaims
+from app.runtime.ports import (
+    RuntimeApiLogicalExecutionResultMutationAbsent,
+    RuntimeApiLogicalExecutionResultMutationPresent,
+)
 from app.runtime.state import RuntimeExecutionState
 from app.schemas.runtime_api import RuntimeInvocationSubmitRequest
 from app.services.runtime_api_contracts import (
@@ -71,6 +75,12 @@ from app.services.runtime_api_validation import (
     validate_runtime_api_submission,
     validate_runtime_api_submission_binding,
     validate_runtime_api_trusted_context_facts,
+)
+from tests.test_runtime_api_binding_contracts import (
+    atomic_write_set as _atomic_write_set,
+)
+from tests.test_runtime_api_binding_contracts import (
+    logical_execution_result as _logical_execution_result,
 )
 from tests.test_runtime_api_binding_contracts import (
     query_integration_facts as _query_integration_facts,
@@ -579,6 +589,96 @@ def test_domain_operation_result_is_strict_immutable_and_exactly_bound() -> None
     )
     with pytest.raises(RuntimeApiContractConflict, match="submission stage"):
         validate_runtime_api_domain_operation_result(bound_command, substituted_invocation)
+
+
+def test_domain_operation_result_presence_matches_exact_staged_state() -> None:
+    bound_command = command()
+    absent = RuntimeApiDomainOperationResult(
+        safe_result=safe_result(),
+        stage=bound_command.integration.stage,
+    )
+    assert validate_runtime_api_domain_operation_result(bound_command, absent) is absent
+
+    persisted = bound_command.integration.binding.persistence
+    succeeded_write_set = _atomic_write_set(
+        persisted=persisted,
+        state=RuntimeExecutionState.SUCCEEDED,
+    )
+    present_stage = bound_command.integration.stage.model_copy(
+        update={
+            "write_set": succeeded_write_set,
+            "logical_execution_result": RuntimeApiLogicalExecutionResultMutationPresent(
+                logical_execution_result=_logical_execution_result(
+                    succeeded_write_set,
+                    persisted=persisted,
+                )
+            ),
+        }
+    )
+    present = RuntimeApiDomainOperationResult(
+        safe_result=safe_result(RuntimeApiPublicStatus.SUCCEEDED),
+        stage=present_stage,
+    )
+    assert (
+        validate_runtime_api_domain_operation_result(
+            bound_command.model_copy(
+                update={
+                    "integration": bound_command.integration.model_copy(
+                        update={"stage": present_stage}
+                    )
+                }
+            ),
+            present,
+        )
+        is present
+    )
+
+    forbidden_present = absent.model_copy(
+        update={
+            "stage": absent.stage.model_copy(
+                update={
+                    "logical_execution_result": RuntimeApiLogicalExecutionResultMutationPresent(
+                        logical_execution_result=_logical_execution_result(
+                            absent.stage.write_set,
+                            persisted=persisted,
+                        )
+                    )
+                }
+            )
+        }
+    )
+    with pytest.raises(RuntimeApiContractConflict, match="result"):
+        validate_runtime_api_domain_operation_result(
+            bound_command.model_copy(
+                update={
+                    "integration": bound_command.integration.model_copy(
+                        update={"stage": forbidden_present.stage}
+                    )
+                }
+            ),
+            forbidden_present,
+        )
+
+    missing_required = present.model_copy(
+        update={
+            "stage": present.stage.model_copy(
+                update={
+                    "logical_execution_result": (RuntimeApiLogicalExecutionResultMutationAbsent())
+                }
+            )
+        }
+    )
+    with pytest.raises(RuntimeApiContractConflict, match="result"):
+        validate_runtime_api_domain_operation_result(
+            bound_command.model_copy(
+                update={
+                    "integration": bound_command.integration.model_copy(
+                        update={"stage": missing_required.stage}
+                    )
+                }
+            ),
+            missing_required,
+        )
 
 
 def test_facade_accepts_only_outer_boundary_contracts_and_explicit_facts() -> None:

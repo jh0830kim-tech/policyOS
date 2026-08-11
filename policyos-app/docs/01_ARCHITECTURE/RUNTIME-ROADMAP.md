@@ -557,3 +557,18 @@ exactly-one requires present, and zero-or-one requires an explicit domain choice
 and reconciliation responses are not logical execution results. Reconciliation cannot mutate the
 logical result, contributing adapter-result identities remain deferred, and one local mutation
 counts one atomic bundle rather than one persisted row.
+
+### CP9 logical execution-result public domain and Port contracts
+
+The contract gate adds a strict immutable logical-result identity under
+`app.runtime.ports.runtime_api_persistence`, explicit present/absent submission mutation variants,
+and an exact query locator/read result. The contract binds tenant, organization, classification,
+execution request, attempt, root lineage, resulting state revision, audit revision, result
+reference, stored digest reference, bounded payload-provenance reference, and domain-supplied aware
+time without inferring any field.
+
+ADR-098 cardinality is checked against the exact staged state. Reconciliation requires the absent
+variant. Stored result digest/reference values remain exact-read output rather than locator input.
+Until migration `20260808_0023` and its repository merge, a result-present persistence attempt
+fails closed before database mutation. No schema, migration, provider, binder, facade, route, or
+external effect is added; CP9 remains Planned / Blocked and CP10 remains Planned.

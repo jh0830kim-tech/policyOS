@@ -25,20 +25,6 @@ class RuntimeApiPersistedRecordFact(RuntimePortModel):
     expected_revision: PositiveInt
 
 
-class RuntimeApiQueryResultPresence(StrEnum):
-    ABSENT = "absent"
-    PRESENT = "present"
-
-
-class RuntimeApiQueryResultAbsentLocator(RuntimePortModel):
-    presence: Literal[RuntimeApiQueryResultPresence.ABSENT] = RuntimeApiQueryResultPresence.ABSENT
-
-
-class RuntimeApiQueryResultPresentLocator(RuntimePortModel):
-    presence: Literal[RuntimeApiQueryResultPresence.PRESENT] = RuntimeApiQueryResultPresence.PRESENT
-    execution_result: RuntimeApiPersistedRecordFact
-
-
 class RuntimeApiPersistedPermitFact(RuntimePortModel):
     permit_id: UUID
     expected_revision: PositiveInt
@@ -75,11 +61,76 @@ class RuntimeApiPersistenceScope(RuntimePortModel):
         return self
 
 
+class RuntimeApiLogicalExecutionResult(RuntimePortModel):
+    runtime_logical_execution_result_id: UUID
+    result_revision: PositiveInt
+    execution_request: RuntimeApiPersistedRecordFact
+    execution_state: RuntimeApiPersistedRecordFact
+    audit_trail: RuntimeApiPersistedRecordFact
+    attempt_id: UUID
+    scope: RuntimeApiPersistenceScope
+    result_reference: BoundedId
+    result_digest_reference: BoundedId
+    result_payload_provenance_reference: BoundedId
+    produced_at: datetime
+
+    @field_validator("produced_at")
+    @classmethod
+    def timestamp(cls, value: datetime) -> datetime:
+        return aware(value, "produced_at")
+
+    @model_validator(mode="after")
+    def distinct_exact_records(self):
+        record_ids = {
+            self.execution_request.record_id,
+            self.execution_state.record_id,
+            self.audit_trail.record_id,
+            self.runtime_logical_execution_result_id,
+        }
+        if len(record_ids) != 4:
+            raise ValueError("logical result records must be distinct")
+        return self
+
+
+class RuntimeApiLogicalExecutionResultMutationPresence(StrEnum):
+    ABSENT = "absent"
+    PRESENT = "present"
+
+
+class RuntimeApiLogicalExecutionResultMutationAbsent(RuntimePortModel):
+    presence: Literal[RuntimeApiLogicalExecutionResultMutationPresence.ABSENT] = (
+        RuntimeApiLogicalExecutionResultMutationPresence.ABSENT
+    )
+
+
+class RuntimeApiLogicalExecutionResultMutationPresent(RuntimePortModel):
+    presence: Literal[RuntimeApiLogicalExecutionResultMutationPresence.PRESENT] = (
+        RuntimeApiLogicalExecutionResultMutationPresence.PRESENT
+    )
+    logical_execution_result: RuntimeApiLogicalExecutionResult
+
+
+class RuntimeApiQueryResultPresence(StrEnum):
+    ABSENT = "absent"
+    PRESENT = "present"
+
+
+class RuntimeApiQueryResultAbsentLocator(RuntimePortModel):
+    presence: Literal[RuntimeApiQueryResultPresence.ABSENT] = RuntimeApiQueryResultPresence.ABSENT
+
+
+class RuntimeApiQueryResultPresentLocator(RuntimePortModel):
+    presence: Literal[RuntimeApiQueryResultPresence.PRESENT] = RuntimeApiQueryResultPresence.PRESENT
+    logical_execution_result: RuntimeApiPersistedRecordFact
+    attempt_id: UUID
+
+
 class RuntimeApiQueryProjectionLocator(RuntimePortModel):
     execution_request: RuntimeApiPersistedRecordFact
     execution_state: RuntimeApiPersistedRecordFact
     audit_trail: RuntimeApiPersistedRecordFact
     result: RuntimeApiQueryResultAbsentLocator | RuntimeApiQueryResultPresentLocator
+    attempt_id: UUID
     scope: RuntimeApiPersistenceScope
     located_at: datetime
 
@@ -98,7 +149,7 @@ class RuntimeApiQueryProjectionLocator(RuntimePortModel):
         if len(record_ids) != 3:
             raise ValueError("query locator records must be distinct")
         if isinstance(self.result, RuntimeApiQueryResultPresentLocator):
-            if self.result.execution_result.record_id in record_ids:
+            if self.result.logical_execution_result.record_id in record_ids:
                 raise ValueError("execution result must be a distinct logical record")
         return self
 
@@ -118,6 +169,44 @@ class RuntimeApiExecutionStateRevisionReadResult(RuntimePortModel):
     def exact_read_time(self):
         if self.observed_at < self.locator.located_at:
             raise ValueError("exact state read predates its locator")
+        return self
+
+
+class RuntimeApiLogicalExecutionResultRevisionReadResult(RuntimePortModel):
+    locator: RuntimeApiQueryProjectionLocator
+    logical_execution_result: RuntimeApiLogicalExecutionResult
+    observed_at: datetime
+
+    @field_validator("observed_at")
+    @classmethod
+    def timestamp(cls, value: datetime) -> datetime:
+        return aware(value, "observed_at")
+
+    @model_validator(mode="after")
+    def exact_read(self):
+        if self.observed_at < self.locator.located_at:
+            raise ValueError("exact logical-result read predates its locator")
+        if not isinstance(self.locator.result, RuntimeApiQueryResultPresentLocator):
+            raise ValueError("logical-result read requires a present locator")
+        result = self.logical_execution_result
+        if (
+            result.runtime_logical_execution_result_id,
+            result.result_revision,
+            result.execution_request,
+            result.execution_state,
+            result.audit_trail,
+            result.attempt_id,
+            result.scope,
+        ) != (
+            self.locator.result.logical_execution_result.record_id,
+            self.locator.result.logical_execution_result.expected_revision,
+            self.locator.execution_request,
+            self.locator.execution_state,
+            self.locator.audit_trail,
+            self.locator.attempt_id,
+            self.locator.scope,
+        ):
+            raise ValueError("logical-result read differs from exact locator")
         return self
 
 
@@ -172,6 +261,10 @@ class RuntimeApiLocalWriteSetStage(RuntimePortModel):
     operation: RuntimeApiLocalWriteSetOperation
     binding: RuntimeApiPersistenceBindingRead
     write_set_digest_reference: BoundedId
+    logical_execution_result: (
+        RuntimeApiLogicalExecutionResultMutationAbsent
+        | RuntimeApiLogicalExecutionResultMutationPresent
+    )
     write_set: RuntimeAtomicWriteSet | None = None
     reconciliation_request: RuntimeEffectReconciliationRequest | None = None
     staged_at: datetime
@@ -192,11 +285,21 @@ class RuntimeApiLocalWriteSetStage(RuntimePortModel):
             if self.write_set is None or self.reconciliation_request is not None:
                 raise ValueError("submission requires exactly one atomic write set")
             _validate_submission_write_set(self.binding, self.write_set)
+            _validate_submission_logical_result(
+                self.binding,
+                self.write_set,
+                self.logical_execution_result,
+            )
             payload_time = self.write_set.requested_at
         else:
             if self.reconciliation_request is None or self.write_set is not None:
                 raise ValueError("reconciliation requires exactly one reconciliation request")
             _validate_reconciliation_write_set(self.binding, self.reconciliation_request)
+            if not isinstance(
+                self.logical_execution_result,
+                RuntimeApiLogicalExecutionResultMutationAbsent,
+            ):
+                raise ValueError("reconciliation cannot mutate a logical execution result")
             payload_time = self.reconciliation_request.requested_at
         if self.staged_at < max(self.binding.requested_at, payload_time):
             raise ValueError("write-set stage predates its bound facts")
@@ -367,6 +470,69 @@ def _validate_reconciliation_write_set(
         raise ValueError("reconciliation request differs from exact persistence binding")
 
 
+def _validate_submission_logical_result(
+    binding: RuntimeApiPersistenceBindingRead,
+    write_set: RuntimeAtomicWriteSet,
+    mutation: (
+        RuntimeApiLogicalExecutionResultMutationAbsent
+        | RuntimeApiLogicalExecutionResultMutationPresent
+    ),
+) -> None:
+    if isinstance(mutation, RuntimeApiLogicalExecutionResultMutationAbsent):
+        return
+    result = mutation.logical_execution_result
+    state = write_set.state_record
+    audit = write_set.audit_trail
+    if (
+        result.execution_request,
+        result.execution_state.record_id,
+        result.execution_state.expected_revision,
+        result.audit_trail.record_id,
+        result.audit_trail.expected_revision,
+        result.attempt_id,
+        result.scope,
+    ) != (
+        binding.execution_request,
+        state.runtime_execution_state_record_id,
+        state.current_revision,
+        audit.runtime_audit_trail_id,
+        audit.trail_revision,
+        state.scope.attempt_id,
+        binding.scope,
+    ):
+        raise ValueError("logical result differs from exact submission records")
+    if (
+        state.scope.runtime_execution_request_id,
+        audit.scope.runtime_execution_request_id,
+        state.scope.tenant_id,
+        state.scope.organization_id,
+        state.scope.classification,
+        state.scope.root_lineage_id,
+        state.scope.root_lineage_digest_reference,
+        audit.scope.tenant_id,
+        audit.scope.organization_id,
+        audit.scope.classification,
+        audit.scope.root_lineage_id,
+        audit.scope.root_lineage_digest_reference,
+    ) != (
+        binding.execution_request.record_id,
+        binding.execution_request.record_id,
+        binding.scope.tenant_id,
+        binding.scope.organization_id,
+        binding.scope.classification,
+        binding.scope.root_lineage_id,
+        binding.scope.root_lineage_digest_reference,
+        binding.scope.tenant_id,
+        binding.scope.organization_id,
+        binding.scope.classification,
+        binding.scope.root_lineage_id,
+        binding.scope.root_lineage_digest_reference,
+    ):
+        raise ValueError("logical result scope or lineage differs from submission")
+    if result.produced_at < max(state.updated_at, audit.updated_at, write_set.requested_at):
+        raise ValueError("logical result predates its exact state or audit revision")
+
+
 @runtime_checkable
 class RuntimeApiActiveTransactionPersistencePort(Protocol):
     """Read and stage facts without owning or ending the outer transaction."""
@@ -395,11 +561,28 @@ class RuntimeApiExactExecutionStateRevisionReader(Protocol):
     ) -> RuntimeApiExecutionStateRevisionReadResult: ...
 
 
+@runtime_checkable
+class RuntimeApiExactLogicalExecutionResultRevisionReader(Protocol):
+    """Read one explicitly named logical-result revision and stored references."""
+
+    async def read_exact_logical_execution_result_revision(
+        self,
+        context: RuntimeApiActiveTransactionContext,
+        locator: RuntimeApiQueryProjectionLocator,
+    ) -> RuntimeApiLogicalExecutionResultRevisionReadResult: ...
+
+
 __all__ = (
     "RuntimeApiActiveTransactionContext",
     "RuntimeApiActiveTransactionPersistencePort",
     "RuntimeApiExactExecutionStateRevisionReader",
+    "RuntimeApiExactLogicalExecutionResultRevisionReader",
     "RuntimeApiExecutionStateRevisionReadResult",
+    "RuntimeApiLogicalExecutionResult",
+    "RuntimeApiLogicalExecutionResultMutationAbsent",
+    "RuntimeApiLogicalExecutionResultMutationPresence",
+    "RuntimeApiLogicalExecutionResultMutationPresent",
+    "RuntimeApiLogicalExecutionResultRevisionReadResult",
     "RuntimeApiLocalWriteSetStage",
     "RuntimeApiLocalWriteSetOperation",
     "RuntimeApiLocalWriteSetStageResult",

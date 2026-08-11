@@ -14,6 +14,7 @@ from app.runtime.ports import (
     RuntimeApiLocalWriteSetOperation,
     RuntimeApiLocalWriteSetStage,
     RuntimeApiLocalWriteSetStageResult,
+    RuntimeApiLogicalExecutionResultMutationPresent,
     RuntimeApiPersistenceBindingRead,
     validate_runtime_atomic_write_set,
 )
@@ -72,6 +73,13 @@ class SQLAlchemyRuntimeApiActiveTransactionPersistence:
                 if stage.write_set is None:
                     raise RuntimePersistenceTransactionError(
                         "submission stage requires one atomic write set"
+                    )
+                if isinstance(
+                    stage.logical_execution_result,
+                    RuntimeApiLogicalExecutionResultMutationPresent,
+                ):
+                    raise RuntimePersistenceTransactionError(
+                        "logical-result persistence is not implemented"
                     )
                 validate_runtime_atomic_write_set(stage.write_set)
                 await _persist_runtime_atomic_write_set(
