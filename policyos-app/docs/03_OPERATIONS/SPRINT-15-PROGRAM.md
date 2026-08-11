@@ -776,3 +776,19 @@ stages one closed payload and one transport receipt using the same captured sess
 transaction. `get_invocation` performs only the exact read-only verification. The required public
 contract amendment, concrete integration, routes, acceptance, and closeout remain separate gates;
 CP9 remains Planned / Blocked and CP10 remains Planned.
+
+### CP9 explicit integration facts public contracts
+
+The ADR-096 public-contract amendment is implemented and validated, pending review. Existing
+submission, query, and reconciliation facts now require strict nested operation integration facts;
+the trusted command or query carries the same validated value to the local-operation boundary.
+The public facade methods remain exactly five parameters and existing binder signatures continue
+to consume the outer facts value without a separate authority-bearing parameter.
+
+Submission and reconciliation contracts carry exact expected Persistence binding, caller-owned
+active-transaction context, closed stage payload, caller-supplied identities, digest, and time.
+The query contract carries only exact read identity, expected binding, and transaction context.
+Pure validators reject operation, payload, scope, Registry, admission, permit, revision, receipt,
+digest, action, and duplicate-identity substitution with bounded conflicts. The request-scoped
+provider is a structural Protocol only: no provider, binder, local operation, facade behavior,
+route, model, migration, repository, or external effect is implemented by this gate.

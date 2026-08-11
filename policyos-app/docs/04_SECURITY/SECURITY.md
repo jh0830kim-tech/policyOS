@@ -401,3 +401,18 @@ scope substitution, stale facts, and mismatch fail closed before mutation. Repla
 no binding read or mutation; new mutations stage one closed payload and receipt atomically; the
 query path is read-only. Public contract changes and concrete integration remain unimplemented, so
 CP9 remains Planned / Blocked.
+
+### CP9 explicit integration facts public-contract amendment
+
+Required strict nested integration facts eliminate the remaining opaque-reference inference path.
+Submission and reconciliation expose exactly one closed governed stage; invocation query facts
+have no stage, receipt, write set, mutation digest, or reconciliation payload. Duplicate outer and
+nested command, query, receipt, correlation, action, classification, and digest identities must
+compare exactly. Missing, extra, stale, cross-scope, or substituted values fail closed.
+
+The request-scoped integration-facts provider is an application Protocol, not an implementation or
+authority resolver. It accepts no HTTP body, session, engine, repository, cache, or reusable
+capability and may return only immutable caller-owned expected facts. Actual session and root
+transaction identity remain confined to the approved one-shot Persistence factory. This contract
+gate changes no facade behavior, route, database model, migration, repository, external effect, or
+Worker boundary.

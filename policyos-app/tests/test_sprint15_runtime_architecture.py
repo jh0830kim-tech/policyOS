@@ -946,3 +946,30 @@ def test_cp9_explicit_integration_facts_governance_precedes_contracts() -> None:
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
+
+def test_cp9_explicit_integration_facts_contract_gate_is_bounded() -> None:
+    contracts = (ROOT / "app" / "services" / "runtime_api_contracts.py").read_text(encoding="utf-8")
+    protocols = (ROOT / "app" / "services" / "runtime_api_protocols.py").read_text(encoding="utf-8")
+    validation = (ROOT / "app" / "services" / "runtime_api_validation.py").read_text(
+        encoding="utf-8"
+    )
+    combined = "\n".join((contracts, protocols, validation))
+    for name in (
+        "RuntimeApiSubmissionIntegrationFacts",
+        "RuntimeApiInvocationQueryIntegrationFacts",
+        "RuntimeApiReconciliationIntegrationFacts",
+        "RuntimeApiIntegrationFactsProvider",
+    ):
+        assert name in combined
+    assert "integration: RuntimeApiSubmissionIntegrationFacts" in contracts
+    assert "integration: RuntimeApiInvocationQueryIntegrationFacts" in contracts
+    assert "integration: RuntimeApiReconciliationIntegrationFacts" in contracts
+    assert "submission integration facts differ" in validation
+    assert "invocation query integration facts differ" in validation
+    assert "reconciliation integration facts differ" in validation
+    assert "AsyncSession" not in contracts
+    assert "FastAPI" not in combined
+    assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()

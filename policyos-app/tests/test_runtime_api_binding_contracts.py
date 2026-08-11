@@ -64,12 +64,16 @@ from app.runtime.registry import (
 from app.services.runtime_api_contracts import (
     RuntimeApiContractConflict,
     RuntimeApiInvocationQueryBindingFacts,
+    RuntimeApiInvocationQueryIntegrationFacts,
     RuntimeApiReconciliationBindingFacts,
+    RuntimeApiReconciliationIntegrationFacts,
     RuntimeApiSubmissionBindingFacts,
+    RuntimeApiSubmissionIntegrationFacts,
 )
 from app.services.runtime_api_protocols import (
     RuntimeApiActiveTransactionPersistenceFactory,
     RuntimeApiApplicationFacade,
+    RuntimeApiIntegrationFactsProvider,
     RuntimeApiPersistedOrchestrationFactBinder,
 )
 from app.services.runtime_api_validation import (
@@ -86,6 +90,13 @@ LINEAGE = UUID("00000000-0000-0000-0000-000000000003")
 
 def uid(value: int) -> UUID:
     return UUID(int=value)
+
+
+DEFAULT_SUBMISSION_RECEIPT = uid(32)
+DEFAULT_SUBMISSION_COMMAND = uid(33)
+DEFAULT_QUERY = uid(34)
+DEFAULT_RECONCILIATION_RECEIPT = uid(36)
+DEFAULT_RECONCILIATION_COMMAND = uid(37)
 
 
 def record(value: int, revision: int = 1) -> RuntimeApiPersistedRecordFact:
@@ -304,6 +315,90 @@ def binding() -> RuntimeApiPersistenceBindingRead:
     )
 
 
+def binding_for_scope(
+    tenant_id=TENANT,
+    organization_id=ORGANIZATION,
+    classification=DataClassification.CONFIDENTIAL,
+) -> RuntimeApiPersistenceBindingRead:
+    item = binding()
+    facts = item.registry_resolution_admission
+    snapshot = facts.snapshot.model_copy(
+        update={
+            "entries": tuple(
+                entry.model_copy(
+                    update={
+                        "action_definition": entry.action_definition.model_copy(
+                            update={
+                                "tenant_id": tenant_id,
+                                "organization_id": organization_id,
+                                "classification": classification,
+                            }
+                        )
+                    }
+                )
+                for entry in facts.snapshot.entries
+            ),
+            "tenant_id": tenant_id,
+            "organization_id": organization_id,
+            "classification": classification,
+        }
+    )
+    request = facts.resolution_request.model_copy(
+        update={
+            "snapshot_reference": facts.resolution_request.snapshot_reference.model_copy(
+                update={
+                    "tenant_id": tenant_id,
+                    "organization_id": organization_id,
+                    "classification": classification,
+                }
+            ),
+            "tenant_id": tenant_id,
+            "organization_id": organization_id,
+            "classification": classification,
+        }
+    )
+    decision = facts.resolution_decision.model_copy(
+        update={
+            "snapshot_reference": facts.resolution_decision.snapshot_reference.model_copy(
+                update={
+                    "tenant_id": tenant_id,
+                    "organization_id": organization_id,
+                    "classification": classification,
+                }
+            ),
+            "tenant_id": tenant_id,
+            "organization_id": organization_id,
+            "classification": classification,
+        }
+    )
+    admission = facts.admission_decision.model_copy(
+        update={
+            "tenant_id": tenant_id,
+            "organization_id": organization_id,
+            "classification": classification,
+        }
+    )
+    return item.model_copy(
+        update={
+            "registry_resolution_admission": facts.model_copy(
+                update={
+                    "snapshot": snapshot,
+                    "resolution_request": request,
+                    "resolution_decision": decision,
+                    "admission_decision": admission,
+                }
+            ),
+            "scope": item.scope.model_copy(
+                update={
+                    "tenant_id": tenant_id,
+                    "organization_id": organization_id,
+                    "classification": classification,
+                }
+            ),
+        }
+    )
+
+
 def test_operation_bindings_own_exact_immutable_persisted_facts() -> None:
     persisted = binding()
     bindings = (
@@ -443,8 +538,8 @@ class ActiveTransactionPersistence:
         )
 
 
-def atomic_write_set(*, outbox=None) -> RuntimeAtomicWriteSet:
-    item = binding()
+def atomic_write_set(*, outbox=None, persisted=None) -> RuntimeAtomicWriteSet:
+    item = persisted or binding()
     identity = item.registry_resolution_admission.resolution_request.action_identity
     scope = RuntimePortScope(
         runtime_execution_request_id=item.execution_request.record_id,
@@ -487,8 +582,8 @@ def atomic_write_set(*, outbox=None) -> RuntimeAtomicWriteSet:
     )
 
 
-def reconciliation_write_set() -> RuntimeEffectReconciliationRequest:
-    item = binding()
+def reconciliation_write_set(*, persisted=None) -> RuntimeEffectReconciliationRequest:
+    item = persisted or binding()
     return RuntimeEffectReconciliationRequest(
         runtime_effect_reconciliation_request_id=uid(50),
         runtime_effect_id=uid(51),
@@ -506,6 +601,150 @@ def reconciliation_write_set() -> RuntimeEffectReconciliationRequest:
         requested_at=NOW,
         request_digest_reference="reconciliation.digest",
     )
+
+
+def active_transaction_context() -> RuntimeApiActiveTransactionContext:
+    return RuntimeApiActiveTransactionContext(
+        transaction_id=uid(30),
+        transaction_reference="transaction.active",
+        opened_at=NOW,
+    )
+
+
+def submission_integration_facts(
+    *,
+    receipt_id=DEFAULT_SUBMISSION_RECEIPT,
+    command_id=DEFAULT_SUBMISSION_COMMAND,
+    command_version="v1",
+    command_digest="sha256:submission.digest",
+    action_reference="action-1",
+    command_reference="command-1",
+    correlation_reference="correlation-1",
+    tenant_id=TENANT,
+    organization_id=ORGANIZATION,
+    classification=DataClassification.CONFIDENTIAL,
+) -> RuntimeApiSubmissionIntegrationFacts:
+    persisted = binding_for_scope(tenant_id, organization_id, classification)
+    return RuntimeApiSubmissionIntegrationFacts(
+        binding=RuntimeApiSubmissionBindingFacts(persistence=persisted),
+        active_transaction=active_transaction_context(),
+        stage=RuntimeApiLocalWriteSetStage(
+            local_write_set_id=uid(31),
+            transport_receipt_id=receipt_id,
+            operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+            binding=persisted,
+            write_set_digest_reference="write-set.digest",
+            write_set=atomic_write_set(persisted=persisted),
+            staged_at=NOW,
+        ),
+        command_id=command_id,
+        command_version=command_version,
+        command_digest=command_digest,
+        action_reference=action_reference,
+        command_reference=command_reference,
+        correlation_reference=correlation_reference,
+        classification=classification,
+        tenant_id=tenant_id,
+        organization_id=organization_id,
+        root_lineage_id=persisted.scope.root_lineage_id,
+        root_lineage_digest_reference=persisted.scope.root_lineage_digest_reference,
+    )
+
+
+def query_integration_facts(
+    *,
+    query_id=DEFAULT_QUERY,
+    invocation_reference="invocation-1",
+    correlation_reference="correlation-1",
+    tenant_id=TENANT,
+    organization_id=ORGANIZATION,
+    classification=DataClassification.CONFIDENTIAL,
+) -> RuntimeApiInvocationQueryIntegrationFacts:
+    persisted = binding_for_scope(tenant_id, organization_id, classification)
+    return RuntimeApiInvocationQueryIntegrationFacts(
+        binding=RuntimeApiInvocationQueryBindingFacts(persistence=persisted),
+        active_transaction=active_transaction_context(),
+        query_id=query_id,
+        invocation_reference=invocation_reference,
+        correlation_reference=correlation_reference,
+        tenant_id=tenant_id,
+        organization_id=organization_id,
+        classification=classification,
+        root_lineage_id=persisted.scope.root_lineage_id,
+        root_lineage_digest_reference=persisted.scope.root_lineage_digest_reference,
+    )
+
+
+def reconciliation_integration_facts(
+    *,
+    receipt_id=DEFAULT_RECONCILIATION_RECEIPT,
+    command_id=DEFAULT_RECONCILIATION_COMMAND,
+    command_version="v1",
+    command_digest="sha256:reconciliation.digest",
+    invocation_reference="invocation-1",
+    reconciliation_reference="reconciliation-1",
+    correlation_reference="correlation-1",
+    tenant_id=TENANT,
+    organization_id=ORGANIZATION,
+    classification=DataClassification.CONFIDENTIAL,
+) -> RuntimeApiReconciliationIntegrationFacts:
+    persisted = binding_for_scope(tenant_id, organization_id, classification)
+    return RuntimeApiReconciliationIntegrationFacts(
+        binding=RuntimeApiReconciliationBindingFacts(persistence=persisted),
+        active_transaction=active_transaction_context(),
+        stage=RuntimeApiLocalWriteSetStage(
+            local_write_set_id=uid(35),
+            transport_receipt_id=receipt_id,
+            operation=RuntimeApiLocalWriteSetOperation.REQUEST_RECONCILIATION,
+            binding=persisted,
+            write_set_digest_reference="reconciliation.digest",
+            reconciliation_request=reconciliation_write_set(persisted=persisted),
+            staged_at=NOW,
+        ),
+        command_id=command_id,
+        command_version=command_version,
+        command_digest=command_digest,
+        invocation_reference=invocation_reference,
+        reconciliation_reference=reconciliation_reference,
+        correlation_reference=correlation_reference,
+        tenant_id=tenant_id,
+        organization_id=organization_id,
+        classification=classification,
+        root_lineage_id=persisted.scope.root_lineage_id,
+        root_lineage_digest_reference=persisted.scope.root_lineage_digest_reference,
+    )
+
+
+class IntegrationFactsProvider:
+    async def provide_submission(self):
+        return submission_integration_facts()
+
+    async def provide_query(self):
+        return query_integration_facts()
+
+    async def provide_reconciliation(self):
+        return reconciliation_integration_facts()
+
+
+def test_operation_integration_facts_are_strict_required_and_request_scoped() -> None:
+    submission = submission_integration_facts()
+    query = query_integration_facts()
+    reconciliation = reconciliation_integration_facts()
+    assert submission.stage.binding == submission.binding.persistence
+    assert reconciliation.stage.binding == reconciliation.binding.persistence
+    assert not hasattr(query, "stage")
+    assert isinstance(IntegrationFactsProvider(), RuntimeApiIntegrationFactsProvider)
+    with pytest.raises(ValidationError):
+        RuntimeApiSubmissionIntegrationFacts.model_validate(
+            {**submission.model_dump(), "metadata": {"unsafe": True}}
+        )
+    with pytest.raises(ValidationError):
+        RuntimeApiSubmissionIntegrationFacts.model_validate(
+            {
+                **submission.model_dump(),
+                "stage": reconciliation.stage,
+            }
+        )
 
 
 def test_active_transaction_port_is_structural_and_stages_exactly_once() -> None:

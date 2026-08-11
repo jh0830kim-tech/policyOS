@@ -323,6 +323,7 @@ def validate_runtime_api_submission_binding(
         command.command_reference,
         command.input_reference,
         command.classification,
+        command.integration,
     ) != (
         facts.command_id,
         RuntimeApiOperation.SUBMIT_INVOCATION,
@@ -340,8 +341,34 @@ def validate_runtime_api_submission_binding(
         request.command_reference,
         request.input_reference,
         request.classification,
+        facts.integration,
     ):
         raise RuntimeApiContractConflict("submission binding differs")
+    integration = facts.integration
+    if (
+        integration.command_id,
+        integration.command_version,
+        integration.command_digest,
+        integration.action_reference,
+        integration.command_reference,
+        integration.correlation_reference,
+        integration.classification,
+    ) != (
+        facts.command_id,
+        facts.command_version,
+        command_digest,
+        request.action_reference,
+        request.command_reference,
+        facts.correlation_reference,
+        request.classification,
+    ):
+        raise RuntimeApiContractConflict("submission integration facts differ")
+    if (
+        integration.tenant_id,
+        integration.organization_id,
+        integration.classification,
+    ) != (scope.tenant_id, scope.organization_id, request.classification):
+        raise RuntimeApiContractConflict("submission integration scope differs")
     return command
 
 
@@ -369,6 +396,7 @@ def validate_runtime_api_invocation_query_binding(
         query.permission,
         query.invocation_reference,
         query.correlation_reference,
+        query.integration,
     ) != (
         facts.query_id,
         principal,
@@ -376,8 +404,16 @@ def validate_runtime_api_invocation_query_binding(
         permission,
         request.invocation_reference,
         facts.correlation_reference,
+        facts.integration,
     ):
         raise RuntimeApiContractConflict("invocation query binding differs")
+    if facts.integration.invocation_reference != request.invocation_reference:
+        raise RuntimeApiContractConflict("invocation query integration facts differ")
+    if (facts.integration.tenant_id, facts.integration.organization_id) != (
+        scope.tenant_id,
+        scope.organization_id,
+    ):
+        raise RuntimeApiContractConflict("invocation query integration scope differs")
     return query
 
 
@@ -414,6 +450,7 @@ def validate_runtime_api_reconciliation_binding(
         command.permission,
         command.invocation_reference,
         command.reconciliation_reference,
+        command.integration,
     ) != (
         facts.command_id,
         RuntimeApiOperation.REQUEST_RECONCILIATION,
@@ -429,8 +466,31 @@ def validate_runtime_api_reconciliation_binding(
         permission,
         request.invocation_reference,
         request.reconciliation_reference,
+        facts.integration,
     ):
         raise RuntimeApiContractConflict("reconciliation binding differs")
+    integration = facts.integration
+    if (
+        integration.command_id,
+        integration.command_version,
+        integration.command_digest,
+        integration.invocation_reference,
+        integration.reconciliation_reference,
+        integration.correlation_reference,
+    ) != (
+        facts.command_id,
+        facts.command_version,
+        command_digest,
+        request.invocation_reference,
+        request.reconciliation_reference,
+        facts.correlation_reference,
+    ):
+        raise RuntimeApiContractConflict("reconciliation integration facts differ")
+    if (integration.tenant_id, integration.organization_id) != (
+        scope.tenant_id,
+        scope.organization_id,
+    ):
+        raise RuntimeApiContractConflict("reconciliation integration scope differs")
     return command
 
 

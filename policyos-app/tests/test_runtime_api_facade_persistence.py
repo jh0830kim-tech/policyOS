@@ -47,8 +47,17 @@ from app.services.runtime_api_facade import (
     SQLAlchemyRuntimeApiApplicationFacade,
 )
 from app.services.runtime_api_idempotency import RuntimeApiIdempotencyPersistenceError
+from app.services.runtime_api_validation import (
+    build_runtime_api_reconciliation_digest,
+    build_runtime_api_submission_digest,
+)
 from app.services.runtime_permission_facts import RuntimePermissionDeniedError
 from app.services.runtime_tenant_binding import RuntimeScopeNotFoundError
+from tests.test_runtime_api_binding_contracts import (
+    query_integration_facts,
+    reconciliation_integration_facts,
+    submission_integration_facts,
+)
 
 NOW = datetime(2026, 8, 8, tzinfo=UTC)
 AUDIENCE = "policyos-api-test"
@@ -112,6 +121,7 @@ class Binder:
             command_reference=request.command_reference,
             input_reference=request.input_reference,
             classification=request.classification,
+            integration=facts.integration,
         )
 
     async def bind_query(self, principal, scope, permission, request, facts):
@@ -122,6 +132,7 @@ class Binder:
             permission=permission,
             invocation_reference=request.invocation_reference,
             correlation_reference=facts.correlation_reference,
+            integration=facts.integration,
         )
 
     async def bind_reconciliation(self, principal, scope, permission, request, facts, digest):
@@ -142,6 +153,7 @@ class Binder:
             permission=permission,
             invocation_reference=request.invocation_reference,
             reconciliation_reference=request.reconciliation_reference,
+            integration=facts.integration,
         )
 
 
@@ -244,22 +256,56 @@ def facade(session):
     )
 
 
-def submission(key, receipt_id):
-    return (
-        RuntimeApiSubmissionInput(
-            action_reference="action:persistence",
-            command_reference="command:persistence",
-            classification=DataClassification.INTERNAL,
-            idempotency_key=key,
-        ),
-        RuntimeApiSubmissionFacts(
-            command_id=uuid4(),
-            command_version="v1",
+def submission(key, receipt_id, tenant_id, organization_id):
+    request = RuntimeApiSubmissionInput(
+        action_reference="action:persistence",
+        command_reference="command:persistence",
+        classification=DataClassification.INTERNAL,
+        idempotency_key=key,
+    )
+    command_id = uuid4()
+    facts = RuntimeApiSubmissionFacts(
+        command_id=command_id,
+        command_version="v1",
+        receipt_id=receipt_id,
+        committed_at=NOW,
+        correlation_reference="correlation:persistence",
+        context=context(),
+        integration=submission_integration_facts(
             receipt_id=receipt_id,
-            committed_at=NOW,
+            command_id=command_id,
+            action_reference=request.action_reference,
+            command_reference=request.command_reference,
             correlation_reference="correlation:persistence",
-            context=context(),
+            tenant_id=tenant_id,
+            organization_id=organization_id,
+            classification=request.classification,
         ),
+    )
+    digest = build_runtime_api_submission_digest(request, facts=facts)
+    facts = facts.model_copy(
+        update={"integration": facts.integration.model_copy(update={"command_digest": digest})}
+    )
+    return request, facts
+
+
+def replace_submission_ids(facts):
+    command_id = uuid4()
+    receipt_id = uuid4()
+    stage = facts.integration.stage.model_copy(update={"transport_receipt_id": receipt_id})
+    integration = facts.integration.model_copy(update={"command_id": command_id, "stage": stage})
+    return facts.model_copy(
+        update={"command_id": command_id, "receipt_id": receipt_id, "integration": integration}
+    )
+
+
+def replace_reconciliation_ids(facts):
+    command_id = uuid4()
+    receipt_id = uuid4()
+    stage = facts.integration.stage.model_copy(update={"transport_receipt_id": receipt_id})
+    integration = facts.integration.model_copy(update={"command_id": command_id, "stage": stage})
+    return facts.model_copy(
+        update={"command_id": command_id, "receipt_id": receipt_id, "integration": integration}
     )
 
 
@@ -267,9 +313,9 @@ def submission(key, receipt_id):
 async def test_postgresql_submission_replay_conflict_and_rollback(database_url):
     engine = create_async_engine(database_url)
     factory = async_sessionmaker(engine, expire_on_commit=False)
-    organization_id, _, _, claims = await seed(factory)
+    organization_id, tenant_id, _, claims = await seed(factory)
     selector = RuntimeApiOrganizationSelector(organization_id=organization_id)
-    request, facts = submission(f"key-{uuid4()}", uuid4())
+    request, facts = submission(f"key-{uuid4()}", uuid4(), tenant_id, organization_id)
     LocalOperation.calls = 0
     async with factory() as session:
         first = await facade(session).submit_invocation(request, claims, selector, facts)
@@ -278,7 +324,7 @@ async def test_postgresql_submission_replay_conflict_and_rollback(database_url):
             request,
             claims,
             selector,
-            facts.model_copy(update={"command_id": uuid4(), "receipt_id": uuid4()}),
+            replace_submission_ids(facts),
         )
     assert first.idempotency.receipt == replay.idempotency.receipt
     assert LocalOperation.calls == 1
@@ -288,11 +334,11 @@ async def test_postgresql_submission_replay_conflict_and_rollback(database_url):
                 request.model_copy(update={"command_reference": "different"}),
                 claims,
                 selector,
-                facts.model_copy(update={"command_id": uuid4(), "receipt_id": uuid4()}),
+                replace_submission_ids(facts),
             )
     assert LocalOperation.calls == 1
 
-    failed_request, failed_facts = submission(f"key-{uuid4()}", uuid4())
+    failed_request, failed_facts = submission(f"key-{uuid4()}", uuid4(), tenant_id, organization_id)
     LocalOperation.fail = True
     with pytest.raises(RuntimeApiFacadeError, match="runtime facade operation failed"):
         async with factory() as session:
@@ -309,7 +355,9 @@ async def test_postgresql_submission_replay_conflict_and_rollback(database_url):
     async with factory() as session, session.begin():
         organization = await session.get(Organization, organization_id)
         organization.name = "before-receipt-failure"
-    duplicate_request, duplicate_facts = submission(f"key-{uuid4()}", facts.receipt_id)
+    duplicate_request, duplicate_facts = submission(
+        f"key-{uuid4()}", facts.receipt_id, tenant_id, organization_id
+    )
     with pytest.raises(
         RuntimeApiIdempotencyPersistenceError,
         match="transport idempotency persistence failed",
@@ -332,10 +380,18 @@ async def test_postgresql_revocation_cross_scope_query_and_reconciliation(databa
     selector = RuntimeApiOrganizationSelector(organization_id=organization_id)
     query = RuntimeApiInvocationQueryInput(invocation_reference="invocation:persistence")
     query_facts = RuntimeApiInvocationQueryFacts(
-        query_id=uuid4(),
+        query_id=(query_id := uuid4()),
         requested_at=NOW,
         correlation_reference="correlation:persistence",
         context=context(),
+        integration=query_integration_facts(
+            query_id=query_id,
+            invocation_reference=query.invocation_reference,
+            correlation_reference="correlation:persistence",
+            tenant_id=tenant_id,
+            organization_id=organization_id,
+            classification=DataClassification.INTERNAL,
+        ),
     )
     LocalOperation.calls = 0
     async with factory() as session:
@@ -364,12 +420,26 @@ async def test_postgresql_revocation_cross_scope_query_and_reconciliation(databa
         idempotency_key=f"key-{uuid4()}",
     )
     facts = RuntimeApiReconciliationFacts(
-        command_id=uuid4(),
+        command_id=(command_id := uuid4()),
         command_version="v1",
-        receipt_id=uuid4(),
+        receipt_id=(receipt_id := uuid4()),
         committed_at=NOW,
         correlation_reference="correlation:persistence",
         context=context(),
+        integration=reconciliation_integration_facts(
+            receipt_id=receipt_id,
+            command_id=command_id,
+            invocation_reference=reconciliation.invocation_reference,
+            reconciliation_reference=reconciliation.reconciliation_reference,
+            correlation_reference="correlation:persistence",
+            tenant_id=tenant_id,
+            organization_id=organization_id,
+            classification=DataClassification.INTERNAL,
+        ),
+    )
+    digest = build_runtime_api_reconciliation_digest(reconciliation, facts=facts)
+    facts = facts.model_copy(
+        update={"integration": facts.integration.model_copy(update={"command_digest": digest})}
     )
     async with factory() as session:
         first = await facade(session).request_reconciliation(
@@ -380,7 +450,7 @@ async def test_postgresql_revocation_cross_scope_query_and_reconciliation(databa
             reconciliation,
             claims,
             selector,
-            facts.model_copy(update={"command_id": uuid4(), "receipt_id": uuid4()}),
+            replace_reconciliation_ids(facts),
         )
     assert first.idempotency.receipt == replay.idempotency.receipt
     assert tenant_id == first.idempotency.receipt.identity.tenant_id
@@ -393,7 +463,7 @@ async def test_postgresql_revocation_cross_scope_query_and_reconciliation(databa
                 ),
                 claims,
                 selector,
-                facts.model_copy(update={"command_id": uuid4(), "receipt_id": uuid4()}),
+                replace_reconciliation_ids(facts),
             )
     assert LocalOperation.calls == calls_after_replay
     await engine.dispose()

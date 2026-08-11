@@ -42,7 +42,18 @@ from app.services.runtime_api_facade import (
 )
 from app.services.runtime_api_protocols import RuntimeApiApplicationFacade
 from app.services.runtime_api_validation import (
+    build_runtime_api_reconciliation_digest,
+    build_runtime_api_submission_digest,
     validate_runtime_api_idempotency_replay,
+)
+from tests.test_runtime_api_binding_contracts import (
+    query_integration_facts as _query_integration_facts,
+)
+from tests.test_runtime_api_binding_contracts import (
+    reconciliation_integration_facts as _reconciliation_integration_facts,
+)
+from tests.test_runtime_api_binding_contracts import (
+    submission_integration_facts as _submission_integration_facts,
 )
 
 NOW = datetime(2026, 8, 8, tzinfo=UTC)
@@ -53,6 +64,33 @@ MEMBERSHIP = UUID(int=104)
 COMMAND = UUID(int=105)
 RECEIPT = UUID(int=106)
 QUERY = UUID(int=107)
+
+
+def submission_integration_facts(**kwargs):
+    return _submission_integration_facts(
+        tenant_id=TENANT,
+        organization_id=ORGANIZATION,
+        classification=DataClassification.INTERNAL,
+        **kwargs,
+    )
+
+
+def query_integration_facts(**kwargs):
+    return _query_integration_facts(
+        tenant_id=TENANT,
+        organization_id=ORGANIZATION,
+        classification=DataClassification.INTERNAL,
+        **kwargs,
+    )
+
+
+def reconciliation_integration_facts(**kwargs):
+    return _reconciliation_integration_facts(
+        tenant_id=TENANT,
+        organization_id=ORGANIZATION,
+        classification=DataClassification.INTERNAL,
+        **kwargs,
+    )
 
 
 class Transaction:
@@ -160,13 +198,21 @@ def submission_input():
 
 
 def submission_facts():
-    return RuntimeApiSubmissionFacts(
+    facts = RuntimeApiSubmissionFacts(
         command_id=COMMAND,
         command_version="v1",
         receipt_id=RECEIPT,
         committed_at=NOW,
         correlation_reference="correlation-1",
         context=context(),
+        integration=submission_integration_facts(
+            receipt_id=RECEIPT,
+            command_id=COMMAND,
+        ),
+    )
+    digest = build_runtime_api_submission_digest(submission_input(), facts=facts)
+    return facts.model_copy(
+        update={"integration": facts.integration.model_copy(update={"command_digest": digest})}
     )
 
 
@@ -228,6 +274,7 @@ class Binder:
             command_reference=request.command_reference,
             input_reference=request.input_reference,
             classification=request.classification,
+            integration=facts.integration,
         )
 
     async def bind_query(self, principal, scope, permission, request, facts):
@@ -239,6 +286,7 @@ class Binder:
             permission=permission,
             invocation_reference=request.invocation_reference,
             correlation_reference=facts.correlation_reference,
+            integration=facts.integration,
         )
 
     async def bind_reconciliation(
@@ -262,6 +310,7 @@ class Binder:
             permission=permission,
             invocation_reference=request.invocation_reference,
             reconciliation_reference=request.reconciliation_reference,
+            integration=facts.integration,
         )
 
 
@@ -420,6 +469,10 @@ async def test_query_has_no_receipt_and_reads_once(monkeypatch):
         requested_at=NOW,
         correlation_reference="correlation-1",
         context=context(),
+        integration=query_integration_facts(
+            query_id=QUERY,
+            invocation_reference=request.invocation_reference,
+        ),
     )
     result = await service.get_invocation(
         request, claims(), RuntimeApiOrganizationSelector(organization_id=ORGANIZATION), facts
@@ -446,6 +499,16 @@ async def test_reconciliation_uses_idempotent_local_mutation(monkeypatch):
         committed_at=NOW,
         correlation_reference="correlation-1",
         context=context(),
+        integration=reconciliation_integration_facts(
+            receipt_id=RECEIPT,
+            command_id=COMMAND,
+            invocation_reference=request.invocation_reference,
+            reconciliation_reference=request.reconciliation_reference,
+        ),
+    )
+    digest = build_runtime_api_reconciliation_digest(request, facts=facts)
+    facts = facts.model_copy(
+        update={"integration": facts.integration.model_copy(update={"command_digest": digest})}
     )
     result = await service.request_reconciliation(
         request, claims(), RuntimeApiOrganizationSelector(organization_id=ORGANIZATION), facts
