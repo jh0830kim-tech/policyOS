@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.ai.privacy import DataClassification
+from app.runtime.audit import RuntimeAuditScope, RuntimeAuditTrail
 from app.runtime.authority import (
     RuntimeAdmissionDecision,
     RuntimeAuthorityContractVersion,
@@ -21,10 +22,15 @@ from app.runtime.ports import (
     RuntimeApiActiveTransactionContext,
     RuntimeApiActiveTransactionPersistencePort,
     RuntimeApiExactExecutionStateRevisionReader,
+    RuntimeApiExactLogicalExecutionResultRevisionReader,
     RuntimeApiExecutionStateRevisionReadResult,
     RuntimeApiLocalWriteSetOperation,
     RuntimeApiLocalWriteSetStage,
     RuntimeApiLocalWriteSetStageResult,
+    RuntimeApiLogicalExecutionResult,
+    RuntimeApiLogicalExecutionResultMutationAbsent,
+    RuntimeApiLogicalExecutionResultMutationPresent,
+    RuntimeApiLogicalExecutionResultRevisionReadResult,
     RuntimeApiPersistedPermitFact,
     RuntimeApiPersistedRecordFact,
     RuntimeApiPersistenceBindingRead,
@@ -66,7 +72,7 @@ from app.runtime.registry import (
     RuntimeRegistrySnapshotReference,
     RuntimeSpecializedPermitRequirement,
 )
-from app.runtime.state import RuntimeExecutionState
+from app.runtime.state import RuntimeExecutionState, RuntimeExecutionStateRecord, RuntimeStateScope
 from app.services.runtime_api_contracts import (
     RuntimeApiContractConflict,
     RuntimeApiInvocationQueryBindingFacts,
@@ -545,7 +551,12 @@ class ActiveTransactionPersistence:
         )
 
 
-def atomic_write_set(*, outbox=None, persisted=None) -> RuntimeAtomicWriteSet:
+def atomic_write_set(
+    *,
+    outbox=None,
+    persisted=None,
+    state=RuntimeExecutionState.ADMITTED,
+) -> RuntimeAtomicWriteSet:
     item = persisted or binding()
     identity = item.registry_resolution_admission.resolution_request.action_identity
     scope = RuntimePortScope(
@@ -575,17 +586,77 @@ def atomic_write_set(*, outbox=None, persisted=None) -> RuntimeAtomicWriteSet:
         reservation_digest_reference="reservation.digest",
         reserved_at=NOW,
     )
+    state_scope = RuntimeStateScope.model_construct(
+        runtime_execution_request_id=item.execution_request.record_id,
+        runtime_authority_bundle_id=item.authority_bundle.record_id,
+        runtime_admission_decision_id=item.admission.record_id,
+        execution_plan_id=item.execution_plan.record_id,
+        attempt_id=scope.attempt_id,
+        tenant_id=item.scope.tenant_id,
+        organization_id=item.scope.organization_id,
+        classification=item.scope.classification,
+        root_lineage_id=item.scope.root_lineage_id,
+        root_lineage_digest_reference=item.scope.root_lineage_digest_reference,
+    )
+    state_record = RuntimeExecutionStateRecord.model_construct(
+        runtime_execution_state_record_id=item.execution_state.record_id,
+        scope=state_scope,
+        current_state=state,
+        current_revision=item.execution_state.expected_revision + 1,
+        updated_at=NOW,
+    )
+    audit_scope = RuntimeAuditScope.model_construct(
+        runtime_execution_request_id=item.execution_request.record_id,
+        tenant_id=item.scope.tenant_id,
+        organization_id=item.scope.organization_id,
+        classification=item.scope.classification,
+        root_lineage_id=item.scope.root_lineage_id,
+        root_lineage_digest_reference=item.scope.root_lineage_digest_reference,
+    )
+    audit_trail = RuntimeAuditTrail.model_construct(
+        runtime_audit_trail_id=item.audit_trail.record_id,
+        scope=audit_scope,
+        trail_revision=item.audit_trail.expected_revision + 1,
+        updated_at=NOW,
+    )
     return RuntimeAtomicWriteSet.model_construct(
         runtime_transaction_id=uid(44),
         contract_version=None,
-        state_record=None,
-        audit_trail=None,
+        state_record=state_record,
+        audit_trail=audit_trail,
         idempotency_reservation=reservation,
         outbox_enqueue_record=outbox,
         expected_state_revision=item.execution_state.expected_revision,
         expected_audit_revision=item.audit_trail.expected_revision,
         commit_facts=None,
         requested_at=NOW,
+    )
+
+
+def logical_execution_result(
+    write_set: RuntimeAtomicWriteSet,
+    *,
+    persisted=None,
+) -> RuntimeApiLogicalExecutionResult:
+    item = persisted or binding()
+    return RuntimeApiLogicalExecutionResult(
+        runtime_logical_execution_result_id=uid(54),
+        result_revision=1,
+        execution_request=item.execution_request,
+        execution_state=record(
+            write_set.state_record.runtime_execution_state_record_id.int,
+            write_set.state_record.current_revision,
+        ),
+        audit_trail=record(
+            write_set.audit_trail.runtime_audit_trail_id.int,
+            write_set.audit_trail.trail_revision,
+        ),
+        attempt_id=write_set.state_record.scope.attempt_id,
+        scope=item.scope,
+        result_reference="logical-result.reference",
+        result_digest_reference="sha256:logical-result.digest",
+        result_payload_provenance_reference="logical-result.payload-provenance",
+        produced_at=NOW,
     )
 
 
@@ -633,6 +704,7 @@ def submission_integration_facts(
     classification=DataClassification.CONFIDENTIAL,
 ) -> RuntimeApiSubmissionIntegrationFacts:
     persisted = binding_for_scope(tenant_id, organization_id, classification)
+    write_set = atomic_write_set(persisted=persisted)
     return RuntimeApiSubmissionIntegrationFacts(
         binding=RuntimeApiSubmissionBindingFacts(persistence=persisted),
         active_transaction=active_transaction_context(),
@@ -642,7 +714,8 @@ def submission_integration_facts(
             operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
             binding=persisted,
             write_set_digest_reference="write-set.digest",
-            write_set=atomic_write_set(persisted=persisted),
+            logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
+            write_set=write_set,
             staged_at=NOW,
         ),
         command_id=command_id,
@@ -678,6 +751,7 @@ def query_integration_facts(
             execution_state=persisted.execution_state,
             audit_trail=persisted.audit_trail,
             result=RuntimeApiQueryResultAbsentLocator(),
+            attempt_id=uid(41),
             scope=persisted.scope,
             located_at=NOW,
         ),
@@ -715,6 +789,7 @@ def reconciliation_integration_facts(
             operation=RuntimeApiLocalWriteSetOperation.REQUEST_RECONCILIATION,
             binding=persisted,
             write_set_digest_reference="reconciliation.digest",
+            logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
             reconciliation_request=reconciliation_write_set(persisted=persisted),
             staged_at=NOW,
         ),
@@ -758,6 +833,16 @@ class ExactExecutionStateRevisionReader:
         )
 
 
+class ExactLogicalExecutionResultRevisionReader:
+    async def read_exact_logical_execution_result_revision(self, context, locator):
+        write_set = atomic_write_set(state=RuntimeExecutionState.SUCCEEDED)
+        return RuntimeApiLogicalExecutionResultRevisionReadResult(
+            locator=locator,
+            logical_execution_result=logical_execution_result(write_set),
+            observed_at=NOW,
+        )
+
+
 def test_operation_integration_facts_are_strict_required_and_request_scoped() -> None:
     submission = submission_integration_facts()
     query = query_integration_facts()
@@ -788,14 +873,17 @@ def test_query_locator_is_closed_exact_and_separate_from_mutation_binding() -> N
 
     present = item.locator.model_copy(
         update={
-            "result": RuntimeApiQueryResultPresentLocator(execution_result=record(80)),
+            "result": RuntimeApiQueryResultPresentLocator(
+                logical_execution_result=record(80),
+                attempt_id=uid(41),
+            ),
         }
     )
-    assert present.result.execution_result == record(80)
+    assert present.result.logical_execution_result == record(80)
 
     with pytest.raises(ValidationError):
         RuntimeApiQueryResultAbsentLocator.model_validate(
-            {"presence": "absent", "execution_result": record(80)}
+            {"presence": "absent", "logical_execution_result": record(80)}
         )
     with pytest.raises(ValidationError):
         RuntimeApiQueryResultPresentLocator.model_validate({"presence": "present"})
@@ -820,6 +908,10 @@ def test_exact_state_revision_read_contracts_are_structural_and_fail_closed() ->
         ExactExecutionStateRevisionReader(), RuntimeApiExactExecutionStateRevisionReader
     )
     assert isinstance(QueryProjectionLocatorProvider(), RuntimeApiQueryProjectionLocatorProvider)
+    assert isinstance(
+        ExactLogicalExecutionResultRevisionReader(),
+        RuntimeApiExactLogicalExecutionResultRevisionReader,
+    )
     with pytest.raises(ValidationError, match="predates"):
         RuntimeApiExecutionStateRevisionReadResult(
             locator=locator,
@@ -843,6 +935,7 @@ def test_active_transaction_port_is_structural_and_stages_exactly_once() -> None
         operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
         binding=binding(),
         write_set_digest_reference="write-set.digest",
+        logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
         write_set=atomic_write_set(),
         staged_at=NOW,
     )
@@ -864,6 +957,7 @@ def test_closed_write_set_discriminator_and_payload_fail_closed() -> None:
         "transport_receipt_id": uid(61),
         "binding": binding(),
         "write_set_digest_reference": "write-set.digest",
+        "logical_execution_result": RuntimeApiLogicalExecutionResultMutationAbsent(),
         "staged_at": NOW,
     }
     RuntimeApiLocalWriteSetStage(
@@ -901,8 +995,93 @@ def test_closed_write_set_forbids_outbox_and_exact_binding_substitution() -> Non
             operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
             binding=binding(),
             write_set_digest_reference="write-set.digest",
+            logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
             write_set=atomic_write_set(outbox=object()),
             staged_at=NOW,
+        )
+
+
+def test_logical_execution_result_mutation_is_closed_exact_and_strict() -> None:
+    persisted = binding()
+    write_set = atomic_write_set(
+        persisted=persisted,
+        state=RuntimeExecutionState.SUCCEEDED,
+    )
+    logical_result = logical_execution_result(write_set, persisted=persisted)
+    stage = RuntimeApiLocalWriteSetStage(
+        local_write_set_id=uid(81),
+        transport_receipt_id=uid(82),
+        operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+        binding=persisted,
+        write_set_digest_reference="write-set.logical-result",
+        logical_execution_result=RuntimeApiLogicalExecutionResultMutationPresent(
+            logical_execution_result=logical_result
+        ),
+        write_set=write_set,
+        staged_at=NOW,
+    )
+    assert stage.logical_execution_result.logical_execution_result is logical_result
+    with pytest.raises(ValidationError, match="exact submission records"):
+        RuntimeApiLocalWriteSetStage.model_validate(
+            {
+                **{
+                    name: getattr(stage, name)
+                    for name in RuntimeApiLocalWriteSetStage.model_fields
+                },
+                "logical_execution_result": {
+                    "presence": "present",
+                    "logical_execution_result": {
+                        **logical_result.model_dump(),
+                        "attempt_id": uid(99),
+                    },
+                },
+            }
+        )
+    with pytest.raises(ValidationError, match="reconciliation cannot mutate"):
+        RuntimeApiLocalWriteSetStage(
+            local_write_set_id=uid(83),
+            transport_receipt_id=uid(84),
+            operation=RuntimeApiLocalWriteSetOperation.REQUEST_RECONCILIATION,
+            binding=persisted,
+            write_set_digest_reference="reconciliation.logical-result",
+            logical_execution_result=RuntimeApiLogicalExecutionResultMutationPresent(
+                logical_execution_result=logical_result
+            ),
+            reconciliation_request=reconciliation_write_set(persisted=persisted),
+            staged_at=NOW,
+        )
+
+
+def test_exact_logical_result_read_returns_stored_references_only() -> None:
+    write_set = atomic_write_set(state=RuntimeExecutionState.SUCCEEDED)
+    logical_result = logical_execution_result(write_set)
+    base = query_integration_facts().locator
+    locator = base.model_copy(
+        update={
+            "execution_state": logical_result.execution_state,
+            "audit_trail": logical_result.audit_trail,
+            "attempt_id": logical_result.attempt_id,
+            "result": RuntimeApiQueryResultPresentLocator(
+                logical_execution_result=RuntimeApiPersistedRecordFact(
+                    record_id=logical_result.runtime_logical_execution_result_id,
+                    expected_revision=logical_result.result_revision,
+                ),
+                attempt_id=logical_result.attempt_id,
+            ),
+        }
+    )
+    read = RuntimeApiLogicalExecutionResultRevisionReadResult(
+        locator=locator,
+        logical_execution_result=logical_result,
+        observed_at=NOW,
+    )
+    assert read.logical_execution_result.result_digest_reference == ("sha256:logical-result.digest")
+    assert not hasattr(locator.result, "result_digest_reference")
+    with pytest.raises(ValidationError, match="differs from exact locator"):
+        RuntimeApiLogicalExecutionResultRevisionReadResult(
+            locator=locator.model_copy(update={"attempt_id": uid(99)}),
+            logical_execution_result=logical_result,
+            observed_at=NOW,
         )
     item = reconciliation_write_set().model_copy(update={"tenant_id": uid(99)})
     with pytest.raises(ValidationError, match="exact persistence binding"):
@@ -912,6 +1091,7 @@ def test_closed_write_set_forbids_outbox_and_exact_binding_substitution() -> Non
             operation=RuntimeApiLocalWriteSetOperation.REQUEST_RECONCILIATION,
             binding=binding(),
             write_set_digest_reference="write-set.digest",
+            logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
             reconciliation_request=item,
             staged_at=NOW,
         )

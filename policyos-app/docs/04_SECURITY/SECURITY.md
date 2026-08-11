@@ -503,3 +503,19 @@ Reconciliation has no approved state mutation and cannot create or revise a logi
 Contributing adapter-result identities are excluded until separately governed. Query locators
 carry exact identity and expected revisions but never stored result digests or references as
 caller authority; those remain exact-read outputs.
+
+### CP9 logical execution-result contract boundary
+
+The logical-result Port contract is strict, frozen, extra-forbidden, caller/domain-supplied, and
+bound to exact tenant, organization, classification, execution request, attempt, root lineage,
+resulting execution-state revision, and audit-trail revision. The submission mutation is a closed
+present/absent union. ADR-098 cardinality is checked against the exact staged state; missing,
+forbidden, duplicate, stale, substituted, cross-scope, cross-lineage, wrong-attempt, or
+wrong-revision values fail closed.
+
+Reconciliation cannot carry a logical-result mutation. Query locator input includes only exact
+identity and expected revisions; the stored result reference, digest, payload-provenance reference,
+and production time are returned from the exact persisted read. Until migration `20260808_0023`
+and the append-only repository exist, result-present staging is rejected before database work.
+No hidden identifier, clock, revision, digest, reference, latest-row selection, adapter-result
+promotion, schema, backfill, facade behavior, route, or external effect is introduced.

@@ -820,3 +820,15 @@ result-absent sibling. `RuntimeApiSafeResult` and reconciliation recovery respon
 logical result. Reconciliation cannot create or revise one, and adapter-result contribution
 linkage remains outside the approved contract. Production contracts, migration `0023`,
 persistence, and Application Integration remain separate checkpoints.
+
+### CP9 logical execution-result public domain and Port contracts
+
+The contract gate implements ADR-099's strict logical-result identity, closed submission
+present/absent mutation, and exact result-revision read contract. Exact staged state controls
+ADR-098 cardinality; reconciliation can only carry the absent variant. Query locators contain
+identity and expected revisions but no caller-authoritative stored result digest/reference.
+
+The existing active-transaction implementation rejects result-present staging before database
+work until the dedicated migration `20260808_0023` and repository gate is implemented. The gate
+adds no schema, backfill, persistence row, facade behavior, route, external effect, or CP10 work;
+CP9 remains Planned / Blocked.

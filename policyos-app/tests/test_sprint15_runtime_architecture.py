@@ -1199,3 +1199,49 @@ def test_cp9_authoritative_operation_result_contract_gate_is_bounded() -> None:
     assert "domain operation stage differs from command" in validation
     assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
+
+
+def test_cp9_logical_execution_result_contract_gate_is_bounded() -> None:
+    persistence = (ROOT / "app" / "runtime" / "ports" / "runtime_api_persistence.py").read_text(
+        encoding="utf-8"
+    )
+    active = (ROOT / "app" / "runtime" / "persistence" / "active_transaction.py").read_text(
+        encoding="utf-8"
+    )
+    validation = (ROOT / "app" / "services" / "runtime_api_validation.py").read_text(
+        encoding="utf-8"
+    )
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for name in (
+        "RuntimeApiLogicalExecutionResult",
+        "RuntimeApiLogicalExecutionResultMutationAbsent",
+        "RuntimeApiLogicalExecutionResultMutationPresent",
+        "RuntimeApiLogicalExecutionResultRevisionReadResult",
+        "RuntimeApiExactLogicalExecutionResultRevisionReader",
+    ):
+        assert name in persistence
+    for phrase in (
+        "result_payload_provenance_reference: BoundedId",
+        "logical_execution_result:",
+        "reconciliation cannot mutate a logical execution result",
+        "logical-result read differs from exact locator",
+    ):
+        assert phrase in persistence
+    assert "validate_runtime_api_result_count(state, int(present))" in validation
+    assert "logical-result persistence is not implemented" in active
+    assert "CP9 logical execution-result public domain and Port contracts" in combined
+    assert "SQLAlchemy" not in persistence
+    assert not (
+        ROOT / "alembic" / "versions" / "20260808_0023_runtime_logical_execution_results.py"
+    ).exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
