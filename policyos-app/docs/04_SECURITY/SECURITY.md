@@ -454,3 +454,11 @@ result-cardinality validator. It adds no persistence locator, stored digest expo
 read, hidden identifier or clock, facade parameter, binder behavior, schema, or migration. Unknown
 states, invalid counts, forbidden results, and missing required results fail closed. Exact
 state-revision digest reads and request-scoped locator implementation remain separately reviewed.
+
+The persistence/read contract gate carries query-only execution request, state, audit, and
+optional result identities with mandatory expected revisions. Result absence and presence are a
+closed discriminator, and the exact state-revision read result returns the persisted
+`record_digest_reference` unchanged. The contracts cannot select a current/latest revision,
+accept an HTTP-supplied digest, mutate persistence, control a transaction, or generate identity,
+time, revision, reference, status, result, or projection facts. Repository implementation,
+schema, migration `20260808_0023`, concrete facade integration, routes, and CP10 remain blocked.

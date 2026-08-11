@@ -20,6 +20,8 @@ from app.runtime.authority import (
 from app.runtime.ports import (
     RuntimeApiActiveTransactionContext,
     RuntimeApiActiveTransactionPersistencePort,
+    RuntimeApiExactExecutionStateRevisionReader,
+    RuntimeApiExecutionStateRevisionReadResult,
     RuntimeApiLocalWriteSetOperation,
     RuntimeApiLocalWriteSetStage,
     RuntimeApiLocalWriteSetStageResult,
@@ -27,6 +29,9 @@ from app.runtime.ports import (
     RuntimeApiPersistedRecordFact,
     RuntimeApiPersistenceBindingRead,
     RuntimeApiPersistenceScope,
+    RuntimeApiQueryProjectionLocator,
+    RuntimeApiQueryResultAbsentLocator,
+    RuntimeApiQueryResultPresentLocator,
     RuntimeApiRegistryPersistenceFact,
     RuntimeApiRegistryResolutionAdmissionFact,
     RuntimeAtomicWriteSet,
@@ -61,6 +66,7 @@ from app.runtime.registry import (
     RuntimeRegistrySnapshotReference,
     RuntimeSpecializedPermitRequirement,
 )
+from app.runtime.state import RuntimeExecutionState
 from app.services.runtime_api_contracts import (
     RuntimeApiContractConflict,
     RuntimeApiInvocationQueryBindingFacts,
@@ -75,6 +81,7 @@ from app.services.runtime_api_protocols import (
     RuntimeApiApplicationFacade,
     RuntimeApiIntegrationFactsProvider,
     RuntimeApiPersistedOrchestrationFactBinder,
+    RuntimeApiQueryProjectionLocatorProvider,
 )
 from app.services.runtime_api_validation import (
     validate_runtime_api_persistence_binding,
@@ -664,6 +671,14 @@ def query_integration_facts(
     return RuntimeApiInvocationQueryIntegrationFacts(
         binding=RuntimeApiInvocationQueryBindingFacts(persistence=persisted),
         active_transaction=active_transaction_context(),
+        locator=RuntimeApiQueryProjectionLocator(
+            execution_request=persisted.execution_request,
+            execution_state=persisted.execution_state,
+            audit_trail=persisted.audit_trail,
+            result=RuntimeApiQueryResultAbsentLocator(),
+            scope=persisted.scope,
+            located_at=NOW,
+        ),
         query_id=query_id,
         invocation_reference=invocation_reference,
         correlation_reference=correlation_reference,
@@ -726,6 +741,21 @@ class IntegrationFactsProvider:
         return reconciliation_integration_facts()
 
 
+class QueryProjectionLocatorProvider:
+    async def locate_query(self):
+        return query_integration_facts().locator
+
+
+class ExactExecutionStateRevisionReader:
+    async def read_exact_state_revision(self, context, locator):
+        return RuntimeApiExecutionStateRevisionReadResult(
+            locator=locator,
+            state=RuntimeExecutionState.RUNNING,
+            record_digest_reference="state.revision.digest",
+            observed_at=NOW,
+        )
+
+
 def test_operation_integration_facts_are_strict_required_and_request_scoped() -> None:
     submission = submission_integration_facts()
     query = query_integration_facts()
@@ -744,6 +774,56 @@ def test_operation_integration_facts_are_strict_required_and_request_scoped() ->
                 **submission.model_dump(),
                 "stage": reconciliation.stage,
             }
+        )
+
+
+def test_query_locator_is_closed_exact_and_separate_from_mutation_binding() -> None:
+    item = query_integration_facts()
+    assert isinstance(item.locator.result, RuntimeApiQueryResultAbsentLocator)
+    assert item.locator.execution_state == item.binding.persistence.execution_state
+    assert item.locator.audit_trail == item.binding.persistence.audit_trail
+    assert not hasattr(item.locator.result, "execution_result")
+
+    present = item.locator.model_copy(
+        update={
+            "result": RuntimeApiQueryResultPresentLocator(execution_result=record(80)),
+        }
+    )
+    assert present.result.execution_result == record(80)
+
+    with pytest.raises(ValidationError):
+        RuntimeApiQueryResultAbsentLocator.model_validate(
+            {"presence": "absent", "execution_result": record(80)}
+        )
+    with pytest.raises(ValidationError):
+        RuntimeApiQueryResultPresentLocator.model_validate({"presence": "present"})
+
+    substituted = item.locator.model_copy(update={"execution_state": record(14, revision=2)})
+    with pytest.raises(ValidationError, match="locator records"):
+        RuntimeApiInvocationQueryIntegrationFacts.model_validate(
+            {**item.model_dump(), "locator": substituted}
+        )
+
+
+def test_exact_state_revision_read_contracts_are_structural_and_fail_closed() -> None:
+    locator = query_integration_facts().locator
+    result = asyncio.run(
+        ExactExecutionStateRevisionReader().read_exact_state_revision(
+            active_transaction_context(), locator
+        )
+    )
+    assert result.locator.execution_state.expected_revision == 1
+    assert result.record_digest_reference == "state.revision.digest"
+    assert isinstance(
+        ExactExecutionStateRevisionReader(), RuntimeApiExactExecutionStateRevisionReader
+    )
+    assert isinstance(QueryProjectionLocatorProvider(), RuntimeApiQueryProjectionLocatorProvider)
+    with pytest.raises(ValidationError, match="predates"):
+        RuntimeApiExecutionStateRevisionReadResult(
+            locator=locator,
+            state=RuntimeExecutionState.RUNNING,
+            record_digest_reference="state.revision.digest",
+            observed_at=NOW - timedelta(seconds=1),
         )
 
 

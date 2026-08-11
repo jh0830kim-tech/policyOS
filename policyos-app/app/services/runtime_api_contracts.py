@@ -13,6 +13,7 @@ from app.runtime.ports import (
     RuntimeApiLocalWriteSetOperation,
     RuntimeApiLocalWriteSetStage,
     RuntimeApiPersistenceBindingRead,
+    RuntimeApiQueryProjectionLocator,
 )
 
 BoundedReference = Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,199}$")]
@@ -229,6 +230,7 @@ class RuntimeApiSubmissionIntegrationFacts(RuntimeApiModel):
 class RuntimeApiInvocationQueryIntegrationFacts(RuntimeApiModel):
     binding: RuntimeApiInvocationQueryBindingFacts
     active_transaction: RuntimeApiActiveTransactionContext
+    locator: RuntimeApiQueryProjectionLocator
     query_id: UUID
     invocation_reference: BoundedReference
     correlation_reference: BoundedReference
@@ -255,6 +257,18 @@ class RuntimeApiInvocationQueryIntegrationFacts(RuntimeApiModel):
             scope.root_lineage_digest_reference,
         ):
             raise ValueError("query integration scope or lineage differs")
+        if self.locator.scope != scope:
+            raise ValueError("query locator scope or lineage differs")
+        if (
+            self.locator.execution_request,
+            self.locator.execution_state,
+            self.locator.audit_trail,
+        ) != (
+            self.binding.persistence.execution_request,
+            self.binding.persistence.execution_state,
+            self.binding.persistence.audit_trail,
+        ):
+            raise ValueError("query locator records differ from persistence binding")
         return self
 
 
@@ -352,6 +366,8 @@ class RuntimeApiInvocationQueryFacts(RuntimeApiModel):
             self.integration.correlation_reference,
         ):
             raise ValueError("query outer and integration facts differ")
+        if self.integration.locator.located_at < self.requested_at:
+            raise ValueError("query locator predates the query request")
         return self
 
 

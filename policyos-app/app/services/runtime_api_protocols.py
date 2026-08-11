@@ -8,6 +8,7 @@ from app.core.auth_claims import VerifiedAccessTokenClaims
 from app.runtime.ports import (
     RuntimeApiActiveTransactionContext,
     RuntimeApiActiveTransactionPersistencePort,
+    RuntimeApiQueryProjectionLocator,
 )
 from app.services.runtime_api_contracts import (
     BoundedDigest,
@@ -96,6 +97,13 @@ class RuntimeApiIntegrationFactsProvider(Protocol):
     async def provide_query(self) -> RuntimeApiInvocationQueryIntegrationFacts: ...
 
     async def provide_reconciliation(self) -> RuntimeApiReconciliationIntegrationFacts: ...
+
+
+@runtime_checkable
+class RuntimeApiQueryProjectionLocatorProvider(Protocol):
+    """Supply one trusted query-only exact locator for one request scope."""
+
+    async def locate_query(self) -> RuntimeApiQueryProjectionLocator: ...
 
 
 @runtime_checkable
@@ -196,5 +204,6 @@ __all__ = (
     "RuntimeApiOrchestrationFactBinder",
     "RuntimeApiPermissionFactResolver",
     "RuntimeApiPersistedOrchestrationFactBinder",
+    "RuntimeApiQueryProjectionLocatorProvider",
     "RuntimeApiTrustedContextResolver",
 )

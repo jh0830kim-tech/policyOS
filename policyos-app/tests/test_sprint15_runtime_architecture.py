@@ -1109,3 +1109,26 @@ def test_cp9_runtime_lifecycle_public_contract_gate_is_bounded() -> None:
     assert "SQLAlchemy" not in contracts
     assert "SQLAlchemy" not in validation
     assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
+
+
+def test_cp9_exact_projection_read_contract_gate_is_bounded() -> None:
+    persistence = (ROOT / "app" / "runtime" / "ports" / "runtime_api_persistence.py").read_text(
+        encoding="utf-8"
+    )
+    contracts = (ROOT / "app" / "services" / "runtime_api_contracts.py").read_text(encoding="utf-8")
+    protocols = (ROOT / "app" / "services" / "runtime_api_protocols.py").read_text(encoding="utf-8")
+    for name in (
+        "RuntimeApiQueryResultPresence",
+        "RuntimeApiQueryResultAbsentLocator",
+        "RuntimeApiQueryResultPresentLocator",
+        "RuntimeApiQueryProjectionLocator",
+        "RuntimeApiExecutionStateRevisionReadResult",
+        "RuntimeApiExactExecutionStateRevisionReader",
+    ):
+        assert name in persistence
+    assert "locator: RuntimeApiQueryProjectionLocator" in contracts
+    assert "RuntimeApiQueryProjectionLocatorProvider" in protocols
+    assert "expected_revision: PositiveInt" in persistence
+    assert "record_digest_reference: BoundedId" in persistence
+    assert "SQLAlchemy" not in persistence
+    assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
