@@ -523,3 +523,12 @@ transaction. `runtime.grant.manage` is definition-only with zero automatic grant
 `runtime.read`, `runtime.invoke`, and `runtime.reconcile` are eligible targets. Exact replay is
 receipt-stable, conflicting replay and concurrent state changes fail closed, and transport,
 permission-fact resolution, application facade/routes, outbox, and CP10 remain deferred.
+
+### CP9 exact query locator and state-revision read contracts
+
+The persistence/read contract gate adds only immutable query-only exact locators, a closed
+result-present/result-absent discriminator, and an exact execution-state revision read result that
+returns the stored `record_digest_reference`. Every state, result, and audit locator names an
+explicit record ID and expected revision; current/latest selection, caller-provided digests,
+database implementation, schema, migration `20260808_0023`, and concrete integration remain
+prohibited. The public facade keeps its five parameters and CP9 remains Planned / Blocked.

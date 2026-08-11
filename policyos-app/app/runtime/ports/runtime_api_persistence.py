@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Protocol, runtime_checkable
+from typing import Literal, Protocol, runtime_checkable
 from uuid import UUID
 
 from pydantic import field_validator, model_validator
@@ -17,11 +17,26 @@ from app.runtime.registry import (
     RuntimeActionResolutionDecision,
     RuntimeActionResolutionRequest,
 )
+from app.runtime.state import RuntimeExecutionState
 
 
 class RuntimeApiPersistedRecordFact(RuntimePortModel):
     record_id: UUID
     expected_revision: PositiveInt
+
+
+class RuntimeApiQueryResultPresence(StrEnum):
+    ABSENT = "absent"
+    PRESENT = "present"
+
+
+class RuntimeApiQueryResultAbsentLocator(RuntimePortModel):
+    presence: Literal[RuntimeApiQueryResultPresence.ABSENT] = RuntimeApiQueryResultPresence.ABSENT
+
+
+class RuntimeApiQueryResultPresentLocator(RuntimePortModel):
+    presence: Literal[RuntimeApiQueryResultPresence.PRESENT] = RuntimeApiQueryResultPresence.PRESENT
+    execution_result: RuntimeApiPersistedRecordFact
 
 
 class RuntimeApiPersistedPermitFact(RuntimePortModel):
@@ -57,6 +72,52 @@ class RuntimeApiPersistenceScope(RuntimePortModel):
     def distinct_scope(self):
         if self.tenant_id == self.organization_id:
             raise ValueError("tenant and organization must be distinct")
+        return self
+
+
+class RuntimeApiQueryProjectionLocator(RuntimePortModel):
+    execution_request: RuntimeApiPersistedRecordFact
+    execution_state: RuntimeApiPersistedRecordFact
+    audit_trail: RuntimeApiPersistedRecordFact
+    result: RuntimeApiQueryResultAbsentLocator | RuntimeApiQueryResultPresentLocator
+    scope: RuntimeApiPersistenceScope
+    located_at: datetime
+
+    @field_validator("located_at")
+    @classmethod
+    def timestamp(cls, value: datetime) -> datetime:
+        return aware(value, "located_at")
+
+    @model_validator(mode="after")
+    def distinct_exact_records(self):
+        record_ids = {
+            self.execution_request.record_id,
+            self.execution_state.record_id,
+            self.audit_trail.record_id,
+        }
+        if len(record_ids) != 3:
+            raise ValueError("query locator records must be distinct")
+        if isinstance(self.result, RuntimeApiQueryResultPresentLocator):
+            if self.result.execution_result.record_id in record_ids:
+                raise ValueError("execution result must be a distinct logical record")
+        return self
+
+
+class RuntimeApiExecutionStateRevisionReadResult(RuntimePortModel):
+    locator: RuntimeApiQueryProjectionLocator
+    state: RuntimeExecutionState
+    record_digest_reference: BoundedId
+    observed_at: datetime
+
+    @field_validator("observed_at")
+    @classmethod
+    def timestamp(cls, value: datetime) -> datetime:
+        return aware(value, "observed_at")
+
+    @model_validator(mode="after")
+    def exact_read_time(self):
+        if self.observed_at < self.locator.located_at:
+            raise ValueError("exact state read predates its locator")
         return self
 
 
@@ -323,9 +384,22 @@ class RuntimeApiActiveTransactionPersistencePort(Protocol):
     ) -> RuntimeApiLocalWriteSetStageResult: ...
 
 
+@runtime_checkable
+class RuntimeApiExactExecutionStateRevisionReader(Protocol):
+    """Read one explicitly named state revision and its stored digest."""
+
+    async def read_exact_state_revision(
+        self,
+        context: RuntimeApiActiveTransactionContext,
+        locator: RuntimeApiQueryProjectionLocator,
+    ) -> RuntimeApiExecutionStateRevisionReadResult: ...
+
+
 __all__ = (
     "RuntimeApiActiveTransactionContext",
     "RuntimeApiActiveTransactionPersistencePort",
+    "RuntimeApiExactExecutionStateRevisionReader",
+    "RuntimeApiExecutionStateRevisionReadResult",
     "RuntimeApiLocalWriteSetStage",
     "RuntimeApiLocalWriteSetOperation",
     "RuntimeApiLocalWriteSetStageResult",
@@ -333,6 +407,10 @@ __all__ = (
     "RuntimeApiPersistedRecordFact",
     "RuntimeApiPersistenceBindingRead",
     "RuntimeApiPersistenceScope",
+    "RuntimeApiQueryProjectionLocator",
+    "RuntimeApiQueryResultAbsentLocator",
+    "RuntimeApiQueryResultPresence",
+    "RuntimeApiQueryResultPresentLocator",
     "RuntimeApiRegistryPersistenceFact",
     "RuntimeApiRegistryResolutionAdmissionFact",
 )
