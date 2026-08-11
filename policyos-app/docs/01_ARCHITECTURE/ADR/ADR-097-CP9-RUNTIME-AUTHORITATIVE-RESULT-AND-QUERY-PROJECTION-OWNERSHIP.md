@@ -41,6 +41,17 @@ the exact persistence binding, stages the closed write set once, and returns tha
 The idempotency service then stages the transport receipt once in the same session and root
 transaction.
 
+`RuntimeApiSafeResult` is the API and transport response; it is not the logical execution result.
+For submission, the exact post-operation state authority is only
+`RuntimeApiLocalWriteSetStage.write_set.state_record`. The same closed submission mutation bundle
+must carry an explicit logical-result-present or logical-result-absent sibling selected by the
+domain operation and validated against ADR-098 cardinality. No provider, facade, persistence
+adapter, safe result, command reference, or transport receipt may infer that presence.
+
+Reconciliation has no execution-state mutation in its approved closed stage and therefore cannot
+create or revise a logical execution result. Its safe result is a transport or recovery response.
+Any later reconciliation observation or result mutation requires separate governance.
+
 ### Replay and conflict ownership
 
 For exact replay, the persisted transport idempotency receipt is the authoritative owner of the
@@ -94,6 +105,11 @@ A separate public-contract checkpoint is required before concrete integration. I
 It cannot add a facade parameter, optional fallback, caller-declared authoritative result,
 executable integration fact, SQLAlchemy type in Runtime Ports, or transaction-control API. Exact
 names and package placement require review in that contract checkpoint.
+
+ADR-099 fixes that placement for the logical-result persistence boundary in
+`app.runtime.ports.runtime_api_persistence`; no new `app.runtime.result` package is approved.
+`app.runtime.persistence` remains the later schema and repository implementation owner, and Ports
+must never import service contracts.
 
 ADR-099 requires a distinct logical execution-result contract and a dedicated append-only
 persistence store in migration `20260808_0023`. Existing adapter-result rows retain their original

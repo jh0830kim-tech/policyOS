@@ -813,3 +813,10 @@ uniqueness, relational execution-request/state/audit bindings, `ON DELETE RESTRI
 UPDATE/DELETE rejection. Existing rows receive no backfill, normalization, deduplication, or
 meaning change. Application Integration remains blocked until both contract and persistence gates
 merge; CP9 remains Planned / Blocked and CP10 remains Planned.
+
+The logical-result mutation governance correction requires the submission callback to stage one
+closed atomic mutation bundle whose exact state record governs an explicit result-present or
+result-absent sibling. `RuntimeApiSafeResult` and reconciliation recovery responses are not the
+logical result. Reconciliation cannot create or revise one, and adapter-result contribution
+linkage remains outside the approved contract. Production contracts, migration `0023`,
+persistence, and Application Integration remain separate checkpoints.

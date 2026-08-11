@@ -492,3 +492,14 @@ Existing adapter-result rows are never inferred, backfilled, promoted, normalize
 or deleted. The new store starts empty; populated downgrade fails before destructive DDL. This
 governance gate changes no production code or schema. Logical-result contracts and persistence
 must merge before Application Integration; CP9 remains Planned / Blocked and CP10 remains Planned.
+
+The API `RuntimeApiSafeResult` is not logical-result authority. For submission, only the exact
+post-operation state inside the closed local mutation bundle controls ADR-098 result cardinality,
+and the domain operation must supply an explicit present or absent variant. Missing, forbidden,
+duplicate, inferred, or substituted presence fails closed. One local mutation is one atomic
+bundle and may contain multiple governed rows; it is not a row-count shortcut.
+
+Reconciliation has no approved state mutation and cannot create or revise a logical result.
+Contributing adapter-result identities are excluded until separately governed. Query locators
+carry exact identity and expected revisions but never stored result digests or references as
+caller authority; those remain exact-read outputs.
