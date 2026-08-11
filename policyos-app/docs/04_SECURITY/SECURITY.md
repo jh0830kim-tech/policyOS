@@ -343,3 +343,24 @@ non-nested lifetime before every operation. The capability is one-shot, exposes 
 control, and cannot escape the facade call. Replay and conflict perform zero local work; a new
 request stages exactly one closed write set and its receipt atomically. This governance adds no
 production code, migration, route, external effect, credential flow, or CP10 capability.
+
+### CP9 reconciliation-request persistence ownership
+
+ADR-095 separates an authorized reconciliation request from its later observation, transport
+receipt, and any outbox fact. The existing strict `RuntimeEffectReconciliationRequest` remains the
+domain payload; `app.runtime.persistence` owns a dedicated append-only row and repository in
+migration `20260808_0022`. Generic Runtime revisions, observation rows, stage markers, receipts,
+outbox rows, and arbitrary JSON cannot become request authority.
+
+The persisted request and its relational binding require exact tenant, organization,
+classification, root lineage, Registry snapshot/revision/digest, resolution request/decision,
+admission, execution request, canonical permits, idempotency linkage, and caller-supplied time.
+UPDATE, DELETE, cascades, cross-scope substitution, hidden identifiers or clocks, raw payloads,
+provider responses, credentials, and secrets are prohibited. Populated downgrade fails before any
+destructive DDL.
+
+The persistence checkpoint may prove only same-session/root-transaction staging, one-shot
+lifecycle enforcement, and caller-rollback removal. Production replay/conflict callback ordering,
+receipt coupling, and facade commit/rollback remain a separate concrete integration checkpoint.
+Until that evidence exists, PolicyOS does not claim end-to-end Runtime API atomicity or completed
+submission/reconciliation behavior.

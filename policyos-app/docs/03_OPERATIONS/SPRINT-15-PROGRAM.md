@@ -94,6 +94,7 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9 Registry Resolution and Admission Exactness Contracts Gate | Merged, PR #81 | Binds persisted Registry snapshot/reference, resolution request/decision, and admission decision identities, revisions, scope, lineage, action resolution, and permit facts without production integration. |
 | CP9 Registry Snapshot Persistence and Active-Transaction Integration Governance | Governed, pending review | ADR-093 requires a separate append-only Registry store, migration `20260808_0022`, exact admission/permit binding, fail-closed downgrade, and caller-owned session participation; production implementation remains deferred. |
 | CP9 Active-Transaction Write-Set and Session Binding Governance | Governed, pending review | ADR-094 rejects marker staging, selects existing closed atomic/reconciliation payloads, and requires one-shot exact session/root-transaction binding before implementation. |
+| CP9 Reconciliation Request Persistence Ownership and Atomic Integration Sequencing Governance | Governed, pending review | ADR-095 assigns authoritative request persistence to a dedicated append-only table in migration `0022` and separates persistence evidence from later concrete facade composition. |
 | CP9 Runtime API | Planned / Blocked | The production facade and production routes remain ordered blockers. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 

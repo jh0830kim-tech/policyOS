@@ -92,6 +92,10 @@ Migration `20260808_0022` remains the separately approved Registry snapshot pers
 from ADR-093. It must not add a generic stage-marker table. Whether an additional table is needed
 for `RuntimeEffectReconciliationRequest` must be decided from its existing CP8 persistence
 ownership in the implementation Phase A; any new schema meaning requires an approved expansion.
+ADR-095 supplies that approval: a dedicated append-only reconciliation-request table and repository
+owned by `app.runtime.persistence` are included in `20260808_0022`. They persist the existing
+strict request plus exact relational binding facts; they do not introduce a marker, change the
+public request contract, or reuse the observation table.
 
 ## Errors and security
 
@@ -115,11 +119,12 @@ Errors expose no SQL, topology, cross-scope existence, payload, authority detail
 1. Merge this ADR-094 governance gate.
 2. Add the closed union, exact binding validation, and one-shot factory contracts in a separate
    public-contract checkpoint.
-3. Implement ADR-093 migration `20260808_0022`, Registry persistence, and active-transaction
+3. Merge ADR-095 reconciliation-request persistence ownership governance.
+4. Implement ADR-093 migration `20260808_0022`, Registry and reconciliation-request persistence, and active-transaction
    persistence against those approved contracts.
-4. Implement the concrete binder and local operation separately.
-5. Implement routes, run combined CP9 acceptance, and close CP9 under separate approvals.
-6. Begin CP10 only after CP9 closeout.
+5. Implement the concrete binder and local operation separately.
+6. Implement routes, run combined CP9 acceptance, and close CP9 under separate approvals.
+7. Begin CP10 only after CP9 closeout.
 
 ## Deferred scope and consequences
 

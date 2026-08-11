@@ -856,3 +856,39 @@ def test_cp9_local_fact_binding_contract_gate_is_additive_only() -> None:
         path.name.startswith("20260808_0022")
         for path in (ROOT / "alembic" / "versions").glob("*.py")
     )
+
+
+def test_cp9_reconciliation_request_persistence_ownership_governance() -> None:
+    adr = ADR / (
+        "ADR-095-CP9-RUNTIME-RECONCILIATION-REQUEST-PERSISTENCE-OWNERSHIP-"
+        "AND-ATOMIC-INTEGRATION-SEQUENCING.md"
+    )
+    text = adr.read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((text, roadmap, program, security))
+
+    required = (
+        "dedicated append-only SQLAlchemy table",
+        "app.runtime.persistence",
+        "migration `20260808_0022`",
+        "runtime_effect_reconciliation_observations",
+        "generic `runtime_record_revisions`",
+        "stage-marker or mutation-marker table",
+        "transport idempotency receipt",
+        "one immutable request",
+        "non-empty, unique, and stored in canonical order",
+        "`ON DELETE RESTRICT`",
+        "PostgreSQL triggers reject UPDATE and DELETE",
+        "concrete integration checkpoint",
+        "must not claim production submission/reconciliation behavior",
+    )
+    for phrase in required:
+        assert phrase in text
+
+    assert "CP9-Gate-Reconciliation-Request-Persistence-Ownership" in roadmap
+    assert "CP9 Reconciliation Request Persistence Ownership" in program
+    assert "### CP9 reconciliation-request persistence ownership" in security
+    assert "CP9 remains Planned / Blocked" in combined
+    assert "production Python" in text
