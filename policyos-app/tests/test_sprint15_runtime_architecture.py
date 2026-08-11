@@ -1006,7 +1006,7 @@ def test_cp9_authoritative_result_projection_governance_is_bounded() -> None:
         "an additive read-only application Port MUST own an exact projection read",
         "performs zero domain callbacks, persistence-binding reads, local stages",
         "five public parameters `self, request, claims, organization, facts`",
-        "No new table, column, model, repository schema, backfill, or migration `20260808_0023`",
+        "ADR-099 requires a distinct logical execution-result contract",
         "separate public-contract checkpoint is required before concrete integration",
     ):
         assert phrase in text
@@ -1072,11 +1072,51 @@ def test_cp9_runtime_lifecycle_projection_governance_is_total_and_bounded() -> N
         "result-present/result-absent discriminator",
         "An additive request-scoped locator Port",
         "No schema, migration, or backfill is required",
-        "CP9 remains blocked on the three follow-up gates",
+        "CP9 remains blocked on ADR-099",
         "CP10 remains Planned",
     ):
         assert phrase in normalized
     assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
+
+def test_cp9_logical_execution_result_ownership_governance_is_bounded() -> None:
+    adr = ADR / (
+        "ADR-099-CP9-RUNTIME-LOGICAL-EXECUTION-RESULT-IDENTITY-AND-PERSISTENCE-OWNERSHIP.md"
+    )
+    text = " ".join(adr.read_text(encoding="utf-8").split())
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "`RuntimeAdapterInvocationResult` remains an adapter/action invocation result",
+        "at most one logical-result ID",
+        "Different attempts may have different logical results",
+        "They are not relational ownership proof",
+        "Migration `20260808_0023` is required",
+        "one logical-result ID per tenant, organization, execution request, and attempt",
+        "no INSERT, inferred backfill, promotion, normalization",
+        "fails closed before dropping a trigger, constraint, index, or table",
+        "CP9 remains Planned / Blocked and CP10 remains Planned",
+    ):
+        assert phrase in text
+    for phrase in (
+        "CP9 logical execution-result identity and persistence ownership",
+        "CP9 logical execution-result ownership governance",
+        "CP9 logical execution-result identity authority",
+    ):
+        assert phrase in combined
+    assert not (
+        ROOT / "alembic" / "versions" / "20260808_0023_runtime_logical_execution_results.py"
+    ).exists()
     assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 

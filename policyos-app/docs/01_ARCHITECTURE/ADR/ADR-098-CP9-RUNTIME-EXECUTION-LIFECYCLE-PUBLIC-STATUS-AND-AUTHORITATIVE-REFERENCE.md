@@ -3,6 +3,8 @@
 **Status:** Proposed
 **Date:** 2026-08-11
 **Depends on:** ADR-075, ADR-078, ADR-084, ADR-091 through ADR-097, and migration `20260808_0022`
+**Clarified by:** ADR-099, which defines a distinct logical execution-result identity and
+persistence owner instead of treating action-level adapter results as that logical record.
 
 ## Context
 
@@ -80,11 +82,14 @@ revision digest.
 
 ### Result ownership and revisions
 
-There is at most one logical execution-result record for an execution request and attempt. Generic
-Runtime persistence may append revisions to that record as governed result meaning advances, but
-every read names the record ID and expected revision explicitly. Result presence never authorizes
-selection of a head or latest revision. State, result, and audit facts must share exact scope and
-lineage and must be mutually consistent.
+There is at most one logical execution-result ID for an exact execution-request and attempt tuple.
+Different attempts may own different logical results, and each query names the exact attempt.
+Revisions may append to the same logical-result ID as governed result meaning advances, but every
+read names the record ID and expected revision explicitly. Result presence never authorizes
+selection of a current attempt, head, or latest revision. State, result, and audit facts must share
+exact tenant, organization, classification, execution-request, attempt, and root-lineage scope and
+must be mutually consistent. `RuntimeAdapterInvocationResult` remains an action-level result and
+cannot satisfy this cardinality or be selected as the logical result.
 
 ### Trusted query-fact preparation
 
@@ -119,7 +124,10 @@ unchanged.
    `expected_revision`, prohibits current/latest selection, and adds closed query-only
    state/result/audit locator variants. It cannot change models, schema, repositories, or create
    migration `20260808_0023` without separate schema governance.
-3. **Application integration gate.** Expected scope: request-scoped provider, pure binder, local
+3. **Logical-result governance and persistence gates.** ADR-099 governs the separate logical
+   result, followed by an additive domain/Port contract gate and a dedicated migration
+   `20260808_0023` model/repository gate. Existing adapter results are not backfilled or promoted.
+4. **Application integration gate.** Expected scope: request-scoped provider, pure binder, local
    operation, facade composition, persistence implementation, and focused PostgreSQL tests. It
    implements the locator, one-shot authoritative domain callback result, exact projection reader,
    and same-session/root-transaction composition. Routes, external effects, Workers, queues,
@@ -128,10 +136,11 @@ unchanged.
 ## Schema consequence
 
 No schema, migration, or backfill is required for the status reference: migration
-`20260808_0022` already stores `record_digest_reference` on every generic Runtime revision. The
-later read contract and repository implementation expose an existing stored value; they do not
-derive or normalize historical data. Any discovery that an exact required revision lacks that
-value requires separate fail-closed schema governance.
+`20260808_0022` already stores `record_digest_reference` on every generic Runtime state revision.
+The later read contract and repository implementation expose that existing value unchanged.
+Separately, ADR-099 requires migration `20260808_0023` for logical execution-result identity,
+scope, lineage, cardinality, and relational ownership. It performs no adapter-result backfill,
+promotion, derivation, or normalization.
 
 ## Consequences and deferred scope
 
@@ -139,4 +148,4 @@ The public projection preserves exceptional lifecycle meaning, makes result abse
 assigns status authority to one persisted state revision. This ADR changes no enum, production
 contract, Port, model, repository, schema, migration, provider, binder, local operation, facade,
 route, external effect, Worker, queue, retry, scheduler, tag, or release. CP9 remains blocked on
-the three follow-up gates; CP10 remains Planned.
+ADR-099 and its contract, persistence, and integration follow-up gates; CP10 remains Planned.

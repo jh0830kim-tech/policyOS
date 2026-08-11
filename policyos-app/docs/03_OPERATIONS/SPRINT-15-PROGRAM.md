@@ -797,3 +797,19 @@ Pure validators reject operation, payload, scope, Registry, admission, permit, r
 digest, action, and duplicate-identity substitution with bounded conflicts. The request-scoped
 provider is a structural Protocol only: no provider, binder, local operation, facade behavior,
 route, model, migration, repository, or external effect is implemented by this gate.
+
+### CP9 logical execution-result ownership governance
+
+ADR-099 is governed and validated, pending review. It distinguishes the API logical execution
+result from `RuntimeAdapterInvocationResult`, which remains an action-level adapter outcome.
+Neither the generic `EXECUTION_RESULT` label nor an audit outcome reference supplies missing
+execution-request, attempt, or root-lineage authority. Current/latest selection and promotion of
+historical adapter results are prohibited.
+
+The approved persistence direction is a dedicated append-only logical-result revision store in
+migration `20260808_0023`, preceded by a separate immutable domain/Port contract gate. The store
+must enforce one logical-result ID per exact execution-request and attempt tuple, scoped revision
+uniqueness, relational execution-request/state/audit bindings, `ON DELETE RESTRICT`, and
+UPDATE/DELETE rejection. Existing rows receive no backfill, normalization, deduplication, or
+meaning change. Application Integration remains blocked until both contract and persistence gates
+merge; CP9 remains Planned / Blocked and CP10 remains Planned.

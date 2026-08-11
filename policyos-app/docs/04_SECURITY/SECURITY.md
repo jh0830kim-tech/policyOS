@@ -473,3 +473,22 @@ read, one-shot stage, receipt coupling, facade composition, routes, and CP10 rem
 For submission, the expected invocation reference is supplied only by the trusted request-scoped
 preparation boundary and carried unchanged through integration facts and the validated command;
 HTTP input, command references, and write-set contents cannot supply or derive it.
+
+### CP9 logical execution-result identity authority
+
+ADR-099 separates the API logical execution result from action-level adapter outcomes.
+`RuntimeAdapterInvocationResult` lacks execution-request and root-lineage authority and may occur
+multiple times within an attempt, so its generic persistence label cannot establish logical-result
+identity or cardinality. Audit remains append-only evidence and cannot designate, recover, select,
+or promote a logical result.
+
+The logical result is bound to exact tenant, organization, classification, execution request,
+attempt, root-lineage ID/digest, state revision, and audit revision facts. Missing, duplicate,
+stale, substituted, cross-scope, cross-lineage, wrong-attempt, wrong-revision, or digest-mismatched
+facts fail closed. A dedicated append-only store and migration `20260808_0023` must provide scoped
+uniqueness, relational bindings, `ON DELETE RESTRICT`, and database-enforced immutability.
+
+Existing adapter-result rows are never inferred, backfilled, promoted, normalized, deduplicated,
+or deleted. The new store starts empty; populated downgrade fails before destructive DDL. This
+governance gate changes no production code or schema. Logical-result contracts and persistence
+must merge before Application Integration; CP9 remains Planned / Blocked and CP10 remains Planned.
