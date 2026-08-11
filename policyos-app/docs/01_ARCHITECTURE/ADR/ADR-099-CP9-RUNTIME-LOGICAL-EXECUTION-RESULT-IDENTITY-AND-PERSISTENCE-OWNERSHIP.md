@@ -28,15 +28,23 @@ opaque invocation reference, or latest-row lookup would invent authority.
 ### Separate logical-result authority
 
 The Runtime domain owns a distinct immutable logical execution-result meaning. Runtime Ports own
-its public persistence contract. `app.runtime.persistence` owns its SQLAlchemy schema,
+its public persistence contract in `app.runtime.ports.runtime_api_persistence`; no new
+`app.runtime.result` package is approved. `app.runtime.persistence` owns its SQLAlchemy schema,
 serialization, exact repository, and migration. `RuntimeAdapterInvocationResult` remains an
 adapter/action invocation result and is never promoted, relabelled, or inferred to be the logical
 result.
 
 The approved one-shot domain-operation callback produces the authoritative safe result and its
-closed local write set as sibling output. A later public-contract gate must bind that result to an
-explicit caller-supplied logical-result identity. Persistence stores and re-reads the value but
-does not create, select, aggregate, repair, or reinterpret it.
+closed local write set as sibling output. `RuntimeApiSafeResult` is not the logical execution
+result. A later public-contract gate must add an explicit closed logical-result-present or
+logical-result-absent sibling to the submission mutation bundle. Persistence stores and re-reads
+the value but does not create, select, aggregate, repair, or reinterpret it.
+
+The exact post-operation state authority is
+`RuntimeApiLocalWriteSetStage.write_set.state_record`. Its ADR-098 cardinality fixes the closed
+presence rule: `exactly zero` requires absent, `exactly one` requires present, and `zero-or-one`
+requires an explicit domain-supplied present or absent variant. Neither the safe result nor the
+write-set contents may be searched or interpreted to manufacture a logical result.
 
 ### Exact identity and cardinality
 
@@ -55,12 +63,16 @@ The persisted identity must carry:
 - root-lineage ID and root-lineage digest;
 - exact execution-state record ID and expected revision;
 - exact audit-trail record ID and expected revision;
-- caller-supplied logical result digest/reference and immutable bounded result payload provenance;
-- an optional canonically ordered tuple of contributing adapter-result IDs and exact revisions
-  only if the later public-contract gate approves that relationship.
+- domain-supplied logical result reference, digest reference, and aware production time; and
+- immutable bounded result payload provenance.
 
-The result-present query locator carries all identity, scope, lineage, and expected-revision facts
-above except that stored digests remain exact-read outputs rather than caller authority. The
+Contributing adapter-result identities are excluded from this contract. A future relationship,
+including ordering or aggregation, requires separate governance and cannot be added by the
+contract, persistence, or Application Integration gates.
+
+The result-present query locator carries the logical-result ID and expected revision plus exact
+scope, execution-request, attempt, root-lineage, state, and audit identity/revision facts. Stored
+result digests and references remain exact-read outputs rather than query-locator authority. The
 result-absent variant carries no logical-result or adapter-result identity. State, audit, and
 result exact reads must agree on tenant, organization, classification, execution request, root
 lineage, and attempt before projection. Missing, stale, duplicate, substituted, cross-scope,
@@ -106,11 +118,18 @@ data unchanged. Only an empty schema may be removed atomically in dependency-saf
 ### Transaction and replay boundary
 
 The facade remains the sole owner of the outer `AsyncSession` and root transaction. A new request
-stages the closed local write set, including one logical-result mutation when its lifecycle
-cardinality requires a result, and then stages one transport receipt in the same transaction.
+stages exactly one closed local mutation bundle, including one logical-result mutation when its
+lifecycle cardinality requires a result, and then stages one transport receipt in the same
+transaction. One local mutation means one closed atomic bundle, not one database row; the bounded
+bundle may persist state, audit, idempotency, and logical-result rows in their governed order.
 Helpers never begin, nest, commit, roll back, close, or replace the session. Exact replay and
 conflict perform zero callback, logical-result read, local stage, or repository mutation. Failure
 of either local staging or receipt staging rolls back all rows with zero residue.
+
+The reconciliation stage contains only `RuntimeEffectReconciliationRequest`. It has no governed
+post-operation state mutation and cannot create or revise a logical execution result. Its safe
+result remains a transport or recovery response; adding a reconciliation observation or result
+mutation requires separate governance.
 
 ## Required sequence
 

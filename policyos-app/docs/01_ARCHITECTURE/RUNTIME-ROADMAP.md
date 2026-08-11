@@ -550,3 +550,10 @@ public domain/Port contract gate, dedicated migration `20260808_0023` and persis
 Application Integration. Existing adapter-result rows receive no inferred backfill, promotion,
 normalization, or deduplication. This governance gate changes no production or schema surface;
 CP9 remains Planned / Blocked and CP10 remains Planned.
+
+The governance correction makes result presence part of the one closed submission mutation
+bundle. The exact staged state record controls ADR-098 cardinality; exactly-zero requires absent,
+exactly-one requires present, and zero-or-one requires an explicit domain choice. API safe results
+and reconciliation responses are not logical execution results. Reconciliation cannot mutate the
+logical result, contributing adapter-result identities remain deferred, and one local mutation
+counts one atomic bundle rather than one persisted row.

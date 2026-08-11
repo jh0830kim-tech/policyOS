@@ -64,6 +64,14 @@ record tied to the same execution request and lineage. A required result missing
 result present, duplicate logical results, or a result inconsistent with state history fails
 closed.
 
+For a new submission mutation, the authoritative state used for this cardinality decision is the
+exact `RuntimeApiLocalWriteSetStage.write_set.state_record` supplied by the domain operation. The
+closed local mutation bundle carries result presence explicitly: `exactly zero` requires absent,
+`exactly one` requires present, and `zero-or-one` requires the domain operation to choose present
+or absent without inference. `RuntimeApiSafeResult`, HTTP input, transport receipts, and opaque
+references cannot establish presence. Reconciliation does not carry a state mutation and cannot
+create or revise this logical result.
+
 ### Authoritative status reference
 
 The sole authoritative API `status_reference` is the stored `record_digest_reference` of the

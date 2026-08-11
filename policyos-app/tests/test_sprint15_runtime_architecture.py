@@ -1098,6 +1098,17 @@ def test_cp9_logical_execution_result_ownership_governance_is_bounded() -> None:
     )
     for phrase in (
         "`RuntimeAdapterInvocationResult` remains an adapter/action invocation result",
+        "`RuntimeApiSafeResult` is not the logical execution result",
+        "`RuntimeApiLocalWriteSetStage.write_set.state_record`",
+        "`exactly zero` requires absent",
+        "`exactly one` requires present",
+        "`zero-or-one` requires an explicit domain-supplied present or absent variant",
+        "one closed local mutation bundle",
+        "not one database row",
+        "cannot create or revise a logical execution result",
+        "Contributing adapter-result identities are excluded from this contract",
+        "`app.runtime.ports.runtime_api_persistence`",
+        "no new `app.runtime.result` package is approved",
         "at most one logical-result ID",
         "Different attempts may have different logical results",
         "They are not relational ownership proof",
