@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ADR = ROOT / "docs" / "01_ARCHITECTURE" / "ADR"
 RULES = ROOT / "docs" / "01_ARCHITECTURE" / "SPRINT-15-RUNTIME-ARCHITECTURE-RULES.md"
+MIGRATION_0022 = ROOT / "alembic" / "versions" / "20260808_0022_runtime_registry_persistence.py"
 SPRINT_14_PACKAGES = (
     "source_bindings",
     "metrics",
@@ -488,10 +489,7 @@ def test_cp9_permission_fact_resolver_governance_precedes_production_resolution(
     resolver_source = resolver.read_text(encoding="utf-8")
     assert "RuntimePermissionGrantEvent" not in resolver_source
     assert "commit(" not in resolver_source and "rollback(" not in resolver_source
-    assert not any(
-        path.name.startswith("20260808_0022")
-        for path in (ROOT / "alembic" / "versions").glob("*.py")
-    )
+    assert MIGRATION_0022.is_file()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
@@ -507,10 +505,7 @@ def test_cp9_permission_fact_resolver_is_additive_and_transport_free() -> None:
     assert "caller-owned transaction is required" in resolver
     for forbidden in ("FastAPI", "cache", "uuid4", "datetime.now", "RuntimePermissionGrantEvent"):
         assert forbidden not in resolver
-    assert not any(
-        path.name.startswith("20260808_0022")
-        for path in (ROOT / "alembic" / "versions").glob("*.py")
-    )
+    assert MIGRATION_0022.is_file()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
@@ -683,10 +678,7 @@ def test_cp9_trusted_application_facade_governance_precedes_routes() -> None:
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
-    assert not any(
-        path.name.startswith("20260808_0022")
-        for path in (ROOT / "alembic" / "versions").glob("*.py")
-    )
+    assert MIGRATION_0022.is_file()
     for package in ("workers", "worker", "queue", "scheduler"):
         assert not (ROOT / "app" / "runtime" / package).exists()
 
@@ -732,10 +724,7 @@ def test_cp9_local_fact_binding_governance_precedes_concrete_integration() -> No
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
-    assert not any(
-        path.name.startswith("20260808_0022")
-        for path in (ROOT / "alembic" / "versions").glob("*.py")
-    )
+    assert MIGRATION_0022.is_file()
     for package in ("workers", "worker", "queue", "scheduler"):
         assert not (ROOT / "app" / "runtime" / package).exists()
 
@@ -778,10 +767,7 @@ def test_cp9_registry_snapshot_persistence_governance_precedes_implementation() 
     assert "Registry Resolution and Admission Exactness Contracts Gate | Merged, PR #81" in combined
     assert "CP9 Runtime API | Planned / Blocked" in combined
     assert "CP10 Workers | Planned" in combined
-    assert not any(
-        path.name.startswith("20260808_0022")
-        for path in (ROOT / "alembic" / "versions").glob("*.py")
-    )
+    assert MIGRATION_0022.is_file()
     assert not (ROOT / "app" / "runtime" / "persistence" / "registry.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
@@ -819,10 +805,7 @@ def test_cp9_active_transaction_write_set_governance_precedes_contracts() -> Non
     assert "Governed, pending review" in combined
     assert "CP9 Runtime API | Planned / Blocked" in combined
     assert "CP10 Workers | Planned" in combined
-    assert not any(
-        path.name.startswith("20260808_0022")
-        for path in (ROOT / "alembic" / "versions").glob("*.py")
-    )
+    assert MIGRATION_0022.is_file()
 
 
 def test_cp9_local_fact_binding_contract_gate_is_additive_only() -> None:
@@ -852,10 +835,7 @@ def test_cp9_local_fact_binding_contract_gate_is_additive_only() -> None:
         "RuntimeActionRegistrySnapshot(",
     ):
         assert forbidden not in combined
-    assert not any(
-        path.name.startswith("20260808_0022")
-        for path in (ROOT / "alembic" / "versions").glob("*.py")
-    )
+    assert MIGRATION_0022.is_file()
 
 
 def test_cp9_reconciliation_request_persistence_ownership_governance() -> None:
@@ -892,3 +872,39 @@ def test_cp9_reconciliation_request_persistence_ownership_governance() -> None:
     assert "### CP9 reconciliation-request persistence ownership" in security
     assert "CP9 remains Planned / Blocked" in combined
     assert "production Python" in text
+
+
+def test_cp9_registry_and_reconciliation_persistence_implementation_is_bounded() -> None:
+    migration = MIGRATION_0022.read_text(encoding="utf-8")
+    models = (ROOT / "app" / "models" / "runtime_registry.py").read_text(encoding="utf-8")
+    persistence = "\n".join(
+        (ROOT / "app" / "runtime" / "persistence" / name).read_text(encoding="utf-8")
+        for name in (
+            "registry_serialization.py",
+            "registry_repositories.py",
+            "active_transaction.py",
+        )
+    )
+    for table in (
+        "runtime_registry_snapshots",
+        "runtime_registry_snapshot_entries",
+        "runtime_registry_resolution_requests",
+        "runtime_registry_resolution_decisions",
+        "runtime_registry_admission_bindings",
+        "runtime_registry_permit_bindings",
+        "runtime_reconciliation_requests",
+    ):
+        assert table in migration
+        assert table in models
+    assert 'revision: str = "20260808_0022"' in migration
+    assert 'down_revision: str | None = "20260808_0021"' in migration
+    assert 'op.execute("INSERT ' not in migration
+    assert "sa.insert(" not in migration and "sa.update(" not in migration
+    assert "BEFORE UPDATE OR DELETE" in migration
+    assert "active-transaction persistence capability is one-shot" in persistence
+    assert "session.begin(" not in persistence
+    assert "session.commit(" not in persistence
+    assert "session.rollback(" not in persistence
+    assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
