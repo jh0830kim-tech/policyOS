@@ -4,6 +4,9 @@
 **Date:** 2026-08-10
 **Depends on:** ADR-076, ADR-091, ADR-092, the CP9 local fact-binding contracts merged in PR #80, the Registry resolution and admission exactness correction merged in PR #81, and migration `20260808_0021`
 
+**Clarified by:** ADR-094, which rejects marker-only staging and governs the closed write-set and
+exact caller-session/root-transaction binding required before implementation.
+
 ## Context and current blocker
 
 The trusted Runtime API facade owns one outer `AsyncSession` transaction. The merged additive
@@ -167,15 +170,16 @@ the existing generic facade dependency failure and roll back the outer transacti
 ## Allowed implementation order
 
 1. Merge this ADR-093 governance gate.
-2. Add migration `20260808_0022`, Registry persistence models, typed serialization, and repository
+2. Merge ADR-094 and its separately reviewed additive public-contract gate.
+3. Add migration `20260808_0022`, Registry persistence models, typed serialization, and repository
    implementation with focused PostgreSQL fresh/existing/downgrade/concurrency evidence.
-3. Implement the active-transaction persistence adapter and prove exact-session participation and
+4. Implement the active-transaction persistence adapter and prove exact-session participation and
    the prohibition on transaction/session ownership.
-4. Implement the concrete binder and bounded local operation in `app.services` in a separate
+5. Implement the concrete binder and bounded local operation in `app.services` in a separate
    checkpoint, preserving replay/conflict zero-mutation and new-request exactly-once behavior.
-5. Implement production Runtime routes only after local integration is approved.
-6. Run combined CP9 PostgreSQL and HTTP acceptance, then CP9 closeout.
-7. Begin CP10 only under separate approval.
+6. Implement production Runtime routes only after local integration is approved.
+7. Run combined CP9 PostgreSQL and HTTP acceptance, then CP9 closeout.
+8. Begin CP10 only under separate approval.
 
 The schema/persistence checkpoint and the concrete binder/local-operation checkpoint are distinct.
 Neither may silently absorb the other.

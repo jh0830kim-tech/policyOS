@@ -778,6 +778,43 @@ def test_cp9_registry_snapshot_persistence_governance_precedes_implementation() 
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
+def test_cp9_active_transaction_write_set_governance_precedes_contracts() -> None:
+    adr = ADR / "ADR-094-CP9-RUNTIME-ACTIVE-TRANSACTION-WRITE-SET-AND-SESSION-BINDING.md"
+    text = adr.read_text(encoding="utf-8")
+    normalized = " ".join(text.split())
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+
+    for phrase in (
+        "marker row would not be the local mutation",
+        "exactly one existing strict `RuntimeAtomicWriteSet`",
+        "`outbox_enqueue_record` required to be `None`",
+        "exactly one existing strict `RuntimeEffectReconciliationRequest`",
+        "captures both the session object identity and the current root "
+        "transaction object identity",
+        "zero write-set validation callbacks, zero stages, and zero repository mutations",
+        "stage the closed write set; stage the transport receipt",
+        "existing public facade method signatures remain unchanged",
+    ):
+        assert phrase in normalized
+    assert "Active-Transaction Write-Set and Session Binding Governance" in combined
+    assert "Governed, pending review" in combined
+    assert "CP9 Runtime API | Planned / Blocked" in combined
+    assert "CP10 Workers | Planned" in combined
+    assert not any(
+        path.name.startswith("20260808_0022")
+        for path in (ROOT / "alembic" / "versions").glob("*.py")
+    )
+
+
 def test_cp9_local_fact_binding_contract_gate_is_additive_only() -> None:
     ports = ROOT / "app" / "runtime" / "ports" / "runtime_api_persistence.py"
     contracts = ROOT / "app" / "services" / "runtime_api_contracts.py"
