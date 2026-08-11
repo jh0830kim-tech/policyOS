@@ -18,6 +18,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiInvocationQueryBindingFacts,
     RuntimeApiInvocationQueryFacts,
     RuntimeApiInvocationQueryInput,
+    RuntimeApiInvocationQueryIntegrationFacts,
     RuntimeApiOrganizationSelector,
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
@@ -25,6 +26,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationInput,
+    RuntimeApiReconciliationIntegrationFacts,
     RuntimeApiReconciliationResult,
     RuntimeApiSafeResult,
     RuntimeApiStatusProjection,
@@ -32,6 +34,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiSubmissionCommand,
     RuntimeApiSubmissionFacts,
     RuntimeApiSubmissionInput,
+    RuntimeApiSubmissionIntegrationFacts,
     RuntimeApiSubmissionResult,
     RuntimeApiTrustedPrincipal,
     RuntimeApiTrustedScope,
@@ -82,6 +85,17 @@ class RuntimeApiPermissionFactResolver(Protocol):
         scope: RuntimeApiTrustedScope,
         permission: RuntimeApiPermission,
     ) -> RuntimeApiPermissionFact: ...
+
+
+@runtime_checkable
+class RuntimeApiIntegrationFactsProvider(Protocol):
+    """Supply immutable expected facts once for one trusted request scope."""
+
+    async def provide_submission(self) -> RuntimeApiSubmissionIntegrationFacts: ...
+
+    async def provide_query(self) -> RuntimeApiInvocationQueryIntegrationFacts: ...
+
+    async def provide_reconciliation(self) -> RuntimeApiReconciliationIntegrationFacts: ...
 
 
 @runtime_checkable
@@ -176,6 +190,7 @@ __all__ = (
     "RuntimeApiApplicationFacade",
     "RuntimeApiActiveTransactionPersistenceFactory",
     "RuntimeApiIdempotencyTransactionPort",
+    "RuntimeApiIntegrationFactsProvider",
     "RuntimeApiLocalMutation",
     "RuntimeApiLocalOperationPort",
     "RuntimeApiOrchestrationFactBinder",

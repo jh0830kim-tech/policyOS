@@ -62,12 +62,48 @@ from app.services.runtime_api_validation import (
     validate_runtime_api_submission_binding,
     validate_runtime_api_trusted_context_facts,
 )
+from tests.test_runtime_api_binding_contracts import (
+    query_integration_facts as _query_integration_facts,
+)
+from tests.test_runtime_api_binding_contracts import (
+    reconciliation_integration_facts as _reconciliation_integration_facts,
+)
+from tests.test_runtime_api_binding_contracts import (
+    submission_integration_facts as _submission_integration_facts,
+)
 
 NOW = datetime(2026, 8, 6, tzinfo=UTC)
 TENANT = UUID("00000000-0000-0000-0000-000000000101")
 ORG = UUID("00000000-0000-0000-0000-000000000102")
 PRINCIPAL = UUID("00000000-0000-0000-0000-000000000103")
 MEMBERSHIP = UUID("00000000-0000-0000-0000-000000000104")
+
+
+def submission_integration_facts(**kwargs):
+    return _submission_integration_facts(
+        tenant_id=TENANT,
+        organization_id=ORG,
+        classification=kwargs.pop("classification", DataClassification.INTERNAL),
+        **kwargs,
+    )
+
+
+def query_integration_facts(**kwargs):
+    return _query_integration_facts(
+        tenant_id=TENANT,
+        organization_id=ORG,
+        classification=DataClassification.INTERNAL,
+        **kwargs,
+    )
+
+
+def reconciliation_integration_facts(**kwargs):
+    return _reconciliation_integration_facts(
+        tenant_id=TENANT,
+        organization_id=ORG,
+        classification=DataClassification.INTERNAL,
+        **kwargs,
+    )
 
 
 def claims():
@@ -151,6 +187,11 @@ def command(**updates):
         action_reference="action-1",
         command_reference="command-1",
         classification=DataClassification.INTERNAL,
+        integration=submission_integration_facts(
+            command_id=UUID("00000000-0000-0000-0000-000000000105"),
+            command_version="v1.0",
+            command_digest="sha256:0123456789abcdef",
+        ),
     )
     values.update(updates)
     return RuntimeApiSubmissionCommand(**values)
@@ -423,6 +464,10 @@ def test_explicit_facade_facts_are_strict_complete_and_timezone_aware() -> None:
         committed_at=NOW,
         correlation_reference="correlation-1",
         context=context_facts(),
+        integration=submission_integration_facts(
+            receipt_id=UUID("00000000-0000-0000-0000-000000000109"),
+            command_id=UUID("00000000-0000-0000-0000-000000000108"),
+        ),
     )
     assert submission.committed_at is NOW
     with pytest.raises(ValidationError):
@@ -440,6 +485,7 @@ def test_explicit_facade_facts_are_strict_complete_and_timezone_aware() -> None:
         requested_at=NOW,
         correlation_reference="correlation-1",
         context=context_facts(),
+        integration=query_integration_facts(query_id=UUID("00000000-0000-0000-0000-000000000110")),
     )
     reconciliation = RuntimeApiReconciliationFacts(
         command_id=UUID("00000000-0000-0000-0000-000000000111"),
@@ -448,9 +494,33 @@ def test_explicit_facade_facts_are_strict_complete_and_timezone_aware() -> None:
         committed_at=NOW,
         correlation_reference="correlation-1",
         context=context_facts(),
+        integration=reconciliation_integration_facts(
+            receipt_id=UUID("00000000-0000-0000-0000-000000000112"),
+            command_id=UUID("00000000-0000-0000-0000-000000000111"),
+        ),
     )
     assert query.requested_at is NOW
     assert reconciliation.committed_at is NOW
+    for model, value in (
+        (RuntimeApiSubmissionFacts, submission),
+        (RuntimeApiInvocationQueryFacts, query),
+        (RuntimeApiReconciliationFacts, reconciliation),
+    ):
+        payload = {name: getattr(value, name) for name in model.model_fields}
+        with pytest.raises(ValidationError):
+            model.model_validate(
+                {key: item for key, item in payload.items() if key != "integration"}
+            )
+    with pytest.raises(ValidationError, match="outer and integration"):
+        RuntimeApiSubmissionFacts.model_validate(
+            {
+                **{
+                    name: getattr(submission, name)
+                    for name in RuntimeApiSubmissionFacts.model_fields
+                },
+                "receipt_id": UUID(int=999),
+            }
+        )
 
 
 def test_trusted_context_facts_are_explicit_strict_frozen_and_aware() -> None:
@@ -552,6 +622,10 @@ def test_canonical_mutation_digests_are_deterministic_and_operation_specific() -
         committed_at=NOW,
         correlation_reference="correlation-1",
         context=context_facts(),
+        integration=submission_integration_facts(
+            receipt_id=UUID("00000000-0000-0000-0000-000000000109"),
+            command_id=UUID("00000000-0000-0000-0000-000000000108"),
+        ),
     )
     first = build_runtime_api_submission_digest(submission, facts=submission_facts)
     assert first == build_runtime_api_submission_digest(submission, facts=submission_facts)
@@ -570,6 +644,10 @@ def test_canonical_mutation_digests_are_deterministic_and_operation_specific() -
         committed_at=NOW,
         correlation_reference="correlation-1",
         context=context_facts(),
+        integration=reconciliation_integration_facts(
+            receipt_id=UUID("00000000-0000-0000-0000-000000000112"),
+            command_id=UUID("00000000-0000-0000-0000-000000000111"),
+        ),
     )
     reconciliation_digest = build_runtime_api_reconciliation_digest(
         reconciliation, facts=reconciliation_facts
@@ -634,8 +712,15 @@ def test_binder_output_validators_require_exact_outer_and_resolved_facts() -> No
         committed_at=NOW,
         correlation_reference="correlation-1",
         context=context_facts(),
+        integration=submission_integration_facts(
+            receipt_id=UUID("00000000-0000-0000-0000-000000000109"),
+            command_id=UUID("00000000-0000-0000-0000-000000000108"),
+        ),
     )
     digest = build_runtime_api_submission_digest(request, facts=facts)
+    facts = facts.model_copy(
+        update={"integration": facts.integration.model_copy(update={"command_digest": digest})}
+    )
     bound = RuntimeApiSubmissionCommand(
         identity=RuntimeApiCommandIdentity(
             command_id=facts.command_id,
@@ -654,6 +739,7 @@ def test_binder_output_validators_require_exact_outer_and_resolved_facts() -> No
         action_reference=request.action_reference,
         command_reference=request.command_reference,
         classification=request.classification,
+        integration=facts.integration,
     )
     assert (
         validate_runtime_api_submission_binding(
@@ -672,6 +758,11 @@ def test_binder_output_validators_require_exact_outer_and_resolved_facts() -> No
         bound.model_copy(update={"action_reference": "action-2"}),
         bound.model_copy(
             update={"principal": principal().model_copy(update={"principal_id": ORG})}
+        ),
+        bound.model_copy(
+            update={
+                "integration": bound.integration.model_copy(update={"action_reference": "action-2"})
+            }
         ),
         bound.model_copy(
             update={
@@ -701,6 +792,7 @@ def test_query_reconciliation_and_projection_bindings_are_exact() -> None:
         requested_at=NOW,
         correlation_reference="correlation-1",
         context=context_facts(),
+        integration=query_integration_facts(query_id=UUID("00000000-0000-0000-0000-000000000110")),
     )
     bound_query = RuntimeApiInvocationQuery(
         query_id=query_facts.query_id,
@@ -709,6 +801,7 @@ def test_query_reconciliation_and_projection_bindings_are_exact() -> None:
         permission=permission(RuntimeApiPermission.READ),
         invocation_reference=query_request.invocation_reference,
         correlation_reference=query_facts.correlation_reference,
+        integration=query_facts.integration,
     )
     assert (
         validate_runtime_api_invocation_query_binding(
@@ -747,8 +840,15 @@ def test_query_reconciliation_and_projection_bindings_are_exact() -> None:
         committed_at=NOW,
         correlation_reference="correlation-1",
         context=context_facts(),
+        integration=reconciliation_integration_facts(
+            receipt_id=UUID("00000000-0000-0000-0000-000000000112"),
+            command_id=UUID("00000000-0000-0000-0000-000000000111"),
+        ),
     )
     digest = build_runtime_api_reconciliation_digest(request, facts=facts)
+    facts = facts.model_copy(
+        update={"integration": facts.integration.model_copy(update={"command_digest": digest})}
+    )
     reconcile_permission = permission(RuntimeApiPermission.RECONCILE)
     bound = RuntimeApiReconciliationCommand(
         identity=RuntimeApiCommandIdentity(
@@ -767,6 +867,7 @@ def test_query_reconciliation_and_projection_bindings_are_exact() -> None:
         permission=reconcile_permission,
         invocation_reference=request.invocation_reference,
         reconciliation_reference=request.reconciliation_reference,
+        integration=facts.integration,
     )
     assert (
         validate_runtime_api_reconciliation_binding(

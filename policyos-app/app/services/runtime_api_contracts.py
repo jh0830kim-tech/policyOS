@@ -5,10 +5,15 @@ from enum import StrEnum
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.ai.privacy import DataClassification
-from app.runtime.ports import RuntimeApiPersistenceBindingRead
+from app.runtime.ports import (
+    RuntimeApiActiveTransactionContext,
+    RuntimeApiLocalWriteSetOperation,
+    RuntimeApiLocalWriteSetStage,
+    RuntimeApiPersistenceBindingRead,
+)
 
 BoundedReference = Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,199}$")]
 BoundedDigest = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_.:-]{15,199}$")]
@@ -155,52 +160,6 @@ class RuntimeApiTrustedContextFacts(RuntimeApiModel):
         return value
 
 
-class RuntimeApiSubmissionFacts(RuntimeApiModel):
-    command_id: UUID
-    command_version: CommandVersion
-    receipt_id: UUID
-    committed_at: datetime
-    correlation_reference: BoundedReference
-    context: RuntimeApiTrustedContextFacts
-
-    @field_validator("committed_at")
-    @classmethod
-    def aware_time(cls, value: datetime) -> datetime:
-        if value.tzinfo is None or value.utcoffset() is None:
-            raise ValueError("committed_at must be timezone-aware")
-        return value
-
-
-class RuntimeApiInvocationQueryFacts(RuntimeApiModel):
-    query_id: UUID
-    requested_at: datetime
-    correlation_reference: BoundedReference
-    context: RuntimeApiTrustedContextFacts
-
-    @field_validator("requested_at")
-    @classmethod
-    def aware_time(cls, value: datetime) -> datetime:
-        if value.tzinfo is None or value.utcoffset() is None:
-            raise ValueError("requested_at must be timezone-aware")
-        return value
-
-
-class RuntimeApiReconciliationFacts(RuntimeApiModel):
-    command_id: UUID
-    command_version: CommandVersion
-    receipt_id: UUID
-    committed_at: datetime
-    correlation_reference: BoundedReference
-    context: RuntimeApiTrustedContextFacts
-
-    @field_validator("committed_at")
-    @classmethod
-    def aware_time(cls, value: datetime) -> datetime:
-        if value.tzinfo is None or value.utcoffset() is None:
-            raise ValueError("committed_at must be timezone-aware")
-        return value
-
-
 class RuntimeApiSubmissionBindingFacts(RuntimeApiModel):
     persistence: RuntimeApiPersistenceBindingRead
 
@@ -213,6 +172,208 @@ class RuntimeApiReconciliationBindingFacts(RuntimeApiModel):
     persistence: RuntimeApiPersistenceBindingRead
 
 
+class RuntimeApiSubmissionIntegrationFacts(RuntimeApiModel):
+    binding: RuntimeApiSubmissionBindingFacts
+    active_transaction: RuntimeApiActiveTransactionContext
+    stage: RuntimeApiLocalWriteSetStage
+    command_id: UUID
+    command_version: CommandVersion
+    command_digest: BoundedDigest
+    action_reference: BoundedReference
+    command_reference: BoundedReference
+    correlation_reference: BoundedReference
+    classification: DataClassification
+    tenant_id: UUID
+    organization_id: UUID
+    root_lineage_id: UUID
+    root_lineage_digest_reference: BoundedReference
+
+    @model_validator(mode="after")
+    def exact_closed_submission(self):
+        if self.stage.operation is not RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION:
+            raise ValueError("submission integration requires submit_invocation stage")
+        if self.stage.binding != self.binding.persistence:
+            raise ValueError("submission integration persistence binding differs")
+        scope = self.binding.persistence.scope
+        if (
+            self.tenant_id,
+            self.organization_id,
+            self.classification,
+            self.root_lineage_id,
+            self.root_lineage_digest_reference,
+        ) != (
+            scope.tenant_id,
+            scope.organization_id,
+            scope.classification,
+            scope.root_lineage_id,
+            scope.root_lineage_digest_reference,
+        ):
+            raise ValueError("submission integration scope or lineage differs")
+        return self
+
+
+class RuntimeApiInvocationQueryIntegrationFacts(RuntimeApiModel):
+    binding: RuntimeApiInvocationQueryBindingFacts
+    active_transaction: RuntimeApiActiveTransactionContext
+    query_id: UUID
+    invocation_reference: BoundedReference
+    correlation_reference: BoundedReference
+    tenant_id: UUID
+    organization_id: UUID
+    classification: DataClassification
+    root_lineage_id: UUID
+    root_lineage_digest_reference: BoundedReference
+
+    @model_validator(mode="after")
+    def exact_read_scope(self):
+        scope = self.binding.persistence.scope
+        if (
+            self.tenant_id,
+            self.organization_id,
+            self.classification,
+            self.root_lineage_id,
+            self.root_lineage_digest_reference,
+        ) != (
+            scope.tenant_id,
+            scope.organization_id,
+            scope.classification,
+            scope.root_lineage_id,
+            scope.root_lineage_digest_reference,
+        ):
+            raise ValueError("query integration scope or lineage differs")
+        return self
+
+
+class RuntimeApiReconciliationIntegrationFacts(RuntimeApiModel):
+    binding: RuntimeApiReconciliationBindingFacts
+    active_transaction: RuntimeApiActiveTransactionContext
+    stage: RuntimeApiLocalWriteSetStage
+    command_id: UUID
+    command_version: CommandVersion
+    command_digest: BoundedDigest
+    invocation_reference: BoundedReference
+    reconciliation_reference: BoundedReference
+    correlation_reference: BoundedReference
+    tenant_id: UUID
+    organization_id: UUID
+    classification: DataClassification
+    root_lineage_id: UUID
+    root_lineage_digest_reference: BoundedReference
+
+    @model_validator(mode="after")
+    def exact_closed_reconciliation(self):
+        if self.stage.operation is not RuntimeApiLocalWriteSetOperation.REQUEST_RECONCILIATION:
+            raise ValueError("reconciliation integration requires request_reconciliation stage")
+        if self.stage.binding != self.binding.persistence:
+            raise ValueError("reconciliation integration persistence binding differs")
+        scope = self.binding.persistence.scope
+        if (
+            self.tenant_id,
+            self.organization_id,
+            self.classification,
+            self.root_lineage_id,
+            self.root_lineage_digest_reference,
+        ) != (
+            scope.tenant_id,
+            scope.organization_id,
+            scope.classification,
+            scope.root_lineage_id,
+            scope.root_lineage_digest_reference,
+        ):
+            raise ValueError("reconciliation integration scope or lineage differs")
+        return self
+
+
+class RuntimeApiSubmissionFacts(RuntimeApiModel):
+    command_id: UUID
+    command_version: CommandVersion
+    receipt_id: UUID
+    committed_at: datetime
+    correlation_reference: BoundedReference
+    context: RuntimeApiTrustedContextFacts
+    integration: RuntimeApiSubmissionIntegrationFacts
+
+    @field_validator("committed_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("committed_at must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def exact_integration_identity(self):
+        if (
+            self.command_id,
+            self.command_version,
+            self.receipt_id,
+            self.correlation_reference,
+        ) != (
+            self.integration.command_id,
+            self.integration.command_version,
+            self.integration.stage.transport_receipt_id,
+            self.integration.correlation_reference,
+        ):
+            raise ValueError("submission outer and integration facts differ")
+        return self
+
+
+class RuntimeApiInvocationQueryFacts(RuntimeApiModel):
+    query_id: UUID
+    requested_at: datetime
+    correlation_reference: BoundedReference
+    context: RuntimeApiTrustedContextFacts
+    integration: RuntimeApiInvocationQueryIntegrationFacts
+
+    @field_validator("requested_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("requested_at must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def exact_integration_identity(self):
+        if (self.query_id, self.correlation_reference) != (
+            self.integration.query_id,
+            self.integration.correlation_reference,
+        ):
+            raise ValueError("query outer and integration facts differ")
+        return self
+
+
+class RuntimeApiReconciliationFacts(RuntimeApiModel):
+    command_id: UUID
+    command_version: CommandVersion
+    receipt_id: UUID
+    committed_at: datetime
+    correlation_reference: BoundedReference
+    context: RuntimeApiTrustedContextFacts
+    integration: RuntimeApiReconciliationIntegrationFacts
+
+    @field_validator("committed_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("committed_at must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def exact_integration_identity(self):
+        if (
+            self.command_id,
+            self.command_version,
+            self.receipt_id,
+            self.correlation_reference,
+        ) != (
+            self.integration.command_id,
+            self.integration.command_version,
+            self.integration.stage.transport_receipt_id,
+            self.integration.correlation_reference,
+        ):
+            raise ValueError("reconciliation outer and integration facts differ")
+        return self
+
+
 class RuntimeApiSubmissionCommand(RuntimeApiModel):
     identity: RuntimeApiCommandIdentity
     principal: RuntimeApiTrustedPrincipal
@@ -222,6 +383,7 @@ class RuntimeApiSubmissionCommand(RuntimeApiModel):
     command_reference: BoundedReference
     input_reference: BoundedReference | None = None
     classification: DataClassification
+    integration: RuntimeApiSubmissionIntegrationFacts
 
 
 class RuntimeApiInvocationQuery(RuntimeApiModel):
@@ -231,6 +393,7 @@ class RuntimeApiInvocationQuery(RuntimeApiModel):
     permission: RuntimeApiPermissionFact
     invocation_reference: BoundedReference
     correlation_reference: BoundedReference
+    integration: RuntimeApiInvocationQueryIntegrationFacts
 
 
 class RuntimeApiReconciliationCommand(RuntimeApiModel):
@@ -240,6 +403,7 @@ class RuntimeApiReconciliationCommand(RuntimeApiModel):
     permission: RuntimeApiPermissionFact
     invocation_reference: BoundedReference
     reconciliation_reference: BoundedReference
+    integration: RuntimeApiReconciliationIntegrationFacts
 
 
 class RuntimeApiStatusProjection(RuntimeApiModel):
@@ -328,6 +492,7 @@ __all__ = (
     "RuntimeApiIdempotencyReceipt",
     "RuntimeApiInvocationQueryFacts",
     "RuntimeApiInvocationQueryBindingFacts",
+    "RuntimeApiInvocationQueryIntegrationFacts",
     "RuntimeApiInvocationQueryInput",
     "RuntimeApiInvocationQuery",
     "RuntimeApiModel",
@@ -339,6 +504,7 @@ __all__ = (
     "RuntimeApiReconciliationCommand",
     "RuntimeApiReconciliationBindingFacts",
     "RuntimeApiReconciliationFacts",
+    "RuntimeApiReconciliationIntegrationFacts",
     "RuntimeApiReconciliationInput",
     "RuntimeApiReconciliationResult",
     "RuntimeApiSafeError",
@@ -347,6 +513,7 @@ __all__ = (
     "RuntimeApiSubmissionCommand",
     "RuntimeApiSubmissionBindingFacts",
     "RuntimeApiSubmissionFacts",
+    "RuntimeApiSubmissionIntegrationFacts",
     "RuntimeApiSubmissionInput",
     "RuntimeApiSubmissionResult",
     "RuntimeApiTrustedPrincipal",
