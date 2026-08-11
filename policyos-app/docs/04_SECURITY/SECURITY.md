@@ -448,3 +448,9 @@ current/latest revision, generate a digest, or synthesize a missing result. Miss
 duplicate, stale, cross-scope, cross-lineage, or digest-inconsistent facts fail closed. Public
 contracts, exact persistence reads, and application integration remain separate CP9 gates; CP10
 remains Planned.
+
+The public-domain contract gate implements ADR-098 as an immutable total mapping and strict
+result-cardinality validator. It adds no persistence locator, stored digest exposure, database
+read, hidden identifier or clock, facade parameter, binder behavior, schema, or migration. Unknown
+states, invalid counts, forbidden results, and missing required results fail closed. Exact
+state-revision digest reads and request-scoped locator implementation remain separately reviewed.

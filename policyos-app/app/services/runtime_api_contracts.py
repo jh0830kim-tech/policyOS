@@ -55,6 +55,20 @@ class RuntimeApiPublicStatus(StrEnum):
     AMBIGUOUS = "ambiguous"
     RECONCILIATION_REQUIRED = "reconciliation_required"
     DEAD_LETTERED = "dead_lettered"
+    PARTIALLY_COMPLETED = "partially_completed"
+    CANCELLATION_PENDING = "cancellation_pending"
+    CANCELLED = "cancelled"
+    TIMED_OUT = "timed_out"
+    COMPENSATION_REQUIRED = "compensation_required"
+    COMPENSATING = "compensating"
+    COMPENSATED = "compensated"
+    INVALIDATED = "invalidated"
+
+
+class RuntimeApiResultCardinality(StrEnum):
+    EXACTLY_ZERO = "exactly_zero"
+    ZERO_OR_ONE = "zero_or_one"
+    EXACTLY_ONE = "exactly_one"
 
 
 class RuntimeApiErrorCode(StrEnum):
@@ -501,6 +515,7 @@ __all__ = (
     "RuntimeApiPermission",
     "RuntimeApiPermissionFact",
     "RuntimeApiPublicStatus",
+    "RuntimeApiResultCardinality",
     "RuntimeApiReconciliationCommand",
     "RuntimeApiReconciliationBindingFacts",
     "RuntimeApiReconciliationFacts",
