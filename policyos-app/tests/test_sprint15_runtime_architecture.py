@@ -1079,3 +1079,33 @@ def test_cp9_runtime_lifecycle_projection_governance_is_total_and_bounded() -> N
     assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
+
+def test_cp9_runtime_lifecycle_public_contract_gate_is_bounded() -> None:
+    contracts = (ROOT / "app" / "services" / "runtime_api_contracts.py").read_text(encoding="utf-8")
+    validation = (ROOT / "app" / "services" / "runtime_api_validation.py").read_text(
+        encoding="utf-8"
+    )
+    for name in (
+        "PARTIALLY_COMPLETED",
+        "CANCELLATION_PENDING",
+        "CANCELLED",
+        "TIMED_OUT",
+        "COMPENSATION_REQUIRED",
+        "COMPENSATING",
+        "COMPENSATED",
+        "INVALIDATED",
+        "RuntimeApiResultCardinality",
+    ):
+        assert name in contracts
+    for name in (
+        "RUNTIME_API_PUBLIC_STATUS_BY_EXECUTION_STATE",
+        "RUNTIME_API_RESULT_CARDINALITY_BY_EXECUTION_STATE",
+        "runtime_api_public_status_for_execution_state",
+        "validate_runtime_api_result_count",
+    ):
+        assert name in validation
+    assert "MappingProxyType" in validation
+    assert "SQLAlchemy" not in contracts
+    assert "SQLAlchemy" not in validation
+    assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()

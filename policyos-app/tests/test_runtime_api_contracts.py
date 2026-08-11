@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from app.ai.privacy import DataClassification
 from app.core.auth_claims import VerifiedAccessTokenClaims
+from app.runtime.state import RuntimeExecutionState
 from app.schemas.runtime_api import RuntimeInvocationSubmitRequest
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
@@ -29,6 +30,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationInput,
+    RuntimeApiResultCardinality,
     RuntimeApiSafeResult,
     RuntimeApiStatusProjection,
     RuntimeApiSubmissionCommand,
@@ -49,15 +51,20 @@ from app.services.runtime_api_protocols import (
 )
 from app.services.runtime_api_validation import (
     RUNTIME_API_OPERATION_PERMISSIONS,
+    RUNTIME_API_PUBLIC_STATUS_BY_EXECUTION_STATE,
+    RUNTIME_API_RESULT_CARDINALITY_BY_EXECUTION_STATE,
     build_runtime_api_reconciliation_digest,
     build_runtime_api_submission_digest,
     required_runtime_api_permission,
+    runtime_api_public_status_for_execution_state,
+    runtime_api_result_cardinality_for_execution_state,
     validate_runtime_api_commit_result,
     validate_runtime_api_idempotency_replay,
     validate_runtime_api_invocation_query_binding,
     validate_runtime_api_projection_binding,
     validate_runtime_api_public_status,
     validate_runtime_api_reconciliation_binding,
+    validate_runtime_api_result_count,
     validate_runtime_api_submission,
     validate_runtime_api_submission_binding,
     validate_runtime_api_trusted_context_facts,
@@ -230,7 +237,16 @@ def test_transport_is_strict_bounded_and_excludes_internal_facts() -> None:
         request.model_copy(update={"tenant_id": str(TENANT)}).model_validate(
             {**request.model_dump(), "tenant_id": str(TENANT)}
         )
-    forbidden = {"authority", "plan", "state", "registry", "audit", "claim", "lease", "retry"}
+    forbidden = {
+        "authority",
+        "plan",
+        "state",
+        "registry",
+        "audit",
+        "claim",
+        "lease",
+        "retry",
+    }
     assert forbidden.isdisjoint(RuntimeInvocationSubmitRequest.model_fields)
 
 
@@ -313,6 +329,104 @@ def test_ambiguous_status_is_not_success() -> None:
     assert validate_runtime_api_public_status(RuntimeApiPublicStatus.AMBIGUOUS) is not (
         RuntimeApiPublicStatus.SUCCEEDED
     )
+
+
+def test_runtime_lifecycle_public_status_mapping_is_total_and_exact() -> None:
+    assert tuple(RuntimeApiPublicStatus) == (
+        RuntimeApiPublicStatus.ACCEPTED,
+        RuntimeApiPublicStatus.IN_PROGRESS,
+        RuntimeApiPublicStatus.SUCCEEDED,
+        RuntimeApiPublicStatus.FAILED,
+        RuntimeApiPublicStatus.AMBIGUOUS,
+        RuntimeApiPublicStatus.RECONCILIATION_REQUIRED,
+        RuntimeApiPublicStatus.DEAD_LETTERED,
+        RuntimeApiPublicStatus.PARTIALLY_COMPLETED,
+        RuntimeApiPublicStatus.CANCELLATION_PENDING,
+        RuntimeApiPublicStatus.CANCELLED,
+        RuntimeApiPublicStatus.TIMED_OUT,
+        RuntimeApiPublicStatus.COMPENSATION_REQUIRED,
+        RuntimeApiPublicStatus.COMPENSATING,
+        RuntimeApiPublicStatus.COMPENSATED,
+        RuntimeApiPublicStatus.INVALIDATED,
+    )
+    expected = {
+        RuntimeExecutionState.REQUESTED: RuntimeApiPublicStatus.ACCEPTED,
+        RuntimeExecutionState.ADMISSION_PENDING: RuntimeApiPublicStatus.ACCEPTED,
+        RuntimeExecutionState.ADMITTED: RuntimeApiPublicStatus.ACCEPTED,
+        RuntimeExecutionState.PLANNING: RuntimeApiPublicStatus.IN_PROGRESS,
+        RuntimeExecutionState.PLANNED: RuntimeApiPublicStatus.IN_PROGRESS,
+        RuntimeExecutionState.READY: RuntimeApiPublicStatus.IN_PROGRESS,
+        RuntimeExecutionState.RUNNING: RuntimeApiPublicStatus.IN_PROGRESS,
+        RuntimeExecutionState.SUCCEEDED: RuntimeApiPublicStatus.SUCCEEDED,
+        RuntimeExecutionState.FAILED: RuntimeApiPublicStatus.FAILED,
+        RuntimeExecutionState.PARTIALLY_COMPLETED: RuntimeApiPublicStatus.PARTIALLY_COMPLETED,
+        RuntimeExecutionState.CANCEL_PENDING: RuntimeApiPublicStatus.CANCELLATION_PENDING,
+        RuntimeExecutionState.CANCELLED: RuntimeApiPublicStatus.CANCELLED,
+        RuntimeExecutionState.TIMED_OUT: RuntimeApiPublicStatus.TIMED_OUT,
+        RuntimeExecutionState.COMPENSATION_REQUIRED: RuntimeApiPublicStatus.COMPENSATION_REQUIRED,
+        RuntimeExecutionState.COMPENSATING: RuntimeApiPublicStatus.COMPENSATING,
+        RuntimeExecutionState.COMPENSATED: RuntimeApiPublicStatus.COMPENSATED,
+        RuntimeExecutionState.INVALIDATED: RuntimeApiPublicStatus.INVALIDATED,
+    }
+    assert dict(RUNTIME_API_PUBLIC_STATUS_BY_EXECUTION_STATE) == expected
+    assert set(expected) == set(RuntimeExecutionState)
+    for state, status in expected.items():
+        assert runtime_api_public_status_for_execution_state(state) is status
+    with pytest.raises(RuntimeApiContractConflict):
+        runtime_api_public_status_for_execution_state("future")  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        RUNTIME_API_PUBLIC_STATUS_BY_EXECUTION_STATE[RuntimeExecutionState.REQUESTED] = (
+            RuntimeApiPublicStatus.FAILED
+        )
+
+
+def test_runtime_lifecycle_result_cardinality_is_total_and_fail_closed() -> None:
+    by_cardinality = {
+        RuntimeApiResultCardinality.EXACTLY_ZERO: {
+            RuntimeExecutionState.REQUESTED,
+            RuntimeExecutionState.ADMISSION_PENDING,
+            RuntimeExecutionState.ADMITTED,
+            RuntimeExecutionState.PLANNING,
+            RuntimeExecutionState.PLANNED,
+            RuntimeExecutionState.READY,
+            RuntimeExecutionState.RUNNING,
+        },
+        RuntimeApiResultCardinality.EXACTLY_ONE: {
+            RuntimeExecutionState.SUCCEEDED,
+            RuntimeExecutionState.PARTIALLY_COMPLETED,
+            RuntimeExecutionState.COMPENSATION_REQUIRED,
+            RuntimeExecutionState.COMPENSATING,
+            RuntimeExecutionState.COMPENSATED,
+        },
+        RuntimeApiResultCardinality.ZERO_OR_ONE: {
+            RuntimeExecutionState.FAILED,
+            RuntimeExecutionState.CANCEL_PENDING,
+            RuntimeExecutionState.CANCELLED,
+            RuntimeExecutionState.TIMED_OUT,
+            RuntimeExecutionState.INVALIDATED,
+        },
+    }
+    assert set(RUNTIME_API_RESULT_CARDINALITY_BY_EXECUTION_STATE) == set(RuntimeExecutionState)
+    with pytest.raises(TypeError):
+        RUNTIME_API_RESULT_CARDINALITY_BY_EXECUTION_STATE[RuntimeExecutionState.REQUESTED] = (
+            RuntimeApiResultCardinality.EXACTLY_ONE
+        )
+    for cardinality, states in by_cardinality.items():
+        for state in states:
+            assert runtime_api_result_cardinality_for_execution_state(state) is cardinality
+            valid_counts = (0,) if cardinality is RuntimeApiResultCardinality.EXACTLY_ZERO else (1,)
+            if cardinality is RuntimeApiResultCardinality.ZERO_OR_ONE:
+                valid_counts = (0, 1)
+            for count in valid_counts:
+                assert validate_runtime_api_result_count(state, count) is cardinality
+            for count in {0, 1} - set(valid_counts):
+                with pytest.raises(RuntimeApiContractConflict):
+                    validate_runtime_api_result_count(state, count)
+    for invalid in (-1, 2, True, 1.0, "1"):
+        with pytest.raises(RuntimeApiContractConflict):
+            validate_runtime_api_result_count(RuntimeExecutionState.FAILED, invalid)  # type: ignore[arg-type]
+    with pytest.raises(RuntimeApiContractConflict):
+        validate_runtime_api_result_count("future", 0)  # type: ignore[arg-type]
 
 
 class Facade:
@@ -668,7 +782,8 @@ def test_canonical_mutation_digests_are_deterministic_and_operation_specific() -
     )
     assert (
         build_runtime_api_submission_digest(
-            submission.model_copy(update={"idempotency_key": "key-2"}), facts=submission_facts
+            submission.model_copy(update={"idempotency_key": "key-2"}),
+            facts=submission_facts,
         )
         == first
     )
@@ -685,7 +800,8 @@ def test_canonical_mutation_digests_are_deterministic_and_operation_specific() -
     ):
         assert (
             build_runtime_api_reconciliation_digest(
-                reconciliation.model_copy(update={field: value}), facts=reconciliation_facts
+                reconciliation.model_copy(update={field: value}),
+                facts=reconciliation_facts,
             )
             != reconciliation_digest
         )
@@ -941,6 +1057,8 @@ def test_explicit_immutable_exports() -> None:
         assert all(hasattr(module, name) for name in module.__all__)
     assert "CommandVersion" in contracts.__all__
     assert "RuntimeApiIdempotencyCommitFacts" in contracts.__all__
+    assert "RuntimeApiResultCardinality" in contracts.__all__
+    assert "validate_runtime_api_result_count" in validation.__all__
     assert "RuntimeApiLocalMutation" in protocols.__all__
 
 

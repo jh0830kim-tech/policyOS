@@ -1,6 +1,8 @@
 """Pure fail-closed validation for CP9 Runtime API contracts."""
 
+from collections.abc import Mapping
 from hashlib import sha256
+from types import MappingProxyType
 from uuid import UUID
 
 from app.ai.privacy import DataClassification
@@ -14,6 +16,7 @@ from app.runtime.registry import (
     validate_runtime_action_resolution_decision,
     validate_runtime_registry_snapshot,
 )
+from app.runtime.state import RuntimeExecutionState
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
     RuntimeApiContractConflict,
@@ -29,6 +32,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationInput,
+    RuntimeApiResultCardinality,
     RuntimeApiSafeError,
     RuntimeApiStatusProjection,
     RuntimeApiSubmissionCommand,
@@ -38,6 +42,91 @@ from app.services.runtime_api_contracts import (
     RuntimeApiTrustedPrincipal,
     RuntimeApiTrustedScope,
 )
+
+RUNTIME_API_PUBLIC_STATUS_BY_EXECUTION_STATE: Mapping[
+    RuntimeExecutionState, RuntimeApiPublicStatus
+] = MappingProxyType(
+    {
+        RuntimeExecutionState.REQUESTED: RuntimeApiPublicStatus.ACCEPTED,
+        RuntimeExecutionState.ADMISSION_PENDING: RuntimeApiPublicStatus.ACCEPTED,
+        RuntimeExecutionState.ADMITTED: RuntimeApiPublicStatus.ACCEPTED,
+        RuntimeExecutionState.PLANNING: RuntimeApiPublicStatus.IN_PROGRESS,
+        RuntimeExecutionState.PLANNED: RuntimeApiPublicStatus.IN_PROGRESS,
+        RuntimeExecutionState.READY: RuntimeApiPublicStatus.IN_PROGRESS,
+        RuntimeExecutionState.RUNNING: RuntimeApiPublicStatus.IN_PROGRESS,
+        RuntimeExecutionState.SUCCEEDED: RuntimeApiPublicStatus.SUCCEEDED,
+        RuntimeExecutionState.FAILED: RuntimeApiPublicStatus.FAILED,
+        RuntimeExecutionState.PARTIALLY_COMPLETED: RuntimeApiPublicStatus.PARTIALLY_COMPLETED,
+        RuntimeExecutionState.CANCEL_PENDING: RuntimeApiPublicStatus.CANCELLATION_PENDING,
+        RuntimeExecutionState.CANCELLED: RuntimeApiPublicStatus.CANCELLED,
+        RuntimeExecutionState.TIMED_OUT: RuntimeApiPublicStatus.TIMED_OUT,
+        RuntimeExecutionState.COMPENSATION_REQUIRED: RuntimeApiPublicStatus.COMPENSATION_REQUIRED,
+        RuntimeExecutionState.COMPENSATING: RuntimeApiPublicStatus.COMPENSATING,
+        RuntimeExecutionState.COMPENSATED: RuntimeApiPublicStatus.COMPENSATED,
+        RuntimeExecutionState.INVALIDATED: RuntimeApiPublicStatus.INVALIDATED,
+    }
+)
+
+RUNTIME_API_RESULT_CARDINALITY_BY_EXECUTION_STATE: Mapping[
+    RuntimeExecutionState, RuntimeApiResultCardinality
+] = MappingProxyType(
+    {
+        RuntimeExecutionState.REQUESTED: RuntimeApiResultCardinality.EXACTLY_ZERO,
+        RuntimeExecutionState.ADMISSION_PENDING: RuntimeApiResultCardinality.EXACTLY_ZERO,
+        RuntimeExecutionState.ADMITTED: RuntimeApiResultCardinality.EXACTLY_ZERO,
+        RuntimeExecutionState.PLANNING: RuntimeApiResultCardinality.EXACTLY_ZERO,
+        RuntimeExecutionState.PLANNED: RuntimeApiResultCardinality.EXACTLY_ZERO,
+        RuntimeExecutionState.READY: RuntimeApiResultCardinality.EXACTLY_ZERO,
+        RuntimeExecutionState.RUNNING: RuntimeApiResultCardinality.EXACTLY_ZERO,
+        RuntimeExecutionState.SUCCEEDED: RuntimeApiResultCardinality.EXACTLY_ONE,
+        RuntimeExecutionState.FAILED: RuntimeApiResultCardinality.ZERO_OR_ONE,
+        RuntimeExecutionState.PARTIALLY_COMPLETED: RuntimeApiResultCardinality.EXACTLY_ONE,
+        RuntimeExecutionState.CANCEL_PENDING: RuntimeApiResultCardinality.ZERO_OR_ONE,
+        RuntimeExecutionState.CANCELLED: RuntimeApiResultCardinality.ZERO_OR_ONE,
+        RuntimeExecutionState.TIMED_OUT: RuntimeApiResultCardinality.ZERO_OR_ONE,
+        RuntimeExecutionState.COMPENSATION_REQUIRED: RuntimeApiResultCardinality.EXACTLY_ONE,
+        RuntimeExecutionState.COMPENSATING: RuntimeApiResultCardinality.EXACTLY_ONE,
+        RuntimeExecutionState.COMPENSATED: RuntimeApiResultCardinality.EXACTLY_ONE,
+        RuntimeExecutionState.INVALIDATED: RuntimeApiResultCardinality.ZERO_OR_ONE,
+    }
+)
+
+
+def runtime_api_public_status_for_execution_state(
+    state: RuntimeExecutionState,
+) -> RuntimeApiPublicStatus:
+    if not isinstance(state, RuntimeExecutionState):
+        raise RuntimeApiContractConflict("runtime execution state is unknown")
+    try:
+        return RUNTIME_API_PUBLIC_STATUS_BY_EXECUTION_STATE[state]
+    except KeyError as exc:
+        raise RuntimeApiContractConflict("runtime execution state has no public status") from exc
+
+
+def runtime_api_result_cardinality_for_execution_state(
+    state: RuntimeExecutionState,
+) -> RuntimeApiResultCardinality:
+    if not isinstance(state, RuntimeExecutionState):
+        raise RuntimeApiContractConflict("runtime execution state is unknown")
+    try:
+        return RUNTIME_API_RESULT_CARDINALITY_BY_EXECUTION_STATE[state]
+    except KeyError as exc:
+        raise RuntimeApiContractConflict(
+            "runtime execution state has no result cardinality"
+        ) from exc
+
+
+def validate_runtime_api_result_count(
+    state: RuntimeExecutionState, result_count: int
+) -> RuntimeApiResultCardinality:
+    cardinality = runtime_api_result_cardinality_for_execution_state(state)
+    if type(result_count) is not int or result_count < 0 or result_count > 1:
+        raise RuntimeApiContractConflict("runtime execution result count is invalid")
+    if cardinality is RuntimeApiResultCardinality.EXACTLY_ZERO and result_count != 0:
+        raise RuntimeApiContractConflict("runtime execution state forbids a result")
+    if cardinality is RuntimeApiResultCardinality.EXACTLY_ONE and result_count != 1:
+        raise RuntimeApiContractConflict("runtime execution state requires one result")
+    return cardinality
 
 
 def validate_runtime_api_persistence_binding(
@@ -169,7 +258,9 @@ RUNTIME_API_OPERATION_PERMISSIONS = (
 )
 
 
-def required_runtime_api_permission(operation: RuntimeApiOperation) -> RuntimeApiPermission:
+def required_runtime_api_permission(
+    operation: RuntimeApiOperation,
+) -> RuntimeApiPermission:
     for candidate, permission in RUNTIME_API_OPERATION_PERMISSIONS:
         if operation is candidate:
             return permission
@@ -543,7 +634,9 @@ def validate_runtime_api_commit_result(
     return result
 
 
-def validate_runtime_api_public_status(status: RuntimeApiPublicStatus) -> RuntimeApiPublicStatus:
+def validate_runtime_api_public_status(
+    status: RuntimeApiPublicStatus,
+) -> RuntimeApiPublicStatus:
     if status in {
         RuntimeApiPublicStatus.AMBIGUOUS,
         RuntimeApiPublicStatus.RECONCILIATION_REQUIRED,
@@ -557,6 +650,8 @@ def validate_runtime_api_safe_error(error: RuntimeApiSafeError) -> RuntimeApiSaf
 
 
 __all__ = (
+    "RUNTIME_API_PUBLIC_STATUS_BY_EXECUTION_STATE",
+    "RUNTIME_API_RESULT_CARDINALITY_BY_EXECUTION_STATE",
     "validate_runtime_api_persistence_binding",
     "validate_runtime_api_persistence_resolution",
     "validate_runtime_api_registry_resolution_admission",
@@ -564,12 +659,15 @@ __all__ = (
     "build_runtime_api_reconciliation_digest",
     "build_runtime_api_submission_digest",
     "required_runtime_api_permission",
+    "runtime_api_public_status_for_execution_state",
+    "runtime_api_result_cardinality_for_execution_state",
     "validate_runtime_api_commit_result",
     "validate_runtime_api_idempotency_replay",
     "validate_runtime_api_invocation_query_binding",
     "validate_runtime_api_permission",
     "validate_runtime_api_principal",
     "validate_runtime_api_public_status",
+    "validate_runtime_api_result_count",
     "validate_runtime_api_projection_binding",
     "validate_runtime_api_reconciliation_binding",
     "validate_runtime_api_safe_error",
