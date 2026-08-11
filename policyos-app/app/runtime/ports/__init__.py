@@ -144,6 +144,7 @@ from app.runtime.ports.repositories import (
 from app.runtime.ports.runtime_api_persistence import (
     RuntimeApiActiveTransactionContext,
     RuntimeApiActiveTransactionPersistencePort,
+    RuntimeApiLocalWriteSetOperation,
     RuntimeApiLocalWriteSetStage,
     RuntimeApiLocalWriteSetStageResult,
     RuntimeApiPersistedPermitFact,
@@ -177,6 +178,7 @@ __all__ = (
     "RuntimeApiActiveTransactionContext",
     "RuntimeApiActiveTransactionPersistencePort",
     "RuntimeApiLocalWriteSetStage",
+    "RuntimeApiLocalWriteSetOperation",
     "RuntimeApiLocalWriteSetStageResult",
     "RuntimeApiPersistedPermitFact",
     "RuntimeApiPersistedRecordFact",

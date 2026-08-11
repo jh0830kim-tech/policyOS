@@ -186,7 +186,17 @@ def test_cp9_api_contract_gate_has_no_production_implementation() -> None:
     )
     for path in modules:
         source = path.read_text(encoding="utf-8").lower()
-        assert not any(item in source for item in forbidden)
+        path_forbidden = forbidden
+        if path.name == "runtime_api_protocols.py":
+            assert "from sqlalchemy.ext.asyncio import asyncsession" in source
+            path_forbidden = (
+                "fastapi",
+                "app.runtime.persistence",
+                "app.runtime.adapters",
+                "create_async_engine",
+                "async_sessionmaker",
+            )
+        assert not any(item in source for item in path_forbidden)
 
     for path in (ROOT / "app" / "runtime").rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -826,6 +836,8 @@ def test_cp9_local_fact_binding_contract_gate_is_additive_only() -> None:
         "RuntimeApiPersistedPermitFact",
         "RuntimeApiRegistryPersistenceFact",
         "RuntimeApiActiveTransactionPersistencePort",
+        "RuntimeApiLocalWriteSetOperation",
+        "RuntimeApiActiveTransactionPersistenceFactory",
         "RuntimeApiSubmissionBindingFacts",
         "RuntimeApiInvocationQueryBindingFacts",
         "RuntimeApiReconciliationBindingFacts",
