@@ -1016,3 +1016,66 @@ def test_cp9_authoritative_result_projection_governance_is_bounded() -> None:
     assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
+
+
+def test_cp9_runtime_lifecycle_projection_governance_is_total_and_bounded() -> None:
+    adr = ADR / (
+        "ADR-098-CP9-RUNTIME-EXECUTION-LIFECYCLE-PUBLIC-STATUS-AND-AUTHORITATIVE-REFERENCE.md"
+    )
+    text = adr.read_text(encoding="utf-8")
+    normalized = " ".join(text.split())
+    states = (
+        "REQUESTED",
+        "ADMISSION_PENDING",
+        "ADMITTED",
+        "PLANNING",
+        "PLANNED",
+        "READY",
+        "RUNNING",
+        "SUCCEEDED",
+        "FAILED",
+        "PARTIALLY_COMPLETED",
+        "CANCEL_PENDING",
+        "CANCELLED",
+        "TIMED_OUT",
+        "COMPENSATION_REQUIRED",
+        "COMPENSATING",
+        "COMPENSATED",
+        "INVALIDATED",
+    )
+    table_rows = tuple(line for line in text.splitlines() if line.startswith("| `"))
+    assert len(table_rows) == len(states)
+    for state in states:
+        assert sum(line.startswith(f"| `{state}` |") for line in table_rows) == 1
+
+    for status in (
+        "ACCEPTED",
+        "IN_PROGRESS",
+        "SUCCEEDED",
+        "FAILED",
+        "PARTIALLY_COMPLETED",
+        "CANCELLATION_PENDING",
+        "CANCELLED",
+        "TIMED_OUT",
+        "COMPENSATION_REQUIRED",
+        "COMPENSATING",
+        "COMPENSATED",
+        "INVALIDATED",
+    ):
+        assert f"`{status}`" in text
+    for phrase in (
+        "The mapping is a domain-owned total function",
+        "exactly zero",
+        "zero-or-one",
+        "exactly one",
+        "stored `record_digest_reference` of the exact persisted `RuntimeExecutionStateRecord`",
+        "result-present/result-absent discriminator",
+        "An additive request-scoped locator Port",
+        "No schema, migration, or backfill is required",
+        "CP9 remains blocked on the three follow-up gates",
+        "CP10 remains Planned",
+    ):
+        assert phrase in normalized
+    assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()

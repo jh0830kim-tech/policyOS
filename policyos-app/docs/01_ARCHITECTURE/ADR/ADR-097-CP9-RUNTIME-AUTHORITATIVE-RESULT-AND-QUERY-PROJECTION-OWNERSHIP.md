@@ -3,6 +3,8 @@
 **Status:** Proposed
 **Date:** 2026-08-11
 **Depends on:** ADR-091 through ADR-096 and migration `20260808_0022`
+**Clarified by:** ADR-098, which fixes the total lifecycle projection, result cardinality, exact
+persisted execution-state revision digest ownership, and trusted query locator boundary.
 
 ## Context
 
@@ -58,7 +60,8 @@ mismatch fails closed. Query performs no write-set stage, receipt stage, or muta
 
 Projection provenance is exact: invocation and correlation references equal the validated query;
 status is the approved mapping of the exact persisted execution-state revision;
-`status_reference` is an exact persisted state/audit reference selected by the future contract;
+`status_reference` is the stored `record_digest_reference` of the exact persisted execution-state
+logical record and expected revision, as governed by ADR-098;
 and `observed_at` is a caller-supplied read observation fact validated by the read boundary.
 
 ### Responsibility and transaction separation
