@@ -33,6 +33,15 @@ from app.models.policy_candidate import PolicyCandidate
 from app.models.provider_audit import ProviderAuditRecord
 from app.models.runtime_api_idempotency import RuntimeApiIdempotencyReceiptRecord
 from app.models.runtime_permission_grants import RuntimePermissionGrantEvent
+from app.models.runtime_registry import (
+    RuntimeReconciliationRequestRecord,
+    RuntimeRegistryAdmissionBindingRecord,
+    RuntimeRegistryPermitBindingRecord,
+    RuntimeRegistryResolutionDecisionRecord,
+    RuntimeRegistryResolutionRequestRecord,
+    RuntimeRegistrySnapshotEntryRecord,
+    RuntimeRegistrySnapshotRecord,
+)
 from app.models.security_governance import LegalHold, ReclassificationRequest, UnifiedAuditEvent
 
 __all__ = [
@@ -67,6 +76,13 @@ __all__ = [
     "Role",
     "RolePermission",
     "RuntimePermissionGrantEvent",
+    "RuntimeReconciliationRequestRecord",
+    "RuntimeRegistryAdmissionBindingRecord",
+    "RuntimeRegistryPermitBindingRecord",
+    "RuntimeRegistryResolutionDecisionRecord",
+    "RuntimeRegistryResolutionRequestRecord",
+    "RuntimeRegistrySnapshotEntryRecord",
+    "RuntimeRegistrySnapshotRecord",
     "RuntimeApiIdempotencyReceiptRecord",
     "TenantOrganizationBinding",
     "UnifiedAuditEvent",

@@ -1,5 +1,9 @@
 """CP7 PostgreSQL runtime persistence implementations."""
 
+from app.runtime.persistence.active_transaction import (
+    SQLAlchemyRuntimeApiActiveTransactionPersistence,
+    SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory,
+)
 from app.runtime.persistence.delivery_repositories import (
     SQLAlchemyRuntimeEffectDueRepository,
     SQLAlchemyRuntimeEffectLifecycleTransaction,
@@ -17,6 +21,8 @@ from app.runtime.persistence.errors import (
     RuntimePersistenceError,
     RuntimePersistenceSerializationError,
     RuntimePersistenceTransactionError,
+    RuntimeRegistryPersistenceBindingError,
+    RuntimeRegistryPersistenceNotFoundError,
 )
 from app.runtime.persistence.models import (
     RUNTIME_EFFECT_PERSISTENCE_TABLES,
@@ -28,6 +34,14 @@ from app.runtime.persistence.models import (
     RuntimeRecordHead,
     RuntimeRecordRevision,
     RuntimeTransactionRecord,
+)
+from app.runtime.persistence.registry_repositories import SQLAlchemyRuntimeRegistryRepository
+from app.runtime.persistence.registry_serialization import (
+    RuntimeRegistryPayload,
+    RuntimeRegistryPayloadType,
+    deserialize_registry_payload,
+    serialize_registry_payload,
+    validate_registry_graph,
 )
 from app.runtime.persistence.repositories import (
     SQLAlchemyExecutionPlanRepository,
@@ -70,6 +84,10 @@ __all__ = (
     "RuntimePersistenceRecordType",
     "RuntimePersistenceSerializationError",
     "RuntimePersistenceTransactionError",
+    "RuntimeRegistryPayload",
+    "RuntimeRegistryPayloadType",
+    "RuntimeRegistryPersistenceBindingError",
+    "RuntimeRegistryPersistenceNotFoundError",
     "RuntimeRecordHead",
     "RuntimeRecordRevision",
     "RuntimeTransactionRecord",
@@ -82,16 +100,22 @@ __all__ = (
     "SQLAlchemyRuntimeEffectLifecycleTransaction",
     "SQLAlchemyRuntimeAdmissionRepository",
     "SQLAlchemyRuntimeAuditRepository",
+    "SQLAlchemyRuntimeApiActiveTransactionPersistence",
+    "SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory",
     "SQLAlchemyRuntimeIdempotencyRepository",
     "SQLAlchemyRuntimeOutboxRepository",
     "SQLAlchemyRuntimePermitRepository",
+    "SQLAlchemyRuntimeRegistryRepository",
     "SQLAlchemyRuntimeTransaction",
     "deserialize_delivery_model",
     "deserialize_runtime_record",
+    "deserialize_registry_payload",
     "metadata_for",
     "serialize_delivery_model",
     "serialize_runtime_record",
+    "serialize_registry_payload",
     "validate_loaded_record",
     "validate_persistence_read_request",
     "validate_persistence_write",
+    "validate_registry_graph",
 )

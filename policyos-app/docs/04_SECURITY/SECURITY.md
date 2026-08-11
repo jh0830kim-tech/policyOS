@@ -364,3 +364,23 @@ lifecycle enforcement, and caller-rollback removal. Production replay/conflict c
 receipt coupling, and facade commit/rollback remain a separate concrete integration checkpoint.
 Until that evidence exists, PolicyOS does not claim end-to-end Runtime API atomicity or completed
 submission/reconciliation behavior.
+
+### CP9 Registry and reconciliation persistence implementation
+
+Migration `20260808_0022` adds seven append-only tables for Registry snapshots, canonical entries,
+resolution requests and decisions, admission and permit bindings, and authorized reconciliation
+requests. Exact tenant, organization, classification, lineage, revision, digest, resolution,
+admission, execution-request, and canonical permit relationships are enforced by bounded columns,
+unique constraints, restrictive foreign keys, and immutable ORM/PostgreSQL guards. The migration
+performs no backfill, inference, normalization, deduplication, or deletion and refuses populated
+downgrade before destructive DDL.
+
+Typed serialization revalidates existing immutable Registry and reconciliation contracts. Reads
+require exact scoped identities and never choose a latest or fallback revision. The one-shot
+active-transaction capability captures the caller `AsyncSession` and root transaction objects and
+rejects inactive, nested, replaced, or reused lifetimes before database work. It does not begin,
+commit, roll back, close, or replace the transaction and exposes no reusable bearer capability.
+
+This checkpoint proves persistence-level local staging and caller rollback only. Concrete binder,
+local operation, facade callback/receipt composition, routes, external effects, Workers, retry,
+scheduler behavior, end-to-end Runtime API atomicity, and CP9 completion remain unimplemented.
