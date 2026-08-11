@@ -8,6 +8,7 @@ from uuid import UUID
 from app.ai.privacy import DataClassification
 from app.runtime.authority import RuntimeAuthorityDecisionStatus
 from app.runtime.ports import (
+    RuntimeApiLocalWriteSetOperation,
     RuntimeApiPersistenceBindingRead,
     RuntimeApiRegistryResolutionAdmissionFact,
 )
@@ -20,6 +21,7 @@ from app.runtime.state import RuntimeExecutionState
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
     RuntimeApiContractConflict,
+    RuntimeApiDomainOperationResult,
     RuntimeApiIdempotencyCommitResult,
     RuntimeApiIdempotencyReceipt,
     RuntimeApiInvocationQuery,
@@ -412,6 +414,7 @@ def validate_runtime_api_submission_binding(
         command.permission,
         command.action_reference,
         command.command_reference,
+        command.invocation_reference,
         command.input_reference,
         command.classification,
         command.integration,
@@ -430,6 +433,7 @@ def validate_runtime_api_submission_binding(
         permission,
         request.action_reference,
         request.command_reference,
+        facts.integration.invocation_reference,
         request.input_reference,
         request.classification,
         facts.integration,
@@ -442,6 +446,7 @@ def validate_runtime_api_submission_binding(
         integration.command_digest,
         integration.action_reference,
         integration.command_reference,
+        integration.invocation_reference,
         integration.correlation_reference,
         integration.classification,
     ) != (
@@ -450,6 +455,7 @@ def validate_runtime_api_submission_binding(
         command_digest,
         request.action_reference,
         request.command_reference,
+        command.invocation_reference,
         facts.correlation_reference,
         request.classification,
     ):
@@ -600,6 +606,32 @@ def validate_runtime_api_projection_binding(
     return projection
 
 
+def validate_runtime_api_domain_operation_result(
+    command: RuntimeApiSubmissionCommand | RuntimeApiReconciliationCommand,
+    result: RuntimeApiDomainOperationResult,
+) -> RuntimeApiDomainOperationResult:
+    """Bind one domain-produced safe result and closed stage to one command."""
+
+    if result.stage != command.integration.stage:
+        raise RuntimeApiContractConflict("domain operation stage differs from command")
+    projection = result.safe_result.projection
+    if projection.correlation_reference != command.identity.correlation_reference:
+        raise RuntimeApiContractConflict("domain operation correlation differs from command")
+    if isinstance(command, RuntimeApiSubmissionCommand):
+        if (
+            result.stage.operation is not RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION
+            or projection.invocation_reference != command.invocation_reference
+        ):
+            raise RuntimeApiContractConflict("domain operation submission stage differs")
+    else:
+        if (
+            result.stage.operation is not RuntimeApiLocalWriteSetOperation.REQUEST_RECONCILIATION
+            or projection.invocation_reference != command.invocation_reference
+        ):
+            raise RuntimeApiContractConflict("domain operation reconciliation result differs")
+    return result
+
+
 def validate_runtime_api_idempotency_replay(
     current: RuntimeApiCommandIdentity,
     stored: RuntimeApiIdempotencyReceipt,
@@ -662,6 +694,7 @@ __all__ = (
     "runtime_api_public_status_for_execution_state",
     "runtime_api_result_cardinality_for_execution_state",
     "validate_runtime_api_commit_result",
+    "validate_runtime_api_domain_operation_result",
     "validate_runtime_api_idempotency_replay",
     "validate_runtime_api_invocation_query_binding",
     "validate_runtime_api_permission",
