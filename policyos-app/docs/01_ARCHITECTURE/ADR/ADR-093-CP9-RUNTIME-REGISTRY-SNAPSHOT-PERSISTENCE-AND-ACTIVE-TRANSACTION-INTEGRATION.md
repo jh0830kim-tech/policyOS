@@ -226,3 +226,9 @@ The cost is additional append-only tables, composite constraints, typed serializ
 tests, and explicit trusted provisioning before production reads can succeed. CP9 remains Planned /
 Blocked until persistence, active-transaction integration, concrete local binding, routes,
 acceptance, and closeout complete. CP10 remains Planned.
+
+## ADR-096 clarification
+
+Expected Registry and admission bindings are explicit immutable request-scoped integration facts,
+not values selected by Persistence. The facade uses its one-shot capability to read or lock the
+exact persisted graph and compare it to those candidates before any local mutation.

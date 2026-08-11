@@ -136,3 +136,9 @@ Services later compose the persistence capability; no upstream package imports S
 This gate adds no production Python, model, migration, repository, facade, route, external effect,
 Worker, queue, retry, scheduler, backfill, cleanup, tag, or release. CP9 remains Planned / Blocked
 and CP10 remains Planned.
+
+## ADR-096 clarification
+
+The existing strict reconciliation request is carried as the closed payload of required nested
+integration facts. Its expected binding, write-set ID, receipt ID, digest, and staged time are
+caller supplied; the repository persists and validates them but never creates or repairs them.

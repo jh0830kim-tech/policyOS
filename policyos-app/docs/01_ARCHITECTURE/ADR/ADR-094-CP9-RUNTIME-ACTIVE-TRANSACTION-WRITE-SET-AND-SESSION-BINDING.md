@@ -134,3 +134,10 @@ Worker, queue, retry, scheduler, backfill, cleanup, tag, or release.
 
 The next contract gate now has deterministic payloads and lifetime rules. CP9 remains Planned /
 Blocked until the remaining gates complete. CP10 remains Planned.
+
+## ADR-096 clarification
+
+The closed write set, reconciliation request, stage identity, canonical digest, transport receipt,
+staged time, and caller-supplied transaction context must be carried explicitly in required nested
+operation facts. Opaque context never substitutes for the exact captured `AsyncSession` and root
+transaction objects.

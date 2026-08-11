@@ -760,3 +760,19 @@ transaction. `runtime.grant.manage` is definition-only with zero automatic grant
 `runtime.read`, `runtime.invoke`, and `runtime.reconcile` are eligible targets. Exact replay is
 receipt-stable, conflicting replay and concurrent state changes fail closed, and transport,
 permission-fact resolution, application facade/routes, outbox, and CP10 remain deferred.
+
+### CP9 explicit integration facts and request-scoped persistence binding
+
+ADR-096 is governed and validated, pending review. It preserves the facade's exact five-parameter
+public signatures and requires submission, reconciliation, and invocation-query facts to carry
+strict nested operation-specific integration facts. A trusted server-owned preparation boundary
+supplies immutable expected candidates once per request; HTTP input, routes, generic dependency
+injection, binders, local operations, and Persistence cannot generate or select them.
+
+The pure binder carries those facts into the command or query before idempotency. Replay and
+conflict perform zero callbacks, persistence-binding reads, stages, or repository mutations. A new
+mutation request re-reads the exact persisted binding inside the facade-owned transaction, then
+stages one closed payload and one transport receipt using the same captured session and root
+transaction. `get_invocation` performs only the exact read-only verification. The required public
+contract amendment, concrete integration, routes, acceptance, and closeout remain separate gates;
+CP9 remains Planned / Blocked and CP10 remains Planned.

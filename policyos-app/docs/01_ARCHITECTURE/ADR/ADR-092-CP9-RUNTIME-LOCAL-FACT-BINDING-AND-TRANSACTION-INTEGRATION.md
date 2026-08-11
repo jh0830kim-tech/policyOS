@@ -95,3 +95,9 @@ The transaction and fact provenance boundary becomes independently reviewable wi
 authority or extending Persistence implicitly. This governance gate adds no production code,
 schema, migration, concrete binder, local operation, route, Worker, queue, scheduler, external
 effect, or credential handling.
+
+## ADR-096 clarification
+
+The pure binder receives request-scoped expected integration facts through the facade facts value
+and binds them into the trusted command or query before idempotency. It performs no database I/O;
+the facade later re-reads and locks the exact persisted binding inside its outer transaction.

@@ -384,3 +384,20 @@ commit, roll back, close, or replace the transaction and exposes no reusable bea
 This checkpoint proves persistence-level local staging and caller rollback only. Concrete binder,
 local operation, facade callback/receipt composition, routes, external effects, Workers, retry,
 scheduler behavior, end-to-end Runtime API atomicity, and CP9 completion remain unimplemented.
+
+### CP9 explicit integration facts and request-scoped persistence binding
+
+ADR-096 prohibits transaction and persistence authority from being synthesized by HTTP input,
+routes, generic dependency injection, binders, repositories, ORM defaults, or latest-row lookup.
+Required strict nested integration facts are prepared once per request from approved orchestration
+outputs and are carried through the unchanged five-parameter facade boundary. They contain only
+bounded opaque identifiers and governed closed payloads, never session objects, transaction
+objects, raw content, model output, credentials, tokens, or arbitrary metadata.
+
+The facade binds a one-shot capability to the exact caller `AsyncSession` and root transaction,
+then re-reads or locks and exactly compares the persisted scope, Registry, admission, permit,
+lineage, receipt, digest, and payload facts. Cross-request reuse, inactive or nested transactions,
+scope substitution, stale facts, and mismatch fail closed before mutation. Replay and conflict do
+no binding read or mutation; new mutations stage one closed payload and receipt atomically; the
+query path is read-only. Public contract changes and concrete integration remain unimplemented, so
+CP9 remains Planned / Blocked.
