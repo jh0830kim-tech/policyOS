@@ -462,3 +462,14 @@ closed discriminator, and the exact state-revision read result returns the persi
 accept an HTTP-supplied digest, mutate persistence, control a transaction, or generate identity,
 time, revision, reference, status, result, or projection facts. Repository implementation,
 schema, migration `20260808_0023`, concrete facade integration, routes, and CP10 remain blocked.
+
+The authoritative domain-operation result contract binds exactly one immutable safe result and
+the already approved closed local write-set stage as sibling output of one request-scoped
+callback. The stage must equal the validated command integration stage, and invocation and
+correlation identities must match the validated command. The callback contract grants no
+transaction control and does not authorize the provider, binder, facade, or persistence adapter
+to generate, infer, repair, or substitute a result or stage. Callback invocation, exact binding
+read, one-shot stage, receipt coupling, facade composition, routes, and CP10 remain deferred.
+For submission, the expected invocation reference is supplied only by the trusted request-scoped
+preparation boundary and carried unchanged through integration facts and the validated command;
+HTTP input, command references, and write-set contents cannot supply or derive it.

@@ -196,6 +196,7 @@ class RuntimeApiSubmissionIntegrationFacts(RuntimeApiModel):
     command_digest: BoundedDigest
     action_reference: BoundedReference
     command_reference: BoundedReference
+    invocation_reference: BoundedReference
     correlation_reference: BoundedReference
     classification: DataClassification
     tenant_id: UUID
@@ -411,6 +412,7 @@ class RuntimeApiSubmissionCommand(RuntimeApiModel):
     permission: RuntimeApiPermissionFact
     action_reference: BoundedReference
     command_reference: BoundedReference
+    invocation_reference: BoundedReference
     input_reference: BoundedReference | None = None
     classification: DataClassification
     integration: RuntimeApiSubmissionIntegrationFacts
@@ -454,6 +456,13 @@ class RuntimeApiStatusProjection(RuntimeApiModel):
 class RuntimeApiSafeResult(RuntimeApiModel):
     result_reference: BoundedReference
     projection: RuntimeApiStatusProjection
+
+
+class RuntimeApiDomainOperationResult(RuntimeApiModel):
+    """Sibling safe-result and closed local-stage output from one domain operation."""
+
+    safe_result: RuntimeApiSafeResult
+    stage: RuntimeApiLocalWriteSetStage
 
 
 class RuntimeApiIdempotencyReceipt(RuntimeApiModel):
@@ -515,6 +524,7 @@ __all__ = (
     "IdempotencyKey",
     "RuntimeApiCommandIdentity",
     "RuntimeApiContractConflict",
+    "RuntimeApiDomainOperationResult",
     "RuntimeApiErrorCode",
     "RuntimeApiIdempotencyCommitFacts",
     "RuntimeApiIdempotencyCommitResult",

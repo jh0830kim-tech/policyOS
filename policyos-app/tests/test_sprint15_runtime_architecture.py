@@ -1132,3 +1132,19 @@ def test_cp9_exact_projection_read_contract_gate_is_bounded() -> None:
     assert "record_digest_reference: BoundedId" in persistence
     assert "SQLAlchemy" not in persistence
     assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
+
+
+def test_cp9_authoritative_operation_result_contract_gate_is_bounded() -> None:
+    contracts = (ROOT / "app" / "services" / "runtime_api_contracts.py").read_text(encoding="utf-8")
+    protocols = (ROOT / "app" / "services" / "runtime_api_protocols.py").read_text(encoding="utf-8")
+    validation = (ROOT / "app" / "services" / "runtime_api_validation.py").read_text(
+        encoding="utf-8"
+    )
+    assert "class RuntimeApiDomainOperationResult" in contracts
+    assert "safe_result: RuntimeApiSafeResult" in contracts
+    assert "stage: RuntimeApiLocalWriteSetStage" in contracts
+    assert "class RuntimeApiDomainOperationCallback" in protocols
+    assert "validate_runtime_api_domain_operation_result" in validation
+    assert "domain operation stage differs from command" in validation
+    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()

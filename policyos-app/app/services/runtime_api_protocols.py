@@ -13,6 +13,7 @@ from app.runtime.ports import (
 from app.services.runtime_api_contracts import (
     BoundedDigest,
     RuntimeApiCommandIdentity,
+    RuntimeApiDomainOperationResult,
     RuntimeApiIdempotencyCommitFacts,
     RuntimeApiIdempotencyCommitResult,
     RuntimeApiInvocationQuery,
@@ -169,6 +170,16 @@ class RuntimeApiLocalOperationPort(Protocol):
 
 
 @runtime_checkable
+class RuntimeApiDomainOperationCallback(Protocol):
+    """Execute one validated mutation command and return its sibling outputs once."""
+
+    async def __call__(
+        self,
+        command: RuntimeApiSubmissionCommand | RuntimeApiReconciliationCommand,
+    ) -> RuntimeApiDomainOperationResult: ...
+
+
+@runtime_checkable
 class RuntimeApiLocalMutation(Protocol):
     async def __call__(self) -> RuntimeApiSafeResult: ...
 
@@ -197,6 +208,7 @@ class RuntimeApiActiveTransactionPersistenceFactory(Protocol):
 __all__ = (
     "RuntimeApiApplicationFacade",
     "RuntimeApiActiveTransactionPersistenceFactory",
+    "RuntimeApiDomainOperationCallback",
     "RuntimeApiIdempotencyTransactionPort",
     "RuntimeApiIntegrationFactsProvider",
     "RuntimeApiLocalMutation",

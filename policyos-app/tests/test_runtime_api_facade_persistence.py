@@ -119,6 +119,7 @@ class Binder:
             permission=permission,
             action_reference=request.action_reference,
             command_reference=request.command_reference,
+            invocation_reference=facts.integration.invocation_reference,
             input_reference=request.input_reference,
             classification=request.classification,
             integration=facts.integration,

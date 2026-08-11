@@ -15,6 +15,7 @@ from app.schemas.runtime_api import RuntimeInvocationSubmitRequest
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
     RuntimeApiContractConflict,
+    RuntimeApiDomainOperationResult,
     RuntimeApiIdempotencyCommitFacts,
     RuntimeApiIdempotencyCommitResult,
     RuntimeApiIdempotencyDisposition,
@@ -43,6 +44,7 @@ from app.services.runtime_api_contracts import (
 )
 from app.services.runtime_api_protocols import (
     RuntimeApiApplicationFacade,
+    RuntimeApiDomainOperationCallback,
     RuntimeApiIdempotencyTransactionPort,
     RuntimeApiLocalMutation,
     RuntimeApiLocalOperationPort,
@@ -59,6 +61,7 @@ from app.services.runtime_api_validation import (
     runtime_api_public_status_for_execution_state,
     runtime_api_result_cardinality_for_execution_state,
     validate_runtime_api_commit_result,
+    validate_runtime_api_domain_operation_result,
     validate_runtime_api_idempotency_replay,
     validate_runtime_api_invocation_query_binding,
     validate_runtime_api_projection_binding,
@@ -193,6 +196,7 @@ def command(**updates):
         permission=permission(),
         action_reference="action-1",
         command_reference="command-1",
+        invocation_reference="invocation-1",
         classification=DataClassification.INTERNAL,
         integration=submission_integration_facts(
             command_id=UUID("00000000-0000-0000-0000-000000000105"),
@@ -507,6 +511,14 @@ class LocalOperation:
         return safe_result()
 
 
+class DomainOperationCallback:
+    async def __call__(self, command):
+        return RuntimeApiDomainOperationResult(
+            safe_result=safe_result(),
+            stage=command.integration.stage,
+        )
+
+
 def test_protocol_structural_conformance() -> None:
     assert isinstance(Facade(), RuntimeApiApplicationFacade)
     assert not isinstance(object(), RuntimeApiApplicationFacade)
@@ -515,12 +527,58 @@ def test_protocol_structural_conformance() -> None:
     assert isinstance(IdempotencyTransaction(), RuntimeApiIdempotencyTransactionPort)
     assert isinstance(FactBinder(), RuntimeApiOrchestrationFactBinder)
     assert isinstance(LocalOperation(), RuntimeApiLocalOperationPort)
+    assert isinstance(DomainOperationCallback(), RuntimeApiDomainOperationCallback)
     assert tuple(signature(RuntimeApiIdempotencyTransactionPort.commit).parameters) == (
         "self",
         "identity",
         "facts",
         "mutation",
     )
+    assert tuple(signature(RuntimeApiDomainOperationCallback.__call__).parameters) == (
+        "self",
+        "command",
+    )
+
+
+def test_domain_operation_result_is_strict_immutable_and_exactly_bound() -> None:
+    bound_command = command()
+    result = RuntimeApiDomainOperationResult(
+        safe_result=safe_result(),
+        stage=bound_command.integration.stage,
+    )
+    assert validate_runtime_api_domain_operation_result(bound_command, result) is result
+    with pytest.raises(ValidationError):
+        result.safe_result = safe_result(RuntimeApiPublicStatus.FAILED)
+    with pytest.raises(ValidationError):
+        RuntimeApiDomainOperationResult.model_validate(
+            {**result.model_dump(), "unexpected": "forbidden"}
+        )
+    substituted = result.model_copy(
+        update={
+            "safe_result": result.safe_result.model_copy(
+                update={
+                    "projection": result.safe_result.projection.model_copy(
+                        update={"correlation_reference": "correlation-substituted"}
+                    )
+                }
+            )
+        }
+    )
+    with pytest.raises(RuntimeApiContractConflict, match="correlation"):
+        validate_runtime_api_domain_operation_result(bound_command, substituted)
+    substituted_invocation = result.model_copy(
+        update={
+            "safe_result": result.safe_result.model_copy(
+                update={
+                    "projection": result.safe_result.projection.model_copy(
+                        update={"invocation_reference": "invocation-substituted"}
+                    )
+                }
+            )
+        }
+    )
+    with pytest.raises(RuntimeApiContractConflict, match="submission stage"):
+        validate_runtime_api_domain_operation_result(bound_command, substituted_invocation)
 
 
 def test_facade_accepts_only_outer_boundary_contracts_and_explicit_facts() -> None:
@@ -854,6 +912,7 @@ def test_binder_output_validators_require_exact_outer_and_resolved_facts() -> No
         permission=permission(),
         action_reference=request.action_reference,
         command_reference=request.command_reference,
+        invocation_reference=facts.integration.invocation_reference,
         classification=request.classification,
         integration=facts.integration,
     )
