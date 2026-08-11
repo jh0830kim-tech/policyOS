@@ -280,21 +280,24 @@ The production facade is merged in PR #78 and owns the transaction across these
 resolutions, exact binding, local operation, and idempotency receipt persistence. Concrete binder
 and local-operation implementations and production routes remain Planned / Blocked. The required
 order is ADR-092 governance (merged in PR #79), additive binding and active-transaction Persistence
-contracts, Registry snapshot boundary analysis and concrete local integration, routes, combined
-PostgreSQL/HTTP acceptance, CP9 closeout, then separately approved CP10.
+contracts (merged in PR #80), Registry resolution/admission exactness (merged in PR #81), ADR-093
+governance, Registry persistence and active-transaction integration, separate concrete local
+integration, routes, combined PostgreSQL/HTTP acceptance, CP9 closeout, then separately approved
+CP10.
 
-The local fact-binding and active-transaction Persistence contracts gate is implemented, pending
-review. Its strict frozen contracts require exact persisted record IDs and expected revisions,
+The local fact-binding and active-transaction Persistence contracts gate merged in PR #80. Its
+strict frozen contracts require exact persisted record IDs and expected revisions,
 canonical permit facts, Registry snapshot and resolution identities, tenant, organization,
 classification, lineage, and caller-supplied aware timestamps. The active-transaction Port exposes
 only exact scoped reads and one bounded local write-set stage; it exposes no begin, commit,
 rollback, close, session, or engine operation. It adds no Registry store, database model, migration,
-concrete binder, local operation, route, or external effect. The remaining order is
-Registry snapshot boundary analysis and concrete local integration, routes, combined PostgreSQL/HTTP
-acceptance, CP9 closeout, then separately approved CP10.
+concrete binder, local operation, route, or external effect. The remaining order is ADR-093
+governance, Registry persistence and active-transaction integration, separate concrete local
+integration, routes, combined PostgreSQL/HTTP acceptance, CP9 closeout, then separately approved
+CP10.
 
-The Registry Resolution and Admission Exactness Contract Correction Gate is implemented and
-validated, pending review. It binds the approved persisted Registry snapshot and reference,
+The Registry Resolution and Admission Exactness Contract Correction Gate merged in PR #81. It
+binds the approved persisted Registry snapshot and reference,
 resolution request and decision, exact resolved action, and `ADMITTED` admission decision to the
 same tenant, organization, classification, lineage, lineage digest, Registry revision, execution
 request, and canonical permit facts. Missing, stale, substituted, revoked, cross-scope, or lineage
@@ -304,6 +307,23 @@ ownership remain unchanged: replay and conflict perform zero local mutations, wh
 performs exactly one. This gate adds no Registry snapshot persistence, database model, migration,
 concrete binder or local operation, production route, external effect, Worker, queue, retry, or
 scheduler. CP9 Runtime API remains Planned / Blocked, and CP10 remains Planned.
+
+ADR-093 requires a separate append-only Registry persistence schema owned by
+`app.runtime.persistence`; immutable Registry meaning remains owned by `app.runtime.registry`, and
+Authority remains the authoritative owner of admission and permit facts. Exact tenant,
+organization, classification, lineage ID/digest, snapshot ID/revision/digest, resolution identity,
+resolved entry/action, persisted admission revision, execution request, and canonical permit
+ID/revision set must agree. Missing, stale, substituted, cross-scope, classification-, lineage-,
+digest-, revision-, or action-mismatched facts fail closed without disclosing cross-scope existence.
+
+Migration `20260808_0022` is required but is not created by this governance gate. It may create only
+empty additive Registry tables and immutability enforcement. Existing data receives no inferred
+backfill. A populated downgrade must fail before any destructive DDL and leave all state unchanged.
+The facade remains the only owner of the active `AsyncSession` transaction; persistence, binder,
+and local-operation helpers may not begin, commit, roll back, close, replace, or retain the session.
+Replay and conflict invoke the local mutation zero times; a validated new request invokes it exactly
+once and atomically stages its write set with the transport receipt. This creates no execution,
+external effect, route, Worker, retry, queue, scheduler, credential flow, or CP10 capability.
 
 ADR-092 fixes the next local integration boundary before production implementation. Opaque
 references are not authority, and no binder or local operation may infer Authority, Permit,

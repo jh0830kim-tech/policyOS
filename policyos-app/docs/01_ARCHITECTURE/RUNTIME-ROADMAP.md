@@ -152,8 +152,9 @@ grants permission or causes automatic execution.
 | CP9-Gate-Trusted-Application-Facade-Fact-Binding-Contracts | Merged, PR #77 | Fact-binding contracts | Explicit trusted-context facts, clock-free resolver input, orchestration binder Protocol, and local-operation Protocol | No concrete binder, facade, or route |
 | CP9-Trusted-Application-Facade | Merged, PR #78 | Production facade | One SQLAlchemy transaction binds trusted context, exact permission, canonical digest, idempotency, and a bounded local operation | Concrete binder/local-operation implementation and routes remain blocked |
 | CP9-Gate-Local-Fact-Binding-and-Transaction-Integration-Governance | Merged, PR #79 | Local integration governance | ADR-092 fixes exact persisted orchestration facts, Registry snapshot provenance, and active-transaction Persistence boundaries | Governance only |
-| CP9-Gate-Local-Fact-Binding-and-Active-Transaction-Persistence-Contracts | Implemented, pending review | Local integration contracts | Adds exact persisted record, permit, Registry, scope, lineage, operation-binding, and caller-owned active-transaction Ports contracts | No concrete binder, store, migration, or route |
-| CP9-Gate-Registry-Resolution-and-Admission-Exactness-Contracts | Implemented / Validated, pending review | Exactness contract correction | Binds persisted Registry snapshot/reference, resolution request/decision, and admission decision identities and scope fail closed | No Registry snapshot persistence, concrete binder/local operation, migration, or route |
+| CP9-Gate-Local-Fact-Binding-and-Active-Transaction-Persistence-Contracts | Merged, PR #80 | Local integration contracts | Adds exact persisted record, permit, Registry, scope, lineage, operation-binding, and caller-owned active-transaction Ports contracts | No concrete binder, store, migration, or route |
+| CP9-Gate-Registry-Resolution-and-Admission-Exactness-Contracts | Merged, PR #81 | Exactness contract correction | Binds persisted Registry snapshot/reference, resolution request/decision, and admission decision identities and scope fail closed | No Registry snapshot persistence, concrete binder/local operation, migration, or route |
+| CP9-Gate-Registry-Snapshot-Persistence-and-Active-Transaction-Integration-Governance | Governed, pending review | Persistence and transaction governance | ADR-093 requires a separate append-only Registry store, migration `20260808_0022`, exact admission binding, and caller-session participation | Governance only; no model, migration, store, binder, or route |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires production facade implementation and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -170,13 +171,16 @@ remain prohibited.
 The required implementation order is:
 
 1. Merge ADR-092 local integration governance.
-2. Review and merge additive binding and active-transaction Persistence contracts.
-3. Review the Registry resolution and admission exactness contract correction gate.
-4. Decide the Registry snapshot persistence boundary and implement concrete local integration.
-5. Implement production Runtime routes.
-6. Run combined CP9 PostgreSQL and HTTP acceptance.
-7. Complete CP9 closeout.
-8. Begin CP10 only after separate approval.
+2. Merge additive binding and active-transaction Persistence contracts (PR #80).
+3. Merge the Registry resolution and admission exactness contract correction gate (PR #81).
+4. Merge ADR-093 Registry snapshot persistence and active-transaction integration governance.
+5. Implement migration `20260808_0022`, the separate Registry store, and active-transaction
+   persistence in their approved checkpoint.
+6. Implement the concrete binder and local operation in a separate checkpoint.
+7. Implement production Runtime routes.
+8. Run combined CP9 PostgreSQL and HTTP acceptance.
+9. Complete CP9 closeout.
+10. Begin CP10 only after separate approval.
 
 
 ## 6. Boundary input and output contracts
