@@ -20,6 +20,7 @@ from app.runtime.authority import (
 from app.runtime.ports import (
     RuntimeApiActiveTransactionContext,
     RuntimeApiActiveTransactionPersistencePort,
+    RuntimeApiLocalWriteSetOperation,
     RuntimeApiLocalWriteSetStage,
     RuntimeApiLocalWriteSetStageResult,
     RuntimeApiPersistedPermitFact,
@@ -28,6 +29,10 @@ from app.runtime.ports import (
     RuntimeApiPersistenceScope,
     RuntimeApiRegistryPersistenceFact,
     RuntimeApiRegistryResolutionAdmissionFact,
+    RuntimeAtomicWriteSet,
+    RuntimeEffectReconciliationRequest,
+    RuntimeIdempotencyReservation,
+    RuntimePortScope,
 )
 from app.runtime.registry import (
     RuntimeActionAdapterReference,
@@ -63,6 +68,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiSubmissionBindingFacts,
 )
 from app.services.runtime_api_protocols import (
+    RuntimeApiActiveTransactionPersistenceFactory,
     RuntimeApiApplicationFacade,
     RuntimeApiPersistedOrchestrationFactBinder,
 )
@@ -431,8 +437,75 @@ class ActiveTransactionPersistence:
         return RuntimeApiLocalWriteSetStageResult(
             local_write_set_id=stage.local_write_set_id,
             transport_receipt_id=stage.transport_receipt_id,
+            operation=stage.operation,
+            write_set_digest_reference=stage.write_set_digest_reference,
             staged_mutation_count=1,
         )
+
+
+def atomic_write_set(*, outbox=None) -> RuntimeAtomicWriteSet:
+    item = binding()
+    identity = item.registry_resolution_admission.resolution_request.action_identity
+    scope = RuntimePortScope(
+        runtime_execution_request_id=item.execution_request.record_id,
+        runtime_authority_bundle_id=item.authority_bundle.record_id,
+        runtime_admission_decision_id=item.admission.record_id,
+        execution_plan_id=item.execution_plan.record_id,
+        execution_plan_step_id=uid(40),
+        attempt_id=uid(41),
+        actor_id=uid(42),
+        tenant_id=item.scope.tenant_id,
+        organization_id=item.scope.organization_id,
+        classification=item.scope.classification,
+        root_lineage_id=item.scope.root_lineage_id,
+        root_lineage_digest_reference=item.scope.root_lineage_digest_reference,
+        registry_revision=item.registry.registry_revision,
+        policy_revision=1,
+        state_revision=item.execution_state.expected_revision + 1,
+    )
+    reservation = RuntimeIdempotencyReservation(
+        runtime_idempotency_reservation_id=uid(43),
+        idempotency_key="idempotency.local",
+        scope=scope,
+        action_definition_id=identity.action_definition_id,
+        action=identity.action,
+        action_version=identity.action_version,
+        reservation_digest_reference="reservation.digest",
+        reserved_at=NOW,
+    )
+    return RuntimeAtomicWriteSet.model_construct(
+        runtime_transaction_id=uid(44),
+        contract_version=None,
+        state_record=None,
+        audit_trail=None,
+        idempotency_reservation=reservation,
+        outbox_enqueue_record=outbox,
+        expected_state_revision=item.execution_state.expected_revision,
+        expected_audit_revision=item.audit_trail.expected_revision,
+        commit_facts=None,
+        requested_at=NOW,
+    )
+
+
+def reconciliation_write_set() -> RuntimeEffectReconciliationRequest:
+    item = binding()
+    return RuntimeEffectReconciliationRequest(
+        runtime_effect_reconciliation_request_id=uid(50),
+        runtime_effect_id=uid(51),
+        ambiguous_attempt_id=uid(52),
+        ambiguous_result_id=uid(53),
+        tenant_id=item.scope.tenant_id,
+        organization_id=item.scope.organization_id,
+        destination_reference="destination.approved",
+        observation_capability_reference="observation.approved",
+        runtime_authority_bundle_id=item.authority_bundle.record_id,
+        runtime_admission_decision_id=item.admission.record_id,
+        permit_reference_ids=tuple(permit.permit_id for permit in item.permits),
+        classification=item.scope.classification,
+        clock_reference="clock.caller",
+        requested_at=NOW,
+        request_digest_reference="reconciliation.digest",
+    )
 
 
 def test_active_transaction_port_is_structural_and_stages_exactly_once() -> None:
@@ -446,7 +519,10 @@ def test_active_transaction_port_is_structural_and_stages_exactly_once() -> None
     stage = RuntimeApiLocalWriteSetStage(
         local_write_set_id=uid(31),
         transport_receipt_id=uid(32),
-        scope=binding().scope,
+        operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+        binding=binding(),
+        write_set_digest_reference="write-set.digest",
+        write_set=atomic_write_set(),
         staged_at=NOW,
     )
     result = asyncio.run(port.stage_local_write_set(context, stage))
@@ -455,8 +531,80 @@ def test_active_transaction_port_is_structural_and_stages_exactly_once() -> None
         RuntimeApiLocalWriteSetStageResult(
             local_write_set_id=uid(31),
             transport_receipt_id=uid(32),
+            operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+            write_set_digest_reference="write-set.digest",
             staged_mutation_count=0,
         )
+
+
+def test_closed_write_set_discriminator_and_payload_fail_closed() -> None:
+    common = {
+        "local_write_set_id": uid(60),
+        "transport_receipt_id": uid(61),
+        "binding": binding(),
+        "write_set_digest_reference": "write-set.digest",
+        "staged_at": NOW,
+    }
+    RuntimeApiLocalWriteSetStage(
+        operation=RuntimeApiLocalWriteSetOperation.REQUEST_RECONCILIATION,
+        reconciliation_request=reconciliation_write_set(),
+        **common,
+    )
+    for values in (
+        {"operation": "get_invocation"},
+        {"operation": "submit_invocation"},
+        {
+            "operation": "submit_invocation",
+            "write_set": atomic_write_set(),
+            "reconciliation_request": reconciliation_write_set(),
+        },
+        {
+            "operation": "request_reconciliation",
+            "write_set": atomic_write_set(),
+        },
+        {
+            "operation": "submit_invocation",
+            "write_set": atomic_write_set(),
+            "metadata": {"unsafe": True},
+        },
+    ):
+        with pytest.raises(ValidationError):
+            RuntimeApiLocalWriteSetStage.model_validate({**common, **values})
+
+
+def test_closed_write_set_forbids_outbox_and_exact_binding_substitution() -> None:
+    with pytest.raises(ValidationError, match="outbox"):
+        RuntimeApiLocalWriteSetStage(
+            local_write_set_id=uid(70),
+            transport_receipt_id=uid(71),
+            operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+            binding=binding(),
+            write_set_digest_reference="write-set.digest",
+            write_set=atomic_write_set(outbox=object()),
+            staged_at=NOW,
+        )
+    item = reconciliation_write_set().model_copy(update={"tenant_id": uid(99)})
+    with pytest.raises(ValidationError, match="exact persistence binding"):
+        RuntimeApiLocalWriteSetStage(
+            local_write_set_id=uid(72),
+            transport_receipt_id=uid(73),
+            operation=RuntimeApiLocalWriteSetOperation.REQUEST_RECONCILIATION,
+            binding=binding(),
+            write_set_digest_reference="write-set.digest",
+            reconciliation_request=item,
+            staged_at=NOW,
+        )
+
+
+class ActiveTransactionFactory:
+    def __call__(self, session, context):
+        return ActiveTransactionPersistence()
+
+
+def test_active_transaction_factory_is_additive_and_structural() -> None:
+    assert isinstance(ActiveTransactionFactory(), RuntimeApiActiveTransactionPersistenceFactory)
+    parameters = tuple(signature(RuntimeApiActiveTransactionPersistenceFactory.__call__).parameters)
+    assert parameters == ("self", "session", "context")
 
 
 def test_existing_facade_signatures_remain_unchanged() -> None:
@@ -482,4 +630,5 @@ def test_existing_facade_signatures_remain_unchanged() -> None:
         "facts",
     )
     assert isinstance(ActiveTransactionPersistence(), RuntimeApiActiveTransactionPersistencePort)
+    assert isinstance(ActiveTransactionFactory(), RuntimeApiActiveTransactionPersistenceFactory)
     assert isinstance(RuntimeApiPersistedOrchestrationFactBinder, type)

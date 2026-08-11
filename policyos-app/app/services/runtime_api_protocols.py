@@ -2,7 +2,13 @@
 
 from typing import Protocol, runtime_checkable
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.auth_claims import VerifiedAccessTokenClaims
+from app.runtime.ports import (
+    RuntimeApiActiveTransactionContext,
+    RuntimeApiActiveTransactionPersistencePort,
+)
 from app.services.runtime_api_contracts import (
     BoundedDigest,
     RuntimeApiCommandIdentity,
@@ -155,8 +161,20 @@ class RuntimeApiIdempotencyTransactionPort(Protocol):
     ) -> RuntimeApiIdempotencyCommitResult: ...
 
 
+@runtime_checkable
+class RuntimeApiActiveTransactionPersistenceFactory(Protocol):
+    """Create one one-shot capability inside the facade-owned transaction."""
+
+    def __call__(
+        self,
+        session: AsyncSession,
+        context: RuntimeApiActiveTransactionContext,
+    ) -> RuntimeApiActiveTransactionPersistencePort: ...
+
+
 __all__ = (
     "RuntimeApiApplicationFacade",
+    "RuntimeApiActiveTransactionPersistenceFactory",
     "RuntimeApiIdempotencyTransactionPort",
     "RuntimeApiLocalMutation",
     "RuntimeApiLocalOperationPort",
