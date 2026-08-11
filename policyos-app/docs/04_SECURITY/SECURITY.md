@@ -333,3 +333,13 @@ approved infrastructure and validated fail closed. A `RuntimeActionRegistrySnaps
 from an approved Persistence/read boundary; the existing Registry cannot be used to reconstruct a
 missing snapshot. The facade remains the sole transaction owner, while later additive Persistence
 contracts participate in its active session without begin, commit, rollback, or session replacement.
+
+ADR-094 rejects marker-only local staging. A mutation must carry exactly one closed existing
+`RuntimeAtomicWriteSet` without outbox work or one `RuntimeEffectReconciliationRequest`, bound to
+the exact tenant, organization, classification, lineage, Registry resolution, admitted decision,
+and canonical permit facts. An application factory captures the exact caller `AsyncSession` and
+root transaction inside the facade transaction; Persistence verifies object identity and active,
+non-nested lifetime before every operation. The capability is one-shot, exposes no transaction
+control, and cannot escape the facade call. Replay and conflict perform zero local work; a new
+request stages exactly one closed write set and its receipt atomically. This governance adds no
+production code, migration, route, external effect, credential flow, or CP10 capability.
