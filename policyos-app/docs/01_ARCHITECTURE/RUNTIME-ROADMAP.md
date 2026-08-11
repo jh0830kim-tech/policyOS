@@ -156,6 +156,7 @@ grants permission or causes automatic execution.
 | CP9-Gate-Registry-Resolution-and-Admission-Exactness-Contracts | Merged, PR #81 | Exactness contract correction | Binds persisted Registry snapshot/reference, resolution request/decision, and admission decision identities and scope fail closed | No Registry snapshot persistence, concrete binder/local operation, migration, or route |
 | CP9-Gate-Registry-Snapshot-Persistence-and-Active-Transaction-Integration-Governance | Governed, pending review | Persistence and transaction governance | ADR-093 requires a separate append-only Registry store, migration `20260808_0022`, exact admission binding, and caller-session participation | Governance only; no model, migration, store, binder, or route |
 | CP9-Gate-Active-Transaction-Write-Set-and-Session-Binding-Governance | Governed, pending review | Atomic local persistence governance | ADR-094 selects existing closed atomic/reconciliation payloads, rejects marker staging, and requires one-shot exact session/root-transaction binding | Governance only; public contracts and implementation remain separate |
+| CP9-Gate-Reconciliation-Request-Persistence-Ownership-and-Atomic-Integration-Sequencing | Governed, pending review | Reconciliation persistence governance | ADR-095 assigns the existing strict reconciliation request to a dedicated append-only Persistence table in `0022` and fixes checkpoint sequencing | Governance only; no production model, migration, repository, facade, or route |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires production facade implementation and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -176,13 +177,15 @@ The required implementation order is:
 3. Merge the Registry resolution and admission exactness contract correction gate (PR #81).
 4. Merge ADR-093 Registry snapshot persistence and active-transaction integration governance.
 5. Merge ADR-094 write-set and caller-session binding governance and its public-contract gate.
-6. Implement migration `20260808_0022`, the separate Registry store, and active-transaction
+6. Merge ADR-095 reconciliation-request persistence ownership and atomic-integration sequencing.
+7. Implement migration `20260808_0022`, the separate Registry store, dedicated
+   reconciliation-request store, and active-transaction
    persistence in their approved checkpoint.
-7. Implement the concrete binder and local operation in a separate checkpoint.
-8. Implement production Runtime routes.
-9. Run combined CP9 PostgreSQL and HTTP acceptance.
-10. Complete CP9 closeout.
-11. Begin CP10 only after separate approval.
+8. Implement the concrete binder and local operation in a separate checkpoint.
+9. Implement production Runtime routes.
+10. Run combined CP9 PostgreSQL and HTTP acceptance.
+11. Complete CP9 closeout.
+12. Begin CP10 only after separate approval.
 
 
 ## 6. Boundary input and output contracts
