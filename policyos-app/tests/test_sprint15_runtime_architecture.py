@@ -448,7 +448,13 @@ def test_cp9_grant_provisioning_keeps_transport_and_resolver_deferred() -> None:
         ROOT / "app" / "services" / "runtime_permission_grants_contracts.py",
     )
     source = "\n".join(path.read_text(encoding="utf-8") for path in files)
-    for forbidden in ("FastAPI", "app.runtime.api", "outbox", "Idempotency", "resolver"):
+    for forbidden in (
+        "FastAPI",
+        "app.runtime.api",
+        "outbox",
+        "Idempotency",
+        "resolver",
+    ):
         assert forbidden not in source
 
 
@@ -503,7 +509,13 @@ def test_cp9_permission_fact_resolver_is_additive_and_transport_free() -> None:
     assert "class RuntimeApiPermissionFactResolver(Protocol)" in protocols
     assert "class SQLAlchemyRuntimeApiPermissionFactResolver" in resolver
     assert "caller-owned transaction is required" in resolver
-    for forbidden in ("FastAPI", "cache", "uuid4", "datetime.now", "RuntimePermissionGrantEvent"):
+    for forbidden in (
+        "FastAPI",
+        "cache",
+        "uuid4",
+        "datetime.now",
+        "RuntimePermissionGrantEvent",
+    ):
         assert forbidden not in resolver
     assert MIGRATION_0022.is_file()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
@@ -973,3 +985,34 @@ def test_cp9_explicit_integration_facts_contract_gate_is_bounded() -> None:
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
+
+def test_cp9_authoritative_result_projection_governance_is_bounded() -> None:
+    adr = ADR / "ADR-097-CP9-RUNTIME-AUTHORITATIVE-RESULT-AND-QUERY-PROJECTION-OWNERSHIP.md"
+    text = " ".join(adr.read_text(encoding="utf-8").split())
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "authoritative owner is the already approved domain-operation callback",
+        "persisted transport idempotency receipt is the authoritative owner",
+        "an additive read-only application Port MUST own an exact projection read",
+        "performs zero domain callbacks, persistence-binding reads, local stages",
+        "five public parameters `self, request, claims, organization, facts`",
+        "No new table, column, model, repository schema, backfill, or migration `20260808_0023`",
+        "separate public-contract checkpoint is required before concrete integration",
+    ):
+        assert phrase in text
+    assert "CP9-Gate-Authoritative-Result-and-Query-Projection-Ownership" in combined
+    assert "CP9 remains Planned / Blocked" in combined
+    assert "CP10 remains Planned" in combined
+    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()

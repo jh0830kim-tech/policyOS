@@ -140,3 +140,12 @@ blocker explicit: existing contracts do not yet carry these facts.
 This governance gate adds no production Python, public contract, model, migration, repository,
 facade implementation, binder, local operation, route, external effect, Worker, queue, retry,
 scheduler, tag, or release. CP9 remains Planned / Blocked and CP10 remains Planned.
+
+## ADR-097 clarification
+
+Integration facts carry expected identities, bindings, and closed payloads but never declare an
+authoritative safe result or query projection. ADR-097 assigns a new mutation result to a one-shot
+domain-operation callback, exact replay to the transport receipt, and query projection to a
+separate exact read-only application Port. Those additive contracts require a separate gate before
+concrete integration; no value may be inferred by provider, binder, facade, local operation, or
+persistence adapter.

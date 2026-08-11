@@ -416,3 +416,19 @@ capability and may return only immutable caller-owned expected facts. Actual ses
 transaction identity remain confined to the approved one-shot Persistence factory. This contract
 gate changes no facade behavior, route, database model, migration, repository, external effect, or
 Worker boundary.
+
+### CP9 authoritative result and query projection ownership
+
+ADR-097 prohibits clients, integration facts, request-scoped providers, binders, facades, local
+operations, and persistence adapters from inventing a safe result or query projection. A new
+mutation receives its immutable safe result only from a separately contracted one-shot domain
+operation callback. Exact replay returns the result already persisted in the transport receipt;
+conflict invokes no callback or persistence-binding read.
+
+The query path requires a separately contracted exact projection Port over persisted execution
+state, result, and audit revisions. It binds tenant, organization, classification, lineage,
+Registry, admission, permit, identity, revision, digest, action, invocation, and correlation facts
+exactly and cannot select a latest row or infer authority from an opaque reference. The provider
+assembles expected facts only and creates no UUID, time, revision, digest, reference, status,
+result, or projection. No schema or migration change is approved; CP9 remains Planned / Blocked
+and CP10 remains Planned.
