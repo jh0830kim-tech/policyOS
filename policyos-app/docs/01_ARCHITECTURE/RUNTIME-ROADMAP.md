@@ -534,3 +534,19 @@ returns the stored `record_digest_reference`. Every state, result, and audit loc
 explicit record ID and expected revision; current/latest selection, caller-provided digests,
 database implementation, schema, migration `20260808_0023`, and concrete integration remain
 prohibited. The public facade keeps its five parameters and CP9 remains Planned / Blocked.
+
+### CP9 logical execution-result identity and persistence ownership
+
+ADR-099 supersedes the assumption that generic `EXECUTION_RESULT` persistence already represents
+the API logical result. `RuntimeAdapterInvocationResult` remains an action-level adapter outcome;
+it has no execution-request or root-lineage authority and multiple action results may exist for an
+attempt. Audit references are evidence, not relational ownership proof, and cannot select or
+promote an adapter result.
+
+A distinct immutable logical-result identity is required for each exact tenant, organization,
+classification, execution-request, root-lineage, and attempt tuple. There is at most one logical
+result ID for that tuple, with append-only revisions on the same ID. The follow-up order is a
+public domain/Port contract gate, dedicated migration `20260808_0023` and persistence gate, then
+Application Integration. Existing adapter-result rows receive no inferred backfill, promotion,
+normalization, or deduplication. This governance gate changes no production or schema surface;
+CP9 remains Planned / Blocked and CP10 remains Planned.

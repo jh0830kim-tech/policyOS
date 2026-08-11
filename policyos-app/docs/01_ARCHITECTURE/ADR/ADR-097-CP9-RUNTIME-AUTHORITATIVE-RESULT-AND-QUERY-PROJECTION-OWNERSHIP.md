@@ -4,7 +4,9 @@
 **Date:** 2026-08-11
 **Depends on:** ADR-091 through ADR-096 and migration `20260808_0022`
 **Clarified by:** ADR-098, which fixes the total lifecycle projection, result cardinality, exact
-persisted execution-state revision digest ownership, and trusted query locator boundary.
+persisted execution-state revision digest ownership, and trusted query locator boundary; and
+ADR-099, which separates the API logical execution result from action-level adapter results and
+requires explicit relational ownership.
 
 ## Context
 
@@ -16,8 +18,9 @@ an opaque invocation reference.
 
 The transport receipt is authoritative for an exact replay. It is not the source for a new
 mutation result because it is staged only after the local callback succeeds. Existing generic
-Runtime persistence already stores exact revisioned execution state, result, and audit records,
-so no new result table is justified, but an application-facing exact read contract is required.
+Runtime persistence stores exact revisioned execution state and audit records, but its
+`EXECUTION_RESULT` payload is the action-level `RuntimeAdapterInvocationResult`. ADR-099
+supersedes the earlier assumption that this record is the API logical execution result.
 
 ## Decision
 
@@ -92,21 +95,25 @@ It cannot add a facade parameter, optional fallback, caller-declared authoritati
 executable integration fact, SQLAlchemy type in Runtime Ports, or transaction-control API. Exact
 names and package placement require review in that contract checkpoint.
 
-No new table, column, model, repository schema, backfill, or migration `20260808_0023` is required.
-Existing append-only generic Runtime revisions and transport receipts remain persistence owners.
-If an exact required reference cannot be read, the contract checkpoint must request separate
-schema governance rather than infer it.
+ADR-099 requires a distinct logical execution-result contract and a dedicated append-only
+persistence store in migration `20260808_0023`. Existing adapter-result rows retain their original
+meaning and receive no inferred backfill, promotion, deduplication, or normalization. Generic
+Runtime state revisions and transport receipts retain their existing ownership; neither becomes
+logical-result authority.
 
 ## Required sequence
 
 1. Merge this governance gate.
-2. Add the bounded callback-result and exact query-projection contracts separately.
-3. Implement provider, binder, local operation, and facade composition separately.
-4. Implement routes and run combined PostgreSQL/HTTP acceptance under separate approval.
-5. Close CP9; begin CP10 only with separate approval.
+2. Merge ADR-099 logical-result identity and persistence ownership governance.
+3. Add the bounded callback-result, logical-result, and exact query-projection contracts.
+4. Implement migration `20260808_0023` and the logical-result repository separately.
+5. Implement provider, binder, local operation, and facade composition separately.
+6. Implement routes and run combined PostgreSQL/HTTP acceptance under separate approval.
+7. Close CP9; begin CP10 only with separate approval.
 
 ## Deferred scope
 
-This ADR adds no production Python, public contract, model, migration, repository, provider,
-binder, local operation, facade behavior, route, external effect, Worker, queue, retry, scheduler,
-tag, or release. CP9 remains Planned / Blocked and CP10 remains Planned.
+This ADR and its ADR-099 clarification add no production Python, public contract, model,
+migration, repository, provider, binder, local operation, facade behavior, route, external effect,
+Worker, queue, retry, scheduler, tag, or release. CP9 remains Planned / Blocked and CP10 remains
+Planned.
