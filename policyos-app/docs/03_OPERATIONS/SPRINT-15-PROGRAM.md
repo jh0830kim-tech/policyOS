@@ -97,6 +97,7 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9 Reconciliation Request Persistence Ownership and Atomic Integration Sequencing Governance | Governed, pending review | ADR-095 assigns authoritative request persistence to a dedicated append-only table in migration `0022` and separates persistence evidence from later concrete facade composition. |
 | CP9 Registry/Reconciliation Persistence and One-Shot Active Transaction | Implemented, pending review | Adds migration `20260808_0022`, append-only Registry/reconciliation storage, deterministic serialization, exact repositories, and one-shot caller-session/root staging without concrete facade integration. |
 | CP9 Authoritative Mutation Result and Query Projection Ownership Governance | Governed, validated, pending review | ADR-097 fixes domain-callback ownership for new mutation results, receipt ownership for replay, exact persisted-state query reads, and the separate bounded public-contract amendment required before concrete integration. |
+| CP9 Runtime Lifecycle and Public Projection Domain Governance | Governed, validated, pending review | ADR-098 fixes all seventeen lifecycle projections, result cardinality, exact state-revision digest ownership, and the request-scoped locator boundary; public-domain, persistence-read, and integration gates remain. |
 | CP9 Runtime API | Planned / Blocked | The production facade and production routes remain ordered blockers. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 

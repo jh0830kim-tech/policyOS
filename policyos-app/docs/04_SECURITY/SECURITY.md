@@ -432,3 +432,19 @@ exactly and cannot select a latest row or infer authority from an opaque referen
 assembles expected facts only and creates no UUID, time, revision, digest, reference, status,
 result, or projection. No schema or migration change is approved; CP9 remains Planned / Blocked
 and CP10 remains Planned.
+
+### CP9 runtime lifecycle and public projection authority
+
+ADR-098 makes public status projection a total domain-owned function and preserves cancellation,
+timeout, partial completion, compensation, and invalidation as distinct public meanings. The
+authoritative public `status_reference` is only the stored `record_digest_reference` of the exact
+persisted execution-state logical record and expected revision. Audit digests protect audit-chain
+integrity, result digests protect result content, and transport receipt digests protect replay;
+none substitutes for execution-state status authority.
+
+Only a server-owned, request-scoped locator may carry exact state, result, and audit identities and
+revisions. HTTP callers cannot declare those facts, and the projection reader cannot choose a
+current/latest revision, generate a digest, or synthesize a missing result. Missing, forbidden,
+duplicate, stale, cross-scope, cross-lineage, or digest-inconsistent facts fail closed. Public
+contracts, exact persistence reads, and application integration remain separate CP9 gates; CP10
+remains Planned.
