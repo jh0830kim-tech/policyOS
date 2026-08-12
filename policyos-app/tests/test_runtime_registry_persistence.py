@@ -33,7 +33,6 @@ from app.runtime.ports import (
     RuntimeApiLocalWriteSetOperation,
     RuntimeApiLocalWriteSetStage,
     RuntimeApiLogicalExecutionResultMutationAbsent,
-    RuntimeApiLogicalExecutionResultMutationPresent,
 )
 
 _SUPPORT = runpy.run_path(str(Path(__file__).with_name("test_runtime_api_binding_contracts.py")))
@@ -74,48 +73,6 @@ def reconciliation_stage() -> RuntimeApiLocalWriteSetStage:
         reconciliation_request=reconciliation_write_set(),
         staged_at=datetime(2026, 8, 12, tzinfo=UTC),
     )
-
-
-@pytest.mark.asyncio
-async def test_logical_result_present_fails_before_unimplemented_persistence_mutation() -> None:
-    support = runpy.run_path(str(Path(__file__).with_name("test_runtime_api_binding_contracts.py")))
-    persisted = support["binding"]()
-    write_set = support["atomic_write_set"](
-        persisted=persisted,
-        state=support["RuntimeExecutionState"].SUCCEEDED,
-    )
-    stage = RuntimeApiLocalWriteSetStage(
-        local_write_set_id=UUID("00000000-0000-0000-0000-000000000904"),
-        transport_receipt_id=UUID("00000000-0000-0000-0000-000000000905"),
-        operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
-        binding=persisted,
-        write_set_digest_reference="sha256:logical-result-stage",
-        logical_execution_result=RuntimeApiLogicalExecutionResultMutationPresent(
-            logical_execution_result=support["logical_execution_result"](
-                write_set,
-                persisted=persisted,
-            )
-        ),
-        write_set=write_set,
-        staged_at=datetime(2026, 8, 12, tzinfo=UTC),
-    )
-    session = RecordingSession()
-    session.in_transaction = MagicMock(return_value=True)
-    session.in_nested_transaction = MagicMock(return_value=False)
-    root = object()
-    session.get_transaction = MagicMock(return_value=root)
-    capability = SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory()(
-        session,
-        context(),
-    )
-    capability._root_transaction = root
-    with pytest.raises(
-        RuntimePersistenceTransactionError,
-        match="logical-result persistence is not implemented",
-    ):
-        await capability.stage_local_write_set(context(), stage)
-    assert session.records == []
-    session.flush.assert_not_awaited()
 
 
 def test_registry_payloads_round_trip_through_strict_allowlist() -> None:

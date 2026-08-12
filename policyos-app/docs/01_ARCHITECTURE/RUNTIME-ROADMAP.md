@@ -572,3 +572,18 @@ variant. Stored result digest/reference values remain exact-read output rather t
 Until migration `20260808_0023` and its repository merge, a result-present persistence attempt
 fails closed before database mutation. No schema, migration, provider, binder, facade, route, or
 external effect is added; CP9 remains Planned / Blocked and CP10 remains Planned.
+
+### CP9 logical execution-result persistence and exact reads
+
+The persistence gate implements migration `20260808_0023` with dedicated immutable logical-result
+identity and revision tables. One logical-result ID is allowed for each exact tenant,
+organization, classification, execution-request, root-lineage, and attempt tuple. Revisions retain
+exact relational bindings to the execution request, resulting execution-state revision, and audit
+revision, with restricted deletion and database-enforced UPDATE/DELETE rejection.
+
+The active-transaction persistence capability appends a result-present sibling only after the
+closed atomic write set is staged in the caller-owned `AsyncSession` and root transaction. Exact
+state and logical-result reads require explicit IDs and revisions and return stored digest and
+reference facts without current/latest selection. Existing generic or adapter-result rows are not
+backfilled, promoted, normalized, or deduplicated. Application Integration remains blocked as a
+separate checkpoint; CP9 remains Planned / Blocked and CP10 remains Planned.

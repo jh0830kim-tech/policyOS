@@ -1,5 +1,9 @@
 """CP7 PostgreSQL runtime persistence implementations."""
 
+from app.models.runtime_logical_result import (
+    RuntimeLogicalExecutionResultRecord,
+    RuntimeLogicalExecutionResultRevisionRecord,
+)
 from app.runtime.persistence.active_transaction import (
     SQLAlchemyRuntimeApiActiveTransactionPersistence,
     SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory,
@@ -23,6 +27,13 @@ from app.runtime.persistence.errors import (
     RuntimePersistenceTransactionError,
     RuntimeRegistryPersistenceBindingError,
     RuntimeRegistryPersistenceNotFoundError,
+)
+from app.runtime.persistence.logical_result_repositories import (
+    SQLAlchemyRuntimeLogicalExecutionResultRepository,
+)
+from app.runtime.persistence.logical_result_serialization import (
+    deserialize_logical_execution_result,
+    serialize_logical_execution_result,
 )
 from app.runtime.persistence.models import (
     RUNTIME_EFFECT_PERSISTENCE_TABLES,
@@ -69,8 +80,14 @@ from app.runtime.persistence.validation import (
     validate_persistence_write,
 )
 
+RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES = (
+    RuntimeLogicalExecutionResultRecord.__table__,
+    RuntimeLogicalExecutionResultRevisionRecord.__table__,
+)
+
 __all__ = (
     "RUNTIME_EFFECT_PERSISTENCE_TABLES",
+    "RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES",
     "RUNTIME_PERSISTENCE_TABLES",
     "RuntimeEffect",
     "RuntimeEffectLifecycleHead",
@@ -103,15 +120,18 @@ __all__ = (
     "SQLAlchemyRuntimeApiActiveTransactionPersistence",
     "SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory",
     "SQLAlchemyRuntimeIdempotencyRepository",
+    "SQLAlchemyRuntimeLogicalExecutionResultRepository",
     "SQLAlchemyRuntimeOutboxRepository",
     "SQLAlchemyRuntimePermitRepository",
     "SQLAlchemyRuntimeRegistryRepository",
     "SQLAlchemyRuntimeTransaction",
     "deserialize_delivery_model",
+    "deserialize_logical_execution_result",
     "deserialize_runtime_record",
     "deserialize_registry_payload",
     "metadata_for",
     "serialize_delivery_model",
+    "serialize_logical_execution_result",
     "serialize_runtime_record",
     "serialize_registry_payload",
     "validate_loaded_record",

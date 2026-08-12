@@ -59,8 +59,7 @@ class RuntimeRecordRevision(Base):
     __tablename__ = "runtime_record_revisions"
     __table_args__ = (
         CheckConstraint(
-            "(runtime_repository_write_request_id IS NULL) <> "
-            "(runtime_transaction_id IS NULL)",
+            "(runtime_repository_write_request_id IS NULL) <> (runtime_transaction_id IS NULL)",
             name="ck_runtime_revision_exactly_one_write_source",
         ),
         UniqueConstraint(
@@ -70,6 +69,15 @@ class RuntimeRecordRevision(Base):
             "record_id",
             "record_revision",
             name="uq_runtime_record_revision_scope",
+        ),
+        UniqueConstraint(
+            "record_type",
+            "tenant_id",
+            "organization_id",
+            "classification",
+            "record_id",
+            "record_revision",
+            name="uq_runtime_record_revision_exact_scope",
         ),
         UniqueConstraint(
             "runtime_repository_write_request_id",
@@ -98,12 +106,8 @@ class RuntimeRecordRevision(Base):
         ),
     )
 
-    runtime_repository_write_receipt_id: Mapped[UUID] = mapped_column(
-        Uuid, primary_key=True
-    )
-    runtime_repository_write_request_id: Mapped[UUID | None] = mapped_column(
-        Uuid, nullable=True
-    )
+    runtime_repository_write_receipt_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    runtime_repository_write_request_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
     runtime_transaction_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
     record_type: Mapped[str] = mapped_column(String(40), nullable=False)
     record_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
@@ -150,27 +154,33 @@ class RuntimeTransactionRecord(Base):
     audit_trail_revision: Mapped[int] = mapped_column(Integer, nullable=False)
     idempotency_reservation_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     outbox_enqueue_record_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
-    persisted_record_receipt_ids: Mapped[list[str]] = mapped_column(
-        JSON_DOCUMENT, nullable=False
-    )
+    persisted_record_receipt_ids: Mapped[list[str]] = mapped_column(JSON_DOCUMENT, nullable=False)
     transaction_digest_reference: Mapped[str] = mapped_column(String(200), nullable=False)
     clock_reference: Mapped[str] = mapped_column(String(200), nullable=False)
     requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     committed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
+
 class RuntimeEffect(Base):
     __tablename__ = "runtime_effects"
     __table_args__ = (
         UniqueConstraint(
-            "tenant_id", "organization_id", "runtime_effect_id",
+            "tenant_id",
+            "organization_id",
+            "runtime_effect_id",
             name="uq_runtime_effect_scope_id",
         ),
         UniqueConstraint(
-            "tenant_id", "organization_id", "effect_idempotency_key",
+            "tenant_id",
+            "organization_id",
+            "effect_idempotency_key",
             name="uq_runtime_effect_scope_key",
         ),
         UniqueConstraint(
-            "tenant_id", "organization_id", "runtime_effect_id", "classification",
+            "tenant_id",
+            "organization_id",
+            "runtime_effect_id",
+            "classification",
             name="uq_runtime_effect_scope_classification",
         ),
     )
@@ -197,8 +207,10 @@ class RuntimeEffect(Base):
 
 _SCOPE_FK_COLUMNS = ["tenant_id", "organization_id", "runtime_effect_id", "classification"]
 _SCOPE_FK_TARGETS = [
-    "runtime_effects.tenant_id", "runtime_effects.organization_id",
-    "runtime_effects.runtime_effect_id", "runtime_effects.classification",
+    "runtime_effects.tenant_id",
+    "runtime_effects.organization_id",
+    "runtime_effects.runtime_effect_id",
+    "runtime_effects.classification",
 ]
 
 
@@ -206,7 +218,8 @@ class RuntimeEffectLifecycleHead(Base):
     __tablename__ = "runtime_effect_lifecycle_heads"
     __table_args__ = (
         ForeignKeyConstraint(
-            _SCOPE_FK_COLUMNS, _SCOPE_FK_TARGETS,
+            _SCOPE_FK_COLUMNS,
+            _SCOPE_FK_TARGETS,
             name="fk_runtime_effect_head_scope",
         ),
         CheckConstraint(
@@ -225,11 +238,13 @@ class RuntimeEffectLifecycleHead(Base):
             name="ck_runtime_effect_head_claim_projection",
         ),
         Index(
-            "ix_runtime_effect_due", "tenant_id", "organization_id",
-            "classification", "next_eligible_at", "runtime_effect_id",
-            postgresql_where=text(
-                "current_status IN ('enqueued', 'retry_scheduled', 'claimed')"
-            ),
+            "ix_runtime_effect_due",
+            "tenant_id",
+            "organization_id",
+            "classification",
+            "next_eligible_at",
+            "runtime_effect_id",
+            postgresql_where=text("current_status IN ('enqueued', 'retry_scheduled', 'claimed')"),
         ),
     )
     tenant_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
@@ -268,7 +283,8 @@ class RuntimeEffectLifecycleRevision(Base):
     __tablename__ = "runtime_effect_lifecycle_revisions"
     __table_args__ = (
         ForeignKeyConstraint(
-            _SCOPE_FK_COLUMNS, _SCOPE_FK_TARGETS,
+            _SCOPE_FK_COLUMNS,
+            _SCOPE_FK_TARGETS,
             name="fk_runtime_effect_revision_scope",
         ),
         CheckConstraint("lifecycle_revision >= 1", name="ck_runtime_effect_revision_positive"),
@@ -278,22 +294,32 @@ class RuntimeEffectLifecycleRevision(Base):
             name="ck_runtime_effect_revision_one_source",
         ),
         UniqueConstraint(
-            "tenant_id", "organization_id", "runtime_effect_id",
-            "lifecycle_revision", name="uq_runtime_effect_lifecycle_revision",
+            "tenant_id",
+            "organization_id",
+            "runtime_effect_id",
+            "lifecycle_revision",
+            name="uq_runtime_effect_lifecycle_revision",
         ),
         UniqueConstraint(
-            "tenant_id", "organization_id",
+            "tenant_id",
+            "organization_id",
             "runtime_effect_lifecycle_record_id",
             name="uq_runtime_effect_lifecycle_record",
         ),
         Index(
-            "uq_runtime_effect_append_request", "tenant_id", "organization_id",
-            "lifecycle_append_request_id", unique=True,
+            "uq_runtime_effect_append_request",
+            "tenant_id",
+            "organization_id",
+            "lifecycle_append_request_id",
+            unique=True,
             postgresql_where=text("lifecycle_append_request_id IS NOT NULL"),
         ),
         Index(
-            "uq_runtime_effect_claim_request", "tenant_id", "organization_id",
-            "claim_request_id", unique=True,
+            "uq_runtime_effect_claim_request",
+            "tenant_id",
+            "organization_id",
+            "claim_request_id",
+            unique=True,
             postgresql_where=text("claim_request_id IS NOT NULL"),
         ),
         Index(
@@ -307,16 +333,24 @@ class RuntimeEffectLifecycleRevision(Base):
         ),
         *(
             Index(
-                f"ix_runtime_effect_revision_{name}", "tenant_id",
-                "organization_id", "runtime_effect_id", column, unique=False,
+                f"ix_runtime_effect_revision_{name}",
+                "tenant_id",
+                "organization_id",
+                "runtime_effect_id",
+                column,
+                unique=False,
                 postgresql_where=text(f"{column} IS NOT NULL"),
             )
             for name, column in _REPEATED_PROJECTIONS
         ),
         *(
             Index(
-                f"uq_runtime_effect_revision_{name}", "tenant_id",
-                "organization_id", "runtime_effect_id", column, unique=True,
+                f"uq_runtime_effect_revision_{name}",
+                "tenant_id",
+                "organization_id",
+                "runtime_effect_id",
+                column,
+                unique=True,
                 postgresql_where=text(f"{column} IS NOT NULL"),
             )
             for name, column in _ONE_SHOT_PROJECTIONS
@@ -359,16 +393,19 @@ class RuntimeEffectReconciliationObservationRecord(Base):
     __tablename__ = "runtime_effect_reconciliation_observations"
     __table_args__ = (
         ForeignKeyConstraint(
-            _SCOPE_FK_COLUMNS, _SCOPE_FK_TARGETS,
+            _SCOPE_FK_COLUMNS,
+            _SCOPE_FK_TARGETS,
             name="fk_runtime_effect_observation_scope",
         ),
         UniqueConstraint(
-            "tenant_id", "organization_id",
+            "tenant_id",
+            "organization_id",
             "runtime_effect_reconciliation_observation_id",
             name="uq_runtime_effect_observation_scope",
         ),
         UniqueConstraint(
-            "tenant_id", "organization_id",
+            "tenant_id",
+            "organization_id",
             "runtime_effect_reconciliation_request_id",
             name="uq_runtime_effect_observation_request",
         ),
@@ -387,21 +424,28 @@ class RuntimeEffectReconciliationObservationRecord(Base):
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     stored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
+
 RUNTIME_PERSISTENCE_TABLES = (
     RuntimeRecordHead.__table__,
     RuntimeRecordRevision.__table__,
     RuntimeTransactionRecord.__table__,
 )
 RUNTIME_EFFECT_PERSISTENCE_TABLES = (
-    RuntimeEffect.__table__, RuntimeEffectLifecycleHead.__table__,
+    RuntimeEffect.__table__,
+    RuntimeEffectLifecycleHead.__table__,
     RuntimeEffectLifecycleRevision.__table__,
     RuntimeEffectReconciliationObservationRecord.__table__,
 )
 
 
 __all__ = (
-    "RUNTIME_EFFECT_PERSISTENCE_TABLES", "RUNTIME_PERSISTENCE_TABLES",
-    "RuntimeEffect", "RuntimeEffectLifecycleHead", "RuntimeEffectLifecycleRevision",
-    "RuntimeEffectReconciliationObservationRecord", "RuntimeRecordHead",
-    "RuntimeRecordRevision", "RuntimeTransactionRecord",
+    "RUNTIME_EFFECT_PERSISTENCE_TABLES",
+    "RUNTIME_PERSISTENCE_TABLES",
+    "RuntimeEffect",
+    "RuntimeEffectLifecycleHead",
+    "RuntimeEffectLifecycleRevision",
+    "RuntimeEffectReconciliationObservationRecord",
+    "RuntimeRecordHead",
+    "RuntimeRecordRevision",
+    "RuntimeTransactionRecord",
 )

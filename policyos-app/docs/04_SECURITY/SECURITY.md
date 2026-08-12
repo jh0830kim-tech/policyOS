@@ -519,3 +519,17 @@ and production time are returned from the exact persisted read. Until migration 
 and the append-only repository exist, result-present staging is rejected before database work.
 No hidden identifier, clock, revision, digest, reference, latest-row selection, adapter-result
 promotion, schema, backfill, facade behavior, route, or external effect is introduced.
+
+### CP9 logical execution-result persistence boundary
+
+Migration `20260808_0023` stores logical-result identity and revisions separately from action-level
+adapter outcomes. Composite scope and revision constraints bind tenant, organization,
+classification, execution request, root lineage, attempt, resulting state, and audit facts.
+Restricted foreign keys, ORM guards, and PostgreSQL triggers reject deletion or mutation.
+
+All identifiers, revisions, digests, references, provenance, and aware times remain caller/domain
+supplied and are revalidated on serialization, append, replay, and exact read. Missing, stale,
+substituted, cross-scope, cross-lineage, wrong-attempt, wrong-revision, or payload/column mismatch
+fails closed. Existing rows are never promoted or backfilled, and populated downgrade stops before
+DDL. The repository and active-transaction capability do not own transaction control; concrete
+Application Integration and production routes remain blocked.

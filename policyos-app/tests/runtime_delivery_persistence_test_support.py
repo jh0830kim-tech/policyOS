@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.runtime.persistence import (
     RUNTIME_EFFECT_PERSISTENCE_TABLES,
+    RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES,
     RUNTIME_PERSISTENCE_TABLES,
 )
 
@@ -21,11 +22,10 @@ async def runtime_delivery_session_factory(
 ) -> AsyncIterator[async_sessionmaker[AsyncSession]]:
     engine = create_async_engine(database_url)
     tables = (*RUNTIME_PERSISTENCE_TABLES, *RUNTIME_EFFECT_PERSISTENCE_TABLES)
+    cleanup_tables = (*tables, *RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES)
     async with engine.begin() as connection:
-        for table in reversed(tables):
-            await connection.run_sync(
-                lambda sync, item=table: item.drop(sync, checkfirst=True)
-            )
+        for table in reversed(cleanup_tables):
+            await connection.run_sync(lambda sync, item=table: item.drop(sync, checkfirst=True))
         for table in tables:
             await connection.run_sync(lambda sync, item=table: item.create(sync))
     factory = async_sessionmaker(engine, expire_on_commit=False)
@@ -34,9 +34,7 @@ async def runtime_delivery_session_factory(
     finally:
         async with engine.begin() as connection:
             for table in reversed(tables):
-                await connection.run_sync(
-                    lambda sync, item=table: item.drop(sync, checkfirst=True)
-                )
+                await connection.run_sync(lambda sync, item=table: item.drop(sync, checkfirst=True))
         await engine.dispose()
 
 

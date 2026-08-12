@@ -6,11 +6,28 @@ from pathlib import Path
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def test_alembic_has_single_head() -> None:
     config = Config("alembic.ini")
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["20260808_0022"]
+    assert scripts.get_heads() == ["20260808_0023"]
+
+
+def test_runtime_logical_result_migration_is_append_only_and_fail_closed() -> None:
+    path = ROOT / "alembic" / "versions" / ("20260808_0023_runtime_logical_execution_results.py")
+    source = path.read_text(encoding="utf-8")
+    assert 'revision: str = "20260808_0023"' in source
+    assert 'down_revision: str | None = "20260808_0022"' in source
+    assert "runtime_logical_execution_results" in source
+    assert "runtime_logical_execution_result_revisions" in source
+    assert "uq_runtime_logical_result_request_attempt" in source
+    assert source.count('ondelete="RESTRICT"') == 4
+    assert "INSERT" not in source
+    downgrade = source.index("def downgrade")
+    assert source.index("SELECT 1", downgrade) < source.index("DROP TRIGGER", downgrade)
+    assert source.index("raise RuntimeError", downgrade) < source.index("op.drop_table", downgrade)
 
 
 def test_initial_migration_contains_foundation_tables() -> None:
