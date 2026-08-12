@@ -640,3 +640,11 @@ authority. A dedicated Runtime dependency returns verified claims without a lega
 `app.api` alone maps bounded errors. Preparation is not persisted, so no schema or migration
 `20260808_0024` is approved. Public contracts and production routes remain separate gates; CP9
 remains Planned / Blocked and CP10 remains Planned.
+
+### CP9 preparation producer and operational backend ownership
+
+ADR-102 assigns explicit application preparation production, one-shot callback ownership, trusted
+clock provenance, and PostgreSQL multi-process rate admission. Migration `20260808_0024` is
+required only for explicitly provisioned immutable policy revisions and scoped atomic window
+counters; it performs no backfill or default assignment. Contracts, persistence, production
+composition/routes, combined acceptance, and closeout remain separate gates.

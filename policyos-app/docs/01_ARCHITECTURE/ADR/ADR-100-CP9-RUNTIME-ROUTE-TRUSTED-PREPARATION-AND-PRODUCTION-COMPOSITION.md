@@ -219,3 +219,11 @@ separate mandatory one-shot application capabilities. A dedicated Runtime authen
 dependency returns verified claims rather than a legacy ORM user. `app.api` alone owns bounded HTTP
 translation; timeout or disconnect creates no Runtime cancellation, retry, compensation, success,
 or external-effect termination authority.
+
+## ADR-102 clarification
+
+ADR-102 assigns preparation production to an explicit application Port with trusted callback,
+fact, digest, identity, and clock inputs. It assigns multi-process rate admission to PostgreSQL
+policy revisions and scoped window counters in migration `20260808_0024`; preparation and
+callbacks remain non-durable. Defaults, backfill, hidden clocks, and process-local fallbacks remain
+prohibited.
