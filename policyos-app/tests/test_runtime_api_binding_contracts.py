@@ -73,12 +73,18 @@ from app.runtime.registry import (
     RuntimeRegistrySnapshotReference,
     RuntimeSpecializedPermitRequirement,
 )
-from app.runtime.state import RuntimeExecutionState, RuntimeExecutionStateRecord, RuntimeStateScope
+from app.runtime.state import (
+    RuntimeExecutionState,
+    RuntimeExecutionStateRecord,
+    RuntimeStateScope,
+)
 from app.services.runtime_api_contracts import (
     RuntimeApiContractConflict,
     RuntimeApiInvocationQueryBindingFacts,
     RuntimeApiInvocationQueryFacts,
     RuntimeApiInvocationQueryIntegrationFacts,
+    RuntimeApiOperation,
+    RuntimeApiPreparationProvenance,
     RuntimeApiReconciliationBindingFacts,
     RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationIntegrationFacts,
@@ -90,13 +96,17 @@ from app.services.runtime_api_contracts import (
 from app.services.runtime_api_protocols import (
     RuntimeApiActiveTransactionPersistenceFactory,
     RuntimeApiApplicationFacade,
+    RuntimeApiDeadlineBudgetCapability,
+    RuntimeApiDisconnectObservationCapability,
     RuntimeApiIntegrationFactsProvider,
     RuntimeApiPersistedOrchestrationFactBinder,
+    RuntimeApiPreparationIssuer,
     RuntimeApiPreparedApplicationEntry,
     RuntimeApiPreparedInvocationQuery,
     RuntimeApiPreparedReconciliation,
     RuntimeApiPreparedSubmission,
     RuntimeApiQueryProjectionLocatorProvider,
+    RuntimeApiRateAdmissionCapability,
     RuntimeApiTrustedPreparationSource,
 )
 from app.services.runtime_api_validation import (
@@ -860,6 +870,36 @@ class PreparedApplicationEntry:
         return None
 
 
+class PreparationIssuer:
+    async def issue_submission(self, provenance, facts, domain_callback):
+        return RuntimeApiPreparedSubmission(
+            provenance=provenance, facts=facts, domain_callback=domain_callback
+        )
+
+    async def issue_query(self, provenance, facts):
+        return RuntimeApiPreparedInvocationQuery(provenance=provenance, facts=facts)
+
+    async def issue_reconciliation(self, provenance, facts, domain_callback):
+        return RuntimeApiPreparedReconciliation(
+            provenance=provenance, facts=facts, domain_callback=domain_callback
+        )
+
+
+class RateAdmissionCapability:
+    async def admit(self, request):
+        return None
+
+
+class DeadlineBudgetCapability:
+    async def evaluate(self, request):
+        return None
+
+
+class DisconnectObservationCapability:
+    async def observe(self, request):
+        return None
+
+
 def trusted_context_facts() -> RuntimeApiTrustedContextFacts:
     return RuntimeApiTrustedContextFacts(
         authentication_reference="authentication.reference",
@@ -906,6 +946,26 @@ def reconciliation_facts() -> RuntimeApiReconciliationFacts:
     )
 
 
+def preparation_provenance(
+    operation, request_identity, command_digest, correlation_reference, classification
+):
+    return RuntimeApiPreparationProvenance(
+        preparation_id=uid(98),
+        tenant_id=TENANT,
+        organization_id=ORGANIZATION,
+        principal_id=uid(97),
+        operation=operation,
+        request_identity=request_identity,
+        classification=classification,
+        canonical_request_digest=command_digest,
+        prepared_facts_digest="sha256:preparedfacts1",
+        correlation_reference=correlation_reference,
+        issued_at=NOW,
+        evaluated_at=NOW,
+        valid_until=NOW + timedelta(minutes=1),
+    )
+
+
 class ExactExecutionStateRevisionReader:
     async def read_exact_state_revision(self, context, locator):
         return RuntimeApiExecutionStateRevisionReadResult(
@@ -949,10 +1009,40 @@ def test_operation_integration_facts_are_strict_required_and_request_scoped() ->
 
 def test_prepared_operation_packages_are_closed_frozen_and_operation_specific() -> None:
     callback = PreparedDomainCallback()
-    submission = RuntimeApiPreparedSubmission(facts=submission_facts(), domain_callback=callback)
-    query = RuntimeApiPreparedInvocationQuery(facts=query_facts())
+    submission_item = submission_facts()
+    query_item = query_facts()
+    reconciliation_item = reconciliation_facts()
+    submission_provenance = preparation_provenance(
+        RuntimeApiOperation.SUBMIT_INVOCATION,
+        submission_item.command_id,
+        submission_item.integration.command_digest,
+        submission_item.correlation_reference,
+        submission_item.integration.classification,
+    )
+    query_provenance = preparation_provenance(
+        RuntimeApiOperation.GET_INVOCATION,
+        query_item.query_id,
+        "sha256:queryrequest1234",
+        query_item.correlation_reference,
+        query_item.integration.classification,
+    )
+    reconciliation_provenance = preparation_provenance(
+        RuntimeApiOperation.REQUEST_RECONCILIATION,
+        reconciliation_item.command_id,
+        reconciliation_item.integration.command_digest,
+        reconciliation_item.correlation_reference,
+        reconciliation_item.integration.classification,
+    )
+    submission = RuntimeApiPreparedSubmission(
+        provenance=submission_provenance,
+        facts=submission_item,
+        domain_callback=callback,
+    )
+    query = RuntimeApiPreparedInvocationQuery(provenance=query_provenance, facts=query_item)
     reconciliation = RuntimeApiPreparedReconciliation(
-        facts=reconciliation_facts(), domain_callback=callback
+        provenance=reconciliation_provenance,
+        facts=reconciliation_item,
+        domain_callback=callback,
     )
 
     assert submission.domain_callback is callback
@@ -962,22 +1052,35 @@ def test_prepared_operation_packages_are_closed_frozen_and_operation_specific() 
         submission.facts = submission_facts()
     with pytest.raises(TypeError, match="submission facts differ"):
         RuntimeApiPreparedSubmission(
+            provenance=submission_provenance,
             facts=query_facts(),  # type: ignore[arg-type]
             domain_callback=callback,
         )
     with pytest.raises(TypeError, match="query facts differ"):
         RuntimeApiPreparedInvocationQuery(
-            facts=reconciliation_facts()  # type: ignore[arg-type]
+            provenance=query_provenance,
+            facts=reconciliation_facts(),  # type: ignore[arg-type]
         )
     with pytest.raises(TypeError, match="reconciliation facts differ"):
         RuntimeApiPreparedReconciliation(
+            provenance=reconciliation_provenance,
             facts=submission_facts(),  # type: ignore[arg-type]
             domain_callback=callback,
         )
     with pytest.raises(TypeError):
-        RuntimeApiPreparedInvocationQuery(query_facts())
+        RuntimeApiPreparedInvocationQuery(query_provenance, query_facts())
+    with pytest.raises(ValueError, match="submission provenance binding"):
+        RuntimeApiPreparedSubmission(
+            provenance=query_provenance,
+            facts=submission_item,
+            domain_callback=callback,
+        )
     assert isinstance(TrustedPreparationSource(), RuntimeApiTrustedPreparationSource)
     assert isinstance(PreparedApplicationEntry(), RuntimeApiPreparedApplicationEntry)
+    assert isinstance(PreparationIssuer(), RuntimeApiPreparationIssuer)
+    assert isinstance(RateAdmissionCapability(), RuntimeApiRateAdmissionCapability)
+    assert isinstance(DeadlineBudgetCapability(), RuntimeApiDeadlineBudgetCapability)
+    assert isinstance(DisconnectObservationCapability(), RuntimeApiDisconnectObservationCapability)
     assert tuple(signature(RuntimeApiTrustedPreparationSource.prepare_submission).parameters) == (
         "self",
         "claims",

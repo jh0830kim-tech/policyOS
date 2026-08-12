@@ -14,6 +14,10 @@ from app.runtime.ports import (
 from app.services.runtime_api_contracts import (
     BoundedDigest,
     RuntimeApiCommandIdentity,
+    RuntimeApiDeadlineBudgetRequest,
+    RuntimeApiDeadlineBudgetResult,
+    RuntimeApiDisconnectObservationRequest,
+    RuntimeApiDisconnectObservationResult,
     RuntimeApiDomainOperationResult,
     RuntimeApiIdempotencyCommitFacts,
     RuntimeApiIdempotencyCommitResult,
@@ -22,9 +26,13 @@ from app.services.runtime_api_contracts import (
     RuntimeApiInvocationQueryFacts,
     RuntimeApiInvocationQueryInput,
     RuntimeApiInvocationQueryIntegrationFacts,
+    RuntimeApiOperation,
     RuntimeApiOrganizationSelector,
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
+    RuntimeApiPreparationProvenance,
+    RuntimeApiRateAdmissionRequest,
+    RuntimeApiRateAdmissionResult,
     RuntimeApiReconciliationBindingFacts,
     RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationFacts,
@@ -98,7 +106,9 @@ class RuntimeApiIntegrationFactsProvider(Protocol):
 
     async def provide_query(self) -> RuntimeApiInvocationQueryIntegrationFacts: ...
 
-    async def provide_reconciliation(self) -> RuntimeApiReconciliationIntegrationFacts: ...
+    async def provide_reconciliation(
+        self,
+    ) -> RuntimeApiReconciliationIntegrationFacts: ...
 
 
 @runtime_checkable
@@ -184,39 +194,98 @@ class RuntimeApiDomainOperationCallback(Protocol):
 class RuntimeApiPreparedSubmission:
     """One inert, server-owned submission candidate for one request."""
 
+    provenance: RuntimeApiPreparationProvenance
     facts: RuntimeApiSubmissionFacts
     domain_callback: RuntimeApiDomainOperationCallback
 
     def __post_init__(self) -> None:
+        if not isinstance(self.provenance, RuntimeApiPreparationProvenance):
+            raise TypeError("prepared submission provenance differs")
         if not isinstance(self.facts, RuntimeApiSubmissionFacts):
             raise TypeError("prepared submission facts differ")
         if not isinstance(self.domain_callback, RuntimeApiDomainOperationCallback):
             raise TypeError("prepared submission callback differs")
+        if (
+            self.provenance.operation is not RuntimeApiOperation.SUBMIT_INVOCATION
+            or self.provenance.request_identity != self.facts.command_id
+            or self.provenance.canonical_request_digest != self.facts.integration.command_digest
+            or self.provenance.correlation_reference != self.facts.correlation_reference
+            or (
+                self.provenance.tenant_id,
+                self.provenance.organization_id,
+                self.provenance.classification,
+            )
+            != (
+                self.facts.integration.tenant_id,
+                self.facts.integration.organization_id,
+                self.facts.integration.classification,
+            )
+        ):
+            raise ValueError("prepared submission provenance binding differs")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RuntimeApiPreparedInvocationQuery:
     """One inert, server-owned exact query candidate for one request."""
 
+    provenance: RuntimeApiPreparationProvenance
     facts: RuntimeApiInvocationQueryFacts
 
     def __post_init__(self) -> None:
+        if not isinstance(self.provenance, RuntimeApiPreparationProvenance):
+            raise TypeError("prepared query provenance differs")
         if not isinstance(self.facts, RuntimeApiInvocationQueryFacts):
             raise TypeError("prepared query facts differ")
+        if (
+            self.provenance.operation is not RuntimeApiOperation.GET_INVOCATION
+            or self.provenance.request_identity != self.facts.query_id
+            or self.provenance.correlation_reference != self.facts.correlation_reference
+            or (
+                self.provenance.tenant_id,
+                self.provenance.organization_id,
+                self.provenance.classification,
+            )
+            != (
+                self.facts.integration.tenant_id,
+                self.facts.integration.organization_id,
+                self.facts.integration.classification,
+            )
+        ):
+            raise ValueError("prepared query provenance binding differs")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RuntimeApiPreparedReconciliation:
     """One inert, server-owned reconciliation candidate for one request."""
 
+    provenance: RuntimeApiPreparationProvenance
     facts: RuntimeApiReconciliationFacts
     domain_callback: RuntimeApiDomainOperationCallback
 
     def __post_init__(self) -> None:
+        if not isinstance(self.provenance, RuntimeApiPreparationProvenance):
+            raise TypeError("prepared reconciliation provenance differs")
         if not isinstance(self.facts, RuntimeApiReconciliationFacts):
             raise TypeError("prepared reconciliation facts differ")
         if not isinstance(self.domain_callback, RuntimeApiDomainOperationCallback):
             raise TypeError("prepared reconciliation callback differs")
+        if (
+            self.provenance.operation is not RuntimeApiOperation.REQUEST_RECONCILIATION
+            or self.provenance.request_identity != self.facts.command_id
+            or self.provenance.canonical_request_digest != self.facts.integration.command_digest
+            or self.provenance.correlation_reference != self.facts.correlation_reference
+            or (
+                self.provenance.tenant_id,
+                self.provenance.organization_id,
+                self.provenance.classification,
+            )
+            != (
+                self.facts.integration.tenant_id,
+                self.facts.integration.organization_id,
+                self.facts.integration.classification,
+            )
+        ):
+            raise ValueError("prepared reconciliation provenance binding differs")
 
 
 @runtime_checkable
@@ -243,6 +312,52 @@ class RuntimeApiTrustedPreparationSource(Protocol):
         organization: RuntimeApiOrganizationSelector,
         request: RuntimeApiReconciliationInput,
     ) -> RuntimeApiPreparedReconciliation: ...
+
+
+@runtime_checkable
+class RuntimeApiPreparationIssuer(Protocol):
+    """Assemble one inert package from explicit server-owned inputs."""
+
+    async def issue_submission(
+        self,
+        provenance: RuntimeApiPreparationProvenance,
+        facts: RuntimeApiSubmissionFacts,
+        domain_callback: RuntimeApiDomainOperationCallback,
+    ) -> RuntimeApiPreparedSubmission: ...
+
+    async def issue_query(
+        self,
+        provenance: RuntimeApiPreparationProvenance,
+        facts: RuntimeApiInvocationQueryFacts,
+    ) -> RuntimeApiPreparedInvocationQuery: ...
+
+    async def issue_reconciliation(
+        self,
+        provenance: RuntimeApiPreparationProvenance,
+        facts: RuntimeApiReconciliationFacts,
+        domain_callback: RuntimeApiDomainOperationCallback,
+    ) -> RuntimeApiPreparedReconciliation: ...
+
+
+@runtime_checkable
+class RuntimeApiRateAdmissionCapability(Protocol):
+    async def admit(
+        self, request: RuntimeApiRateAdmissionRequest
+    ) -> RuntimeApiRateAdmissionResult: ...
+
+
+@runtime_checkable
+class RuntimeApiDeadlineBudgetCapability(Protocol):
+    async def evaluate(
+        self, request: RuntimeApiDeadlineBudgetRequest
+    ) -> RuntimeApiDeadlineBudgetResult: ...
+
+
+@runtime_checkable
+class RuntimeApiDisconnectObservationCapability(Protocol):
+    async def observe(
+        self, request: RuntimeApiDisconnectObservationRequest
+    ) -> RuntimeApiDisconnectObservationResult: ...
 
 
 @runtime_checkable
@@ -301,6 +416,8 @@ __all__ = (
     "RuntimeApiApplicationFacade",
     "RuntimeApiActiveTransactionPersistenceFactory",
     "RuntimeApiDomainOperationCallback",
+    "RuntimeApiDeadlineBudgetCapability",
+    "RuntimeApiDisconnectObservationCapability",
     "RuntimeApiIdempotencyTransactionPort",
     "RuntimeApiIntegrationFactsProvider",
     "RuntimeApiLocalMutation",
@@ -311,8 +428,10 @@ __all__ = (
     "RuntimeApiPreparedInvocationQuery",
     "RuntimeApiPreparedReconciliation",
     "RuntimeApiPreparedSubmission",
+    "RuntimeApiPreparationIssuer",
     "RuntimeApiPersistedOrchestrationFactBinder",
     "RuntimeApiQueryProjectionLocatorProvider",
+    "RuntimeApiRateAdmissionCapability",
     "RuntimeApiTrustedPreparationSource",
     "RuntimeApiTrustedContextResolver",
 )
