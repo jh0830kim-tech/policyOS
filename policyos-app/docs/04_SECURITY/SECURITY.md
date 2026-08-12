@@ -638,3 +638,12 @@ operational requests, exact tenant/organization/principal/operation/classificati
 and operation-specific preparation contexts. Query preparation cannot carry a mutation callback;
 callbacks, clocks, policies, UUIDs, revisions, digests, references, and time values may not be
 generated or inferred by producer, issuer, route, facade, or capability adapters.
+
+ADR-103 requires an exact explicitly provisioned policy ID/revision/reference for every Runtime
+rate evaluation. Unprovisioned, inactive, expired, revoked, stale, substituted, ambiguous, or
+cross-scope policies fail closed before counter access. The trusted clock alone determines the UTC
+epoch-aligned `[window_start, window_end)` interval. Every counter creation or one-step increment
+requires trigger-level proof of the exact admitted decision in the same transaction; denial and
+exact replay do not mutate counters, and failures leave no decision or counter residue. Migration
+`20260808_0024` may create only the four governed append/serialized tables and may not insert,
+backfill, normalize, deduplicate, infer, or default policy authority.

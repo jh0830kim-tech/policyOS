@@ -654,3 +654,14 @@ and validated, pending review. It adds explicit operation-specific preparation c
 application preparation producer, operation-bound callback capability, trusted clock reading,
 and exact scoped rate-policy selection. It creates no producer backend, policy persistence,
 route, schema, or migration `20260808_0024`.
+
+### CP9 rate-admission policy revision and fixed-window governance
+
+ADR-103 fixes immutable scoped policy revisions, explicit one-shot provisioning under
+`runtime.rate_policy.manage`, append-only revocation, UTC epoch-aligned fixed windows, durable
+decision evidence, and serialized counters. A decision-first counter proof binds every admitted
+counter creation or increment to the exact decision in the same transaction. Migration
+`20260808_0024` will create exactly four rate-admission tables without INSERT, backfill,
+normalization, deduplication, inferred assignment, or default policy. Public contracts,
+persistence, production/HTTP acceptance, and closeout remain separate; CP9 remains Planned /
+Blocked and CP10 remains Planned.

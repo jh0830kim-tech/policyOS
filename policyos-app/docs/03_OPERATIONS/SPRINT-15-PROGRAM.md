@@ -789,6 +789,15 @@ transaction. `get_invocation` performs only the exact read-only verification. Th
 contract amendment, concrete integration, routes, acceptance, and closeout remain separate gates;
 CP9 remains Planned / Blocked and CP10 remains Planned.
 
+ADR-103 governs the next rate-admission sequence. Policy revisions and revocations are immutable
+and explicitly provisioned; windows are UTC epoch-aligned and half open; exact replay mutates no
+counter; admitted new requests append one decision and mutate one exact counter; denied requests
+append one decision and mutate no counter. PostgreSQL row serialization plus decision-first
+trigger proof must preserve the threshold under concurrency and leave rollback residue zero.
+Migration `20260808_0024` has four new tables, no data-writing upgrade, empty-only atomic
+downgrade, and populated fail-closed downgrade. This governance does not start contracts,
+persistence, routes, CP10, or release work.
+
 ### CP9 preparation producer and operational backend ownership
 
 ADR-102 binds preparation and callbacks to explicit application inputs and all operational times
