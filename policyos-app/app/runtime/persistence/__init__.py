@@ -1,5 +1,9 @@
 """CP7 PostgreSQL runtime persistence implementations."""
 
+from app.models.runtime_logical_result import (
+    RuntimeLogicalExecutionResultRecord,
+    RuntimeLogicalExecutionResultRevisionRecord,
+)
 from app.runtime.persistence.active_transaction import (
     SQLAlchemyRuntimeApiActiveTransactionPersistence,
     SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory,
@@ -76,8 +80,14 @@ from app.runtime.persistence.validation import (
     validate_persistence_write,
 )
 
+RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES = (
+    RuntimeLogicalExecutionResultRecord.__table__,
+    RuntimeLogicalExecutionResultRevisionRecord.__table__,
+)
+
 __all__ = (
     "RUNTIME_EFFECT_PERSISTENCE_TABLES",
+    "RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES",
     "RUNTIME_PERSISTENCE_TABLES",
     "RuntimeEffect",
     "RuntimeEffectLifecycleHead",

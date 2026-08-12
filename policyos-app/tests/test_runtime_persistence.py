@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.runtime.audit import RuntimeAuditTrail
 from app.runtime.authority import RuntimeExecutionRequest
 from app.runtime.persistence import (
+    RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES,
     RUNTIME_PERSISTENCE_TABLES,
     RuntimePersistenceConflictError,
     RuntimePersistenceRecordType,
@@ -188,15 +189,12 @@ async def postgres_sessions():
         pytest.skip("POLICYOS_TEST_DATABASE_URL is required for PostgreSQL integration")
     engine = create_async_engine(database_url)
     async with engine.begin() as connection:
-        await connection.run_sync(
-            lambda sync: RUNTIME_PERSISTENCE_TABLES[2].drop(sync, checkfirst=True)
+        cleanup_tables = (
+            *RUNTIME_PERSISTENCE_TABLES,
+            *RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES,
         )
-        await connection.run_sync(
-            lambda sync: RUNTIME_PERSISTENCE_TABLES[1].drop(sync, checkfirst=True)
-        )
-        await connection.run_sync(
-            lambda sync: RUNTIME_PERSISTENCE_TABLES[0].drop(sync, checkfirst=True)
-        )
+        for table in reversed(cleanup_tables):
+            await connection.run_sync(lambda sync, item=table: item.drop(sync, checkfirst=True))
         for table in RUNTIME_PERSISTENCE_TABLES:
             await connection.run_sync(lambda sync, item=table: item.create(sync))
     factory = async_sessionmaker(engine, expire_on_commit=False)
