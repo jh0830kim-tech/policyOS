@@ -1,6 +1,6 @@
 """Immutable contracts for the CP9 trusted Runtime application boundary."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Annotated
 from uuid import UUID
@@ -70,6 +70,21 @@ class RuntimeApiResultCardinality(StrEnum):
     EXACTLY_ZERO = "exactly_zero"
     ZERO_OR_ONE = "zero_or_one"
     EXACTLY_ONE = "exactly_one"
+
+
+class RuntimeApiRateAdmissionDisposition(StrEnum):
+    ADMITTED = "admitted"
+    DENIED = "denied"
+
+
+class RuntimeApiDeadlineDisposition(StrEnum):
+    AVAILABLE = "available"
+    EXPIRED = "expired"
+
+
+class RuntimeApiDisconnectDisposition(StrEnum):
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
 
 
 class RuntimeApiErrorCode(StrEnum):
@@ -173,6 +188,137 @@ class RuntimeApiTrustedContextFacts(RuntimeApiModel):
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("trusted context times must be timezone-aware")
         return value
+
+
+class RuntimeApiPreparationProvenance(RuntimeApiModel):
+    preparation_id: UUID
+    tenant_id: UUID
+    organization_id: UUID
+    principal_id: UUID
+    operation: RuntimeApiOperation
+    request_identity: UUID
+    classification: DataClassification
+    canonical_request_digest: BoundedDigest
+    prepared_facts_digest: BoundedDigest
+    correlation_reference: BoundedReference
+    issued_at: datetime
+    valid_until: datetime
+    evaluated_at: datetime
+
+    @field_validator("issued_at", "valid_until", "evaluated_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("preparation times must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def valid_time_window(self):
+        if not self.issued_at <= self.evaluated_at < self.valid_until:
+            raise ValueError("preparation validity window differs")
+        return self
+
+
+class RuntimeApiRateAdmissionRequest(RuntimeApiModel):
+    provenance: RuntimeApiPreparationProvenance
+    policy_reference: BoundedReference
+    evaluated_at: datetime
+
+    @field_validator("evaluated_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("rate admission time must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def exact_evaluation_time(self):
+        if self.evaluated_at != self.provenance.evaluated_at:
+            raise ValueError("rate admission time differs from preparation")
+        return self
+
+
+class RuntimeApiRateAdmissionResult(RuntimeApiModel):
+    request: RuntimeApiRateAdmissionRequest
+    disposition: RuntimeApiRateAdmissionDisposition
+    retry_after_seconds: int | None = Field(default=None, ge=0, le=86_400)
+
+    @model_validator(mode="after")
+    def closed_disposition(self):
+        if self.disposition is RuntimeApiRateAdmissionDisposition.ADMITTED:
+            if self.retry_after_seconds is not None:
+                raise ValueError("admitted rate result cannot retry")
+        elif self.retry_after_seconds is None:
+            raise ValueError("denied rate result requires retry-after seconds")
+        return self
+
+
+class RuntimeApiDeadlineBudgetRequest(RuntimeApiModel):
+    provenance: RuntimeApiPreparationProvenance
+    evaluated_at: datetime
+    deadline_at: datetime
+
+    @field_validator("evaluated_at", "deadline_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("deadline budget times must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def exact_evaluation_time(self):
+        if self.evaluated_at != self.provenance.evaluated_at:
+            raise ValueError("deadline evaluation time differs from preparation")
+        return self
+
+
+class RuntimeApiDeadlineBudgetResult(RuntimeApiModel):
+    request: RuntimeApiDeadlineBudgetRequest
+    disposition: RuntimeApiDeadlineDisposition
+    remaining: timedelta | None = None
+
+    @model_validator(mode="after")
+    def exact_disposition(self):
+        expected = (
+            RuntimeApiDeadlineDisposition.AVAILABLE
+            if self.request.evaluated_at < self.request.deadline_at
+            else RuntimeApiDeadlineDisposition.EXPIRED
+        )
+        if self.disposition is not expected:
+            raise ValueError("deadline disposition differs from exact times")
+        expected_remaining = (
+            self.request.deadline_at - self.request.evaluated_at
+            if expected is RuntimeApiDeadlineDisposition.AVAILABLE
+            else None
+        )
+        if self.remaining != expected_remaining:
+            raise ValueError("remaining deadline budget differs from exact times")
+        return self
+
+
+class RuntimeApiDisconnectObservationRequest(RuntimeApiModel):
+    provenance: RuntimeApiPreparationProvenance
+    observation_reference: BoundedReference
+
+
+class RuntimeApiDisconnectObservationResult(RuntimeApiModel):
+    request: RuntimeApiDisconnectObservationRequest
+    disposition: RuntimeApiDisconnectDisposition
+    observed_at: datetime
+
+    @field_validator("observed_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("disconnect observation time must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def bounded_observation_time(self):
+        provenance = self.request.provenance
+        if not provenance.evaluated_at <= self.observed_at < provenance.valid_until:
+            raise ValueError("disconnect observation time is outside preparation validity")
+        return self
 
 
 class RuntimeApiSubmissionBindingFacts(RuntimeApiModel):
@@ -525,6 +671,12 @@ __all__ = (
     "RuntimeApiCommandIdentity",
     "RuntimeApiContractConflict",
     "RuntimeApiDomainOperationResult",
+    "RuntimeApiDeadlineBudgetRequest",
+    "RuntimeApiDeadlineBudgetResult",
+    "RuntimeApiDeadlineDisposition",
+    "RuntimeApiDisconnectDisposition",
+    "RuntimeApiDisconnectObservationRequest",
+    "RuntimeApiDisconnectObservationResult",
     "RuntimeApiErrorCode",
     "RuntimeApiIdempotencyCommitFacts",
     "RuntimeApiIdempotencyCommitResult",
@@ -541,6 +693,10 @@ __all__ = (
     "RuntimeApiPermission",
     "RuntimeApiPermissionFact",
     "RuntimeApiPublicStatus",
+    "RuntimeApiPreparationProvenance",
+    "RuntimeApiRateAdmissionDisposition",
+    "RuntimeApiRateAdmissionRequest",
+    "RuntimeApiRateAdmissionResult",
     "RuntimeApiResultCardinality",
     "RuntimeApiReconciliationCommand",
     "RuntimeApiReconciliationBindingFacts",

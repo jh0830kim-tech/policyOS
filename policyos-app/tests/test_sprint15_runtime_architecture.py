@@ -1379,6 +1379,35 @@ def test_cp9_runtime_route_production_composition_governance_is_bounded() -> Non
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
 
 
+def test_cp9_runtime_preparation_provenance_capability_contracts_are_bounded() -> None:
+    contracts = (ROOT / "app/services/runtime_api_contracts.py").read_text(encoding="utf-8")
+    protocols = (ROOT / "app/services/runtime_api_protocols.py").read_text(encoding="utf-8")
+    validation = (ROOT / "app/services/runtime_api_validation.py").read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+
+    for name in (
+        "RuntimeApiPreparationProvenance",
+        "RuntimeApiRateAdmissionRequest",
+        "RuntimeApiRateAdmissionResult",
+        "RuntimeApiDeadlineBudgetRequest",
+        "RuntimeApiDeadlineBudgetResult",
+        "RuntimeApiDisconnectObservationRequest",
+        "RuntimeApiDisconnectObservationResult",
+    ):
+        assert f"class {name}" in contracts
+    for name in (
+        "RuntimeApiPreparationIssuer",
+        "RuntimeApiRateAdmissionCapability",
+        "RuntimeApiDeadlineBudgetCapability",
+        "RuntimeApiDisconnectObservationCapability",
+    ):
+        assert f"class {name}(Protocol)" in protocols
+    assert "provenance: RuntimeApiPreparationProvenance" in protocols
+    assert "validate_runtime_api_preparation_provenance" in validation
+    assert "migration `20260808_0024`" in roadmap
+    assert "No production issuer, source, capability, dependency, or route" in roadmap
+
+
 def test_cp9_runtime_route_transport_preparation_contract_gate_is_bounded() -> None:
     schemas = (ROOT / "app" / "schemas" / "runtime_api.py").read_text(encoding="utf-8")
     protocols = (ROOT / "app" / "services" / "runtime_api_protocols.py").read_text(encoding="utf-8")

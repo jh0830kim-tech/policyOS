@@ -599,6 +599,14 @@ default provider, route, global registry, durable preparation state, schema, or 
 
 ### CP9 Runtime preparation provenance and operational capability boundary
 
+The public-contract gate requires an immutable exact preparation provenance value on every
+prepared operation package and exposes no default issuer or operational capability. Rate,
+deadline, and disconnect requests bind the same explicit request scope and evaluated time;
+malformed, stale, substituted, cross-operation, or mismatched results fail closed. Disconnect is
+only transport observation and never proves Runtime cancellation or external-effect termination.
+No bearer material, callback identity, session identity, hidden clock, generated identifier,
+durable preparation state, or migration `20260808_0024` is introduced.
+
 ADR-101 requires a mandatory server-owned issuer to create one preparation package inside the
 same request call stack. Explicit immutable provenance binds preparation ID, request identity,
 principal, tenant, organization, operation, canonical request and facts digests, correlation, and

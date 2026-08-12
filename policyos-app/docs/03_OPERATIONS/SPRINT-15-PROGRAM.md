@@ -870,6 +870,14 @@ CP10 work remain separate checkpoints; CP9 remains Planned / Blocked and CP10 re
 
 ### CP9 Runtime preparation provenance and operational capabilities
 
+The public-contract gate implements ADR-101 with strict immutable preparation provenance and
+closed request/result contracts for rate admission, deadline evaluation, and disconnect
+observation. Prepared operation packages require exact provenance, while structural Protocols
+define server-owned issuance and request-scoped capability calls. Values remain explicit
+application inputs; no clock, UUID, digest, reference, authority, cancellation, or external-effect
+outcome is generated. Production implementations, FastAPI dependencies, composition, routes,
+schema, migration `20260808_0024`, Workers, and CP10 remain deferred.
+
 ADR-101 governs a same-request, mandatory server-owned preparation issuer. It emits one immutable
 operation-specific package to a request-local source whose exact method consumes the package once.
 The package carries explicit preparation, request, principal, tenant, organization, operation,

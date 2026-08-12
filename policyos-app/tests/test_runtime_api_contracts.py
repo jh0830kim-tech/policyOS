@@ -1,7 +1,7 @@
 """Focused CP9 Runtime API contract-gate tests."""
 
 from asyncio import run
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from inspect import signature
 from uuid import UUID
 
@@ -22,6 +22,12 @@ from app.schemas.runtime_api import (
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
     RuntimeApiContractConflict,
+    RuntimeApiDeadlineBudgetRequest,
+    RuntimeApiDeadlineBudgetResult,
+    RuntimeApiDeadlineDisposition,
+    RuntimeApiDisconnectDisposition,
+    RuntimeApiDisconnectObservationRequest,
+    RuntimeApiDisconnectObservationResult,
     RuntimeApiDomainOperationResult,
     RuntimeApiIdempotencyCommitFacts,
     RuntimeApiIdempotencyCommitResult,
@@ -34,7 +40,11 @@ from app.services.runtime_api_contracts import (
     RuntimeApiOrganizationSelector,
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
+    RuntimeApiPreparationProvenance,
     RuntimeApiPublicStatus,
+    RuntimeApiRateAdmissionDisposition,
+    RuntimeApiRateAdmissionRequest,
+    RuntimeApiRateAdmissionResult,
     RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationInput,
@@ -71,6 +81,7 @@ from app.services.runtime_api_validation import (
     validate_runtime_api_domain_operation_result,
     validate_runtime_api_idempotency_replay,
     validate_runtime_api_invocation_query_binding,
+    validate_runtime_api_preparation_provenance,
     validate_runtime_api_projection_binding,
     validate_runtime_api_public_status,
     validate_runtime_api_reconciliation_binding,
@@ -199,6 +210,104 @@ def permission(value=RuntimeApiPermission.INVOKE):
         organization_id=ORG,
         permission_reference="permission-1",
     )
+
+
+def preparation_provenance(**updates):
+    values = dict(
+        preparation_id=UUID("00000000-0000-0000-0000-000000000120"),
+        tenant_id=TENANT,
+        organization_id=ORG,
+        principal_id=PRINCIPAL,
+        operation=RuntimeApiOperation.SUBMIT_INVOCATION,
+        request_identity=UUID("00000000-0000-0000-0000-000000000105"),
+        classification=DataClassification.INTERNAL,
+        canonical_request_digest="sha256:0123456789abcdef",
+        prepared_facts_digest="sha256:fedcba9876543210",
+        correlation_reference="correlation-1",
+        issued_at=NOW,
+        evaluated_at=NOW,
+        valid_until=NOW + timedelta(minutes=1),
+    )
+    values.update(updates)
+    return RuntimeApiPreparationProvenance(**values)
+
+
+def test_preparation_provenance_and_operational_results_are_closed() -> None:
+    provenance = preparation_provenance()
+    assert (
+        validate_runtime_api_preparation_provenance(provenance, expected=provenance) is provenance
+    )
+    with pytest.raises(RuntimeApiContractConflict, match="provenance differs"):
+        validate_runtime_api_preparation_provenance(
+            provenance,
+            expected=preparation_provenance(
+                preparation_id=UUID("00000000-0000-0000-0000-000000000121")
+            ),
+        )
+    with pytest.raises(RuntimeApiContractConflict, match="preparation is stale"):
+        validate_runtime_api_preparation_provenance(
+            provenance.model_copy(update={"evaluated_at": provenance.valid_until}),
+            expected=provenance.model_copy(update={"evaluated_at": provenance.valid_until}),
+        )
+    with pytest.raises(ValidationError, match="validity window"):
+        preparation_provenance(valid_until=NOW)
+    with pytest.raises(ValidationError):
+        RuntimeApiPreparationProvenance.model_validate(
+            {**provenance.model_dump(), "metadata": {"unsafe": True}}
+        )
+
+    rate_request = RuntimeApiRateAdmissionRequest(
+        provenance=provenance,
+        policy_reference="rate-policy-1",
+        evaluated_at=NOW,
+    )
+    RuntimeApiRateAdmissionResult(
+        request=rate_request,
+        disposition=RuntimeApiRateAdmissionDisposition.ADMITTED,
+    )
+    RuntimeApiRateAdmissionResult(
+        request=rate_request,
+        disposition=RuntimeApiRateAdmissionDisposition.DENIED,
+        retry_after_seconds=30,
+    )
+    with pytest.raises(ValidationError, match="requires retry-after"):
+        RuntimeApiRateAdmissionResult(
+            request=rate_request,
+            disposition=RuntimeApiRateAdmissionDisposition.DENIED,
+        )
+
+    deadline_request = RuntimeApiDeadlineBudgetRequest(
+        provenance=provenance,
+        evaluated_at=NOW,
+        deadline_at=NOW + timedelta(seconds=10),
+    )
+    RuntimeApiDeadlineBudgetResult(
+        request=deadline_request,
+        disposition=RuntimeApiDeadlineDisposition.AVAILABLE,
+        remaining=timedelta(seconds=10),
+    )
+    with pytest.raises(ValidationError, match="deadline disposition"):
+        RuntimeApiDeadlineBudgetResult(
+            request=deadline_request,
+            disposition=RuntimeApiDeadlineDisposition.EXPIRED,
+            remaining=timedelta(seconds=10),
+        )
+
+    observation_request = RuntimeApiDisconnectObservationRequest(
+        provenance=provenance,
+        observation_reference="disconnect-observation-1",
+    )
+    RuntimeApiDisconnectObservationResult(
+        request=observation_request,
+        disposition=RuntimeApiDisconnectDisposition.CONNECTED,
+        observed_at=NOW,
+    )
+    with pytest.raises(ValidationError, match="outside preparation validity"):
+        RuntimeApiDisconnectObservationResult(
+            request=observation_request,
+            disposition=RuntimeApiDisconnectDisposition.DISCONNECTED,
+            observed_at=NOW + timedelta(minutes=2),
+        )
 
 
 def command(**updates):

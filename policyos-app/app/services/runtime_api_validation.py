@@ -31,6 +31,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiOperation,
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
+    RuntimeApiPreparationProvenance,
     RuntimeApiPublicStatus,
     RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationFacts,
@@ -45,6 +46,21 @@ from app.services.runtime_api_contracts import (
     RuntimeApiTrustedPrincipal,
     RuntimeApiTrustedScope,
 )
+
+
+def validate_runtime_api_preparation_provenance(
+    actual: RuntimeApiPreparationProvenance,
+    *,
+    expected: RuntimeApiPreparationProvenance,
+) -> RuntimeApiPreparationProvenance:
+    """Require one exact, still-valid same-request preparation identity."""
+
+    if actual != expected:
+        raise RuntimeApiContractConflict("preparation provenance differs")
+    if not actual.issued_at <= actual.evaluated_at < actual.valid_until:
+        raise RuntimeApiContractConflict("preparation is stale")
+    return actual
+
 
 RUNTIME_API_PUBLIC_STATUS_BY_EXECUTION_STATE: Mapping[
     RuntimeExecutionState, RuntimeApiPublicStatus
@@ -710,6 +726,7 @@ __all__ = (
     "validate_runtime_api_idempotency_replay",
     "validate_runtime_api_invocation_query_binding",
     "validate_runtime_api_permission",
+    "validate_runtime_api_preparation_provenance",
     "validate_runtime_api_principal",
     "validate_runtime_api_public_status",
     "validate_runtime_api_result_count",
