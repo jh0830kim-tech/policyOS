@@ -149,3 +149,18 @@ domain-operation callback, exact replay to the transport receipt, and query proj
 separate exact read-only application Port. Those additive contracts require a separate gate before
 concrete integration; no value may be inferred by provider, binder, facade, local operation, or
 persistence adapter.
+
+## ADR-100 clarification
+
+The request-scoped preparation source may assemble one inert already-governed candidate package
+after verified authentication and organization selection but before facade permission resolution.
+It does not resolve permission or prove authority. The package becomes usable only inside the
+facade-owned transaction after the facade resolves and exactly validates current principal, scope,
+permission, binding, Registry, admission, permit, lineage, revision, digest, operation, and
+transaction facts. This ordering preserves the existing five-parameter facade methods while
+preventing routes, generic dependency injection, or persistence from generating integration facts.
+
+ADR-100 also requires a separate narrow contract gate for header-only mutation idempotency and the
+prepared-operation/application-entry Protocols before production routes. If an implementation
+cannot obtain an exact approved prepared output without new durable state, it must stop for schema
+governance rather than infer from opaque references or latest rows.
