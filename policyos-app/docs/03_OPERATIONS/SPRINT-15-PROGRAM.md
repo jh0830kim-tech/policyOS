@@ -797,6 +797,12 @@ and scoped window counters in migration `20260808_0024`. The migration creates n
 and performs no backfill; unprovisioned scope fails closed. Preparation remains non-durable, and
 contracts, persistence, production routes, acceptance, and closeout remain separate checkpoints.
 
+The public-contract correction is implemented and validated, pending review. Explicit trusted
+clock readings, exact scoped rate-policy selections, operation-specific preparation contexts,
+the preparation producer Protocol, and the operation-bound callback capability are now closed
+contracts. Backend persistence, production composition, routes, and migration `20260808_0024`
+remain blocked behind separate checkpoints.
+
 ### CP9 explicit integration facts public contracts
 
 The ADR-096 public-contract amendment is implemented and validated, pending review. Existing

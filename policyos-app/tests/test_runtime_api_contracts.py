@@ -20,6 +20,7 @@ from app.schemas.runtime_api import (
     RuntimeReconciliationRequest,
 )
 from app.services.runtime_api_contracts import (
+    RuntimeApiClockReading,
     RuntimeApiCommandIdentity,
     RuntimeApiContractConflict,
     RuntimeApiDeadlineBudgetRequest,
@@ -45,6 +46,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiRateAdmissionDisposition,
     RuntimeApiRateAdmissionRequest,
     RuntimeApiRateAdmissionResult,
+    RuntimeApiRatePolicySelection,
     RuntimeApiReconciliationCommand,
     RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationInput,
@@ -77,6 +79,7 @@ from app.services.runtime_api_validation import (
     required_runtime_api_permission,
     runtime_api_public_status_for_execution_state,
     runtime_api_result_cardinality_for_execution_state,
+    validate_runtime_api_clock_binding,
     validate_runtime_api_commit_result,
     validate_runtime_api_domain_operation_result,
     validate_runtime_api_idempotency_replay,
@@ -224,6 +227,7 @@ def preparation_provenance(**updates):
         canonical_request_digest="sha256:0123456789abcdef",
         prepared_facts_digest="sha256:fedcba9876543210",
         correlation_reference="correlation-1",
+        clock_reference="clock.trusted",
         issued_at=NOW,
         evaluated_at=NOW,
         valid_until=NOW + timedelta(minutes=1),
@@ -256,10 +260,26 @@ def test_preparation_provenance_and_operational_results_are_closed() -> None:
             {**provenance.model_dump(), "metadata": {"unsafe": True}}
         )
 
+    clock = RuntimeApiClockReading(clock_reference="clock.trusted", observed_at=NOW)
+    assert validate_runtime_api_clock_binding(clock, provenance=provenance) is clock
+    with pytest.raises(RuntimeApiContractConflict, match="trusted clock"):
+        validate_runtime_api_clock_binding(
+            clock.model_copy(update={"clock_reference": "clock.substituted"}),
+            provenance=provenance,
+        )
     rate_request = RuntimeApiRateAdmissionRequest(
         provenance=provenance,
-        policy_reference="rate-policy-1",
-        evaluated_at=NOW,
+        policy=RuntimeApiRatePolicySelection(
+            tenant_id=TENANT,
+            organization_id=ORG,
+            principal_id=PRINCIPAL,
+            operation=RuntimeApiOperation.SUBMIT_INVOCATION,
+            classification=DataClassification.INTERNAL,
+            policy_id=UUID("00000000-0000-0000-0000-000000000122"),
+            policy_revision=1,
+            policy_reference="rate-policy-1",
+        ),
+        clock=clock,
     )
     RuntimeApiRateAdmissionResult(
         request=rate_request,
@@ -278,7 +298,7 @@ def test_preparation_provenance_and_operational_results_are_closed() -> None:
 
     deadline_request = RuntimeApiDeadlineBudgetRequest(
         provenance=provenance,
-        evaluated_at=NOW,
+        clock=clock,
         deadline_at=NOW + timedelta(seconds=10),
     )
     RuntimeApiDeadlineBudgetResult(
@@ -296,13 +316,14 @@ def test_preparation_provenance_and_operational_results_are_closed() -> None:
     observation_request = RuntimeApiDisconnectObservationRequest(
         provenance=provenance,
         observation_reference="disconnect-observation-1",
+        clock=clock,
     )
     RuntimeApiDisconnectObservationResult(
         request=observation_request,
         disposition=RuntimeApiDisconnectDisposition.CONNECTED,
         observed_at=NOW,
     )
-    with pytest.raises(ValidationError, match="outside preparation validity"):
+    with pytest.raises(ValidationError, match="trusted clock"):
         RuntimeApiDisconnectObservationResult(
             request=observation_request,
             disposition=RuntimeApiDisconnectDisposition.DISCONNECTED,

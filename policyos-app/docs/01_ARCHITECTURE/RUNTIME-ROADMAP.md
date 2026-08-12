@@ -648,3 +648,9 @@ clock provenance, and PostgreSQL multi-process rate admission. Migration `202608
 required only for explicitly provisioned immutable policy revisions and scoped atomic window
 counters; it performs no backfill or default assignment. Contracts, persistence, production
 composition/routes, combined acceptance, and closeout remain separate gates.
+
+The preparation producer and operational capability public-contract correction is implemented
+and validated, pending review. It adds explicit operation-specific preparation contexts, an
+application preparation producer, operation-bound callback capability, trusted clock reading,
+and exact scoped rate-policy selection. It creates no producer backend, policy persistence,
+route, schema, or migration `20260808_0024`.

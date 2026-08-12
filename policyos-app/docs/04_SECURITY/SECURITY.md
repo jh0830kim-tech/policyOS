@@ -632,3 +632,9 @@ owned by PostgreSQL policy revisions and scoped atomic window counters in migrat
 `20260808_0024`. No default policy, inferred assignment, backfill, process-local limiter, disabled
 fallback, hidden clock, persisted callback, or current/latest selection is allowed. Missing policy
 or capability fails closed before package consumption and facade work.
+
+The public contracts now require exact clock-reference/time equality across preparation and
+operational requests, exact tenant/organization/principal/operation/classification policy scope,
+and operation-specific preparation contexts. Query preparation cannot carry a mutation callback;
+callbacks, clocks, policies, UUIDs, revisions, digests, references, and time values may not be
+generated or inferred by producer, issuer, route, facade, or capability adapters.

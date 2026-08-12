@@ -201,6 +201,7 @@ class RuntimeApiPreparationProvenance(RuntimeApiModel):
     canonical_request_digest: BoundedDigest
     prepared_facts_digest: BoundedDigest
     correlation_reference: BoundedReference
+    clock_reference: BoundedReference
     issued_at: datetime
     valid_until: datetime
     evaluated_at: datetime
@@ -219,22 +220,55 @@ class RuntimeApiPreparationProvenance(RuntimeApiModel):
         return self
 
 
-class RuntimeApiRateAdmissionRequest(RuntimeApiModel):
-    provenance: RuntimeApiPreparationProvenance
-    policy_reference: BoundedReference
-    evaluated_at: datetime
+class RuntimeApiClockReading(RuntimeApiModel):
+    clock_reference: BoundedReference
+    observed_at: datetime
 
-    @field_validator("evaluated_at")
+    @field_validator("observed_at")
     @classmethod
     def aware_time(cls, value: datetime) -> datetime:
         if value.tzinfo is None or value.utcoffset() is None:
-            raise ValueError("rate admission time must be timezone-aware")
+            raise ValueError("clock reading must be timezone-aware")
         return value
 
+
+class RuntimeApiRatePolicySelection(RuntimeApiModel):
+    tenant_id: UUID
+    organization_id: UUID
+    principal_id: UUID
+    operation: RuntimeApiOperation
+    classification: DataClassification
+    policy_id: UUID
+    policy_revision: int = Field(ge=1)
+    policy_reference: BoundedReference
+
+
+class RuntimeApiRateAdmissionRequest(RuntimeApiModel):
+    provenance: RuntimeApiPreparationProvenance
+    policy: RuntimeApiRatePolicySelection
+    clock: RuntimeApiClockReading
+
     @model_validator(mode="after")
-    def exact_evaluation_time(self):
-        if self.evaluated_at != self.provenance.evaluated_at:
-            raise ValueError("rate admission time differs from preparation")
+    def exact_binding(self):
+        if (
+            self.clock.clock_reference != self.provenance.clock_reference
+            or self.clock.observed_at != self.provenance.evaluated_at
+            or (
+                self.policy.tenant_id,
+                self.policy.organization_id,
+                self.policy.principal_id,
+                self.policy.operation,
+                self.policy.classification,
+            )
+            != (
+                self.provenance.tenant_id,
+                self.provenance.organization_id,
+                self.provenance.principal_id,
+                self.provenance.operation,
+                self.provenance.classification,
+            )
+        ):
+            raise ValueError("rate admission binding differs from preparation")
         return self
 
 
@@ -255,10 +289,10 @@ class RuntimeApiRateAdmissionResult(RuntimeApiModel):
 
 class RuntimeApiDeadlineBudgetRequest(RuntimeApiModel):
     provenance: RuntimeApiPreparationProvenance
-    evaluated_at: datetime
+    clock: RuntimeApiClockReading
     deadline_at: datetime
 
-    @field_validator("evaluated_at", "deadline_at")
+    @field_validator("deadline_at")
     @classmethod
     def aware_time(cls, value: datetime) -> datetime:
         if value.tzinfo is None or value.utcoffset() is None:
@@ -267,8 +301,11 @@ class RuntimeApiDeadlineBudgetRequest(RuntimeApiModel):
 
     @model_validator(mode="after")
     def exact_evaluation_time(self):
-        if self.evaluated_at != self.provenance.evaluated_at:
-            raise ValueError("deadline evaluation time differs from preparation")
+        if (
+            self.clock.clock_reference != self.provenance.clock_reference
+            or self.clock.observed_at != self.provenance.evaluated_at
+        ):
+            raise ValueError("deadline clock differs from preparation")
         return self
 
 
@@ -281,13 +318,13 @@ class RuntimeApiDeadlineBudgetResult(RuntimeApiModel):
     def exact_disposition(self):
         expected = (
             RuntimeApiDeadlineDisposition.AVAILABLE
-            if self.request.evaluated_at < self.request.deadline_at
+            if self.request.clock.observed_at < self.request.deadline_at
             else RuntimeApiDeadlineDisposition.EXPIRED
         )
         if self.disposition is not expected:
             raise ValueError("deadline disposition differs from exact times")
         expected_remaining = (
-            self.request.deadline_at - self.request.evaluated_at
+            self.request.deadline_at - self.request.clock.observed_at
             if expected is RuntimeApiDeadlineDisposition.AVAILABLE
             else None
         )
@@ -299,6 +336,16 @@ class RuntimeApiDeadlineBudgetResult(RuntimeApiModel):
 class RuntimeApiDisconnectObservationRequest(RuntimeApiModel):
     provenance: RuntimeApiPreparationProvenance
     observation_reference: BoundedReference
+    clock: RuntimeApiClockReading
+
+    @model_validator(mode="after")
+    def exact_evaluation_time(self):
+        if (
+            self.clock.clock_reference != self.provenance.clock_reference
+            or self.clock.observed_at != self.provenance.evaluated_at
+        ):
+            raise ValueError("disconnect clock differs from preparation")
+        return self
 
 
 class RuntimeApiDisconnectObservationResult(RuntimeApiModel):
@@ -315,9 +362,8 @@ class RuntimeApiDisconnectObservationResult(RuntimeApiModel):
 
     @model_validator(mode="after")
     def bounded_observation_time(self):
-        provenance = self.request.provenance
-        if not provenance.evaluated_at <= self.observed_at < provenance.valid_until:
-            raise ValueError("disconnect observation time is outside preparation validity")
+        if self.observed_at != self.request.clock.observed_at:
+            raise ValueError("disconnect observation differs from trusted clock")
         return self
 
 
@@ -670,6 +716,7 @@ __all__ = (
     "IdempotencyKey",
     "RuntimeApiCommandIdentity",
     "RuntimeApiContractConflict",
+    "RuntimeApiClockReading",
     "RuntimeApiDomainOperationResult",
     "RuntimeApiDeadlineBudgetRequest",
     "RuntimeApiDeadlineBudgetResult",
@@ -697,6 +744,7 @@ __all__ = (
     "RuntimeApiRateAdmissionDisposition",
     "RuntimeApiRateAdmissionRequest",
     "RuntimeApiRateAdmissionResult",
+    "RuntimeApiRatePolicySelection",
     "RuntimeApiResultCardinality",
     "RuntimeApiReconciliationCommand",
     "RuntimeApiReconciliationBindingFacts",
