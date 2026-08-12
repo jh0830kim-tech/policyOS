@@ -555,3 +555,27 @@ the caller-supplied locator/read time. Missing, stale, substituted, cross-scope,
 wrong-attempt, wrong-revision, or cardinality mismatch fails closed. The facade retains its five
 public parameters and remains the only transaction owner. Routes, external effects, Workers,
 queues, retries, schedulers, CP10, new schema, and migration `20260808_0024` remain excluded.
+
+### CP9 Runtime route trusted preparation and production composition
+
+ADR-100 prevents HTTP transport and framework wiring from becoming a Runtime-fact authority.
+Mutation idempotency is accepted only through one bounded `Idempotency-Key` header and is absent
+from mutation bodies. A server-owned request-scoped preparation source returns exactly one inert
+already-governed operation package from approved command/orchestration preparation output. It
+cannot generate, infer, select-current/latest, normalize, or repair UUIDs, times, revisions,
+digests, references, write sets, logical results, Registry resolutions, admissions, permits,
+State, Audit, classification, or lineage.
+
+The facade activates that candidate only after exact current principal, tenant, organization,
+permission, classification, lineage, Registry, admission, permit, revision, digest, and
+transaction checks. Routes call one application entry boundary and cannot import or call ORM
+models, Persistence, repositories, adapters, providers, MCP clients, connectors, Workers, or
+transaction controls. Missing or ambiguous preparation fails closed as dependency unavailable;
+no default fake or generated package is allowed in production.
+
+Authentication failures remain generic `401`, scope failures non-disclosing `404`, permission
+denials bounded `403`, exact conflicts `409`, strict input failures `422`, rate limiting
+`429`, dependency absence `503`, and unexpected failures generic `500`. Responses and logs
+contain no raw body, bearer material, secret, provider payload, SQL detail, cross-scope existence,
+session, or transaction identity. ADR-100 adds no schema or migration `20260808_0024`; a need
+for new durable preparation state requires a separate schema-governance stop.

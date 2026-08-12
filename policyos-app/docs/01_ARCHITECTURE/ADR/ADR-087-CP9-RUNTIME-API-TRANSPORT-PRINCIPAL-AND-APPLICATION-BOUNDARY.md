@@ -92,6 +92,17 @@ cardinality and model/migration parity.
 
 CP9 begins with a contracts gate. The transport remains thin, fail-closed, tenant- and organization-isolated, and unable to manufacture Runtime facts or bypass Orchestration.
 
+## ADR-100 clarification
+
+ADR-100 fixes the production route and application-composition boundary after PR #98. Mutation
+idempotency is accepted only from the bounded `Idempotency-Key` header; mutation body schemas must
+not duplicate it. Routes receive transport-safe input only and call one application entry
+boundary. A server-owned request-scoped preparation source supplies an exact already-governed
+operation package, but that inert candidate grants no authority and becomes usable only after the
+facade resolves and validates the current principal, scope, operation permission, persisted facts,
+and exact transaction binding. Routes and generic dependency injection cannot generate, infer,
+select-current/latest, or repair Runtime facts.
+
 ## Alternatives rejected
 
 - Treat organization ID as tenant ID: rejected because trusted binding is required.

@@ -1338,3 +1338,42 @@ def test_cp9_logical_execution_result_persistence_gate_is_bounded() -> None:
     ):
         assert forbidden not in repository + active
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
+
+def test_cp9_runtime_route_production_composition_governance_is_bounded() -> None:
+    adr = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-100-CP9-RUNTIME-ROUTE-TRUSTED-PREPARATION-AND-PRODUCTION-COMPOSITION.md"
+    ).read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "Header-owned mutation idempotency",
+        "Server-owned preparation source",
+        "already-governed operation",
+        "facade-owned transaction",
+        "zero persistence-binding reads",
+        "20260808_0024",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in adr
+    for phrase in (
+        "CP9 Runtime route trusted preparation and production composition",
+        "header-only mutation idempotency",
+        "no schema or migration `20260808_0024`",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()

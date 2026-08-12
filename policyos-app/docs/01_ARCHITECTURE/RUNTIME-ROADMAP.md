@@ -13,7 +13,7 @@ state, and execution result is not a policy outcome.
 
 ## 2. Current and target state
 
-### Current state - CP8 Runtime Delivery complete
+### Current state - CP9 Application Integration merged
 
 - `app.runtime.authority`: immutable request, authority reference, permit reference, admission,
   revocation, bundle, audit-metadata, and pure validation contracts.
@@ -38,7 +38,7 @@ state, and execution result is not a policy outcome.
 - PR #56 corrected Alembic 0007 asyncpg execution, and PR #57 corrected repeated lifecycle
   projection cardinality. PR #65 merged the definition-only Runtime permissions, PR #66 merged
   grant/revoke governance, and PR #67 merged governed grant provisioning. The current migration
-  head is `20260808_0021`.
+  head is `20260808_0023`.
 - The CP8 Runtime Delivery Acceptance Gate passed PostgreSQL 16 verification and green CI and
   merged in PR #58. CP8 Runtime Delivery is complete within its approved local delivery boundary.
   No real external adapter, runtime API, Worker, queue, polling loop, scheduler, live credential
@@ -165,7 +165,8 @@ grants permission or causes automatic execution.
 | CP9-Gate-Runtime-Lifecycle-Public-Contracts | Implemented, validated, pending review | Public lifecycle contracts | Adds the ADR-098 statuses, immutable total mapping, strict cardinality enum, and pure fail-closed count validation | Persistence/read and integration remain deferred |
 | CP9-Gate-Exact-Query-Locator-and-State-Revision-Read-Contracts | Merged, PR #92 | Exact projection read contracts | Adds closed query-only locators and an exact state-revision read result exposing the stored digest | Repository implementation and concrete integration remain deferred |
 | CP9-Gate-Authoritative-Domain-Operation-Result-Contracts | Implemented, validated, pending review | Mutation result contracts | Binds one immutable safe result and the approved closed local stage as sibling output, including the trusted server-owned expected submission invocation reference | No callback, persistence, facade, route, or external-effect implementation |
-| CP9 Application Integration | Implemented, validated, pending review | Concrete application composition | Adds a request-scoped one-shot facts provider, pure binder, domain-callback local operation, exact binding/state/result reads, and same-transaction staging through the existing facade | Production routes and CP9 closeout remain separate |
+| CP9 Application Integration | Merged, PR #98 | Concrete application composition | Adds a request-scoped one-shot facts provider, pure binder, domain-callback local operation, exact binding/state/result reads, and same-transaction staging through the existing facade | Production routes and CP9 closeout remain separate |
+| CP9-Gate-Runtime-Route-Trusted-Preparation-and-Production-Composition | Governed, pending review | Route and composition governance | ADR-100 fixes header-only idempotency, server-owned prepared-operation sourcing, thin routes, error mapping, and composition ownership | Governance only; contract correction and routes remain separate |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires production facade implementation and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -195,6 +196,21 @@ The required implementation order is:
 10. Run combined CP9 PostgreSQL and HTTP acceptance.
 11. Complete CP9 closeout.
 12. Begin CP10 only after separate approval.
+
+### CP9 Runtime route trusted preparation and production composition
+
+ADR-100 governs the remaining transport boundary after Application Integration merged in PR #98.
+Mutation idempotency comes only from one bounded `Idempotency-Key` header; mutation body schemas
+cannot duplicate it. A server-owned request-scoped preparation source returns one exact inert
+operation package from approved command/orchestration preparation output. HTTP, routes, generic
+dependency injection, Persistence, and current/latest lookup cannot generate or infer its UUIDs,
+times, revisions, digests, write set, logical result, Registry, admission, permit, State, Audit, or
+lineage facts.
+
+The route checkpoint remains split into a narrow transport/preparation contract amendment and a
+later production composition/route implementation. The facade retains five parameters and owns the
+only `AsyncSession` root transaction. No migration `20260808_0024` is approved. PostgreSQL/HTTP
+acceptance and CP9 closeout remain blocked until both gates merge; CP10 remains Planned.
 
 
 ## 6. Boundary input and output contracts

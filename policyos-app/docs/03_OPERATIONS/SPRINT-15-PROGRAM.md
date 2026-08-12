@@ -101,7 +101,8 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9 Runtime Lifecycle Public Contracts | Merged, PR #91 | Adds the eight approved public statuses, immutable total lifecycle mapping, strict result-cardinality contract, and pure count validator; persistence/read and concrete integration remain blocked. |
 | CP9 Exact Query Locator and State-Revision Read Contracts | Merged, PR #92 | Adds closed query-only state/result/audit locators, mandatory expected revisions, and an exact state-revision read result exposing only the stored digest; repository implementation and concrete integration remain blocked. |
 | CP9 Authoritative Domain-Operation Result Contracts | Implemented, validated, pending review | Adds one strict sibling-output contract, request-scoped callback Protocol, and trusted expected submission invocation-reference carriage with pure exact command/stage/result binding; implementation remains blocked. |
-| CP9 Application Integration | Implemented, validated, pending review | Composes the existing facade with a one-shot facts provider, pure binder, exact persistence reads, domain callback, local stage, and transport receipt in one caller-owned transaction; routes remain deferred. |
+| CP9 Application Integration | Merged, PR #98 | Composes the existing facade with a one-shot facts provider, pure binder, exact persistence reads, domain callback, local stage, and transport receipt in one caller-owned transaction; routes remain deferred. |
+| CP9 Runtime Route Trusted Preparation and Production Composition Governance | Governed, pending review | ADR-100 fixes header-only mutation idempotency, one exact server-owned prepared-operation package, composition ownership, thin route placement, bounded errors, and the PostgreSQL/HTTP acceptance boundary; contracts and routes remain separate. |
 | CP9 Runtime API | Planned / Blocked | The production facade and production routes remain ordered blockers. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
@@ -487,6 +488,11 @@ followed by CP5-Gate-Ports without renumbering CP5 through CP10.
 - **Binding implementation acceptance:** Model/migration parity; PostgreSQL 16 fresh and existing upgrade; lifetime 1:1 uniqueness; concurrent provisioning conflict; missing, inactive, and revoked binding rejection; exact trusted-scope equality; cross-tenant and cross-organization non-disclosure; and no route, facade, or permission expansion.
 - **Allowed outputs:** After the contracts gate, bounded routes in `app.api`, strict schemas in `app.schemas`, trusted application-facade integration, dependencies, and transport tests.
 - **Package placement:** Routes belong in `app.api`, schemas in `app.schemas`, and the trusted facade sits between API and Runtime Orchestration. `app.runtime.api` is prohibited.
+- **ADR-100 route gate:** Mutation idempotency is header-only. One server-owned request-scoped
+  preparation source supplies an exact already-governed operation package; transport, routes,
+  generic dependency injection, Persistence, and latest-row lookup cannot manufacture it. A
+  narrow transport/preparation contract amendment must merge before production composition and
+  the three Runtime routes.
 - **Allowed scope:** Authenticate, validate untrusted transport, resolve trusted server-side facts, invoke only the application facade, and return bounded safe results.
 - **Security gates:** Exact tenant, organization, principal, membership, actor, optional agent and represented-user binding; no client-supplied Authority, Permit, Plan, State, Registry, Audit, Adapter, or Persistence facts; explicit `Idempotency-Key`; bounded body, header, media type, rate, timeout, and error controls.
 - **Excluded:** Direct ORM, Persistence, Adapter, provider, MCP, or connector calls; public due, claim, lease, `DELIVERING`, lifecycle append, retry, or dead-letter endpoints; external exactly-once guarantees; Worker, queue, polling loop, scheduler, and CP10 implementation.
