@@ -1426,3 +1426,62 @@ def test_cp9_runtime_route_transport_preparation_contract_gate_is_bounded() -> N
         assert phrase in combined
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
+
+
+def test_cp9_runtime_preparation_provenance_capability_governance_is_bounded() -> None:
+    adr = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-101-CP9-RUNTIME-PREPARATION-PROVENANCE-AND-OPERATIONAL-CAPABILITY-OWNERSHIP.md"
+    ).read_text(encoding="utf-8")
+    adr100 = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-100-CP9-RUNTIME-ROUTE-TRUSTED-PREPARATION-AND-PRODUCTION-COMPOSITION.md"
+    ).read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "Same-request authoritative issuer and source",
+        "Exact package identity, validity, and one-shot use",
+        "No preparation schema or migration `20260808_0024`",
+        "Rate admission",
+        "Deadline budget",
+        "Disconnect observation",
+        "Runtime authentication dependency",
+        "Production composition graph",
+        "HTTP translation and non-disclosure",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in adr
+    for phrase in (
+        "same-request application capability",
+        "no migration `20260808_0024`",
+        "separate mandatory one-shot application capabilities",
+        "verified claims rather than a legacy ORM user",
+    ):
+        assert phrase in adr100
+    for phrase in (
+        "preparation provenance",
+        "request-local source",
+        "rate admission, deadline budget, and disconnect observation",
+        "no schema or migration `20260808_0024`",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()

@@ -4,6 +4,9 @@
 **Date:** 2026-08-12
 **Depends on:** ADR-087, ADR-090, ADR-091, ADR-096 through ADR-099, migration
 `20260808_0023`, and the CP9 Application Integration merged in PR #98
+**Clarified by:** ADR-101, which fixes same-request preparation issuance, exact provenance and
+one-shot consumption, operational capability ownership, dedicated verified-claims authentication,
+and the prohibition on preparation persistence or migration `20260808_0024`.
 
 ## Context
 
@@ -200,3 +203,19 @@ This governance gate changes no production Python, public contract, route, schem
 repository, migration, facade implementation, adapter, provider, MCP client, connector, Worker,
 queue, retry, scheduler, external effect, tag, or release. CP9 remains Planned / Blocked until the
 follow-up gates, PostgreSQL/HTTP acceptance, and closeout merge. CP10 remains Planned.
+
+## ADR-101 clarification
+
+The authoritative preparation issuer is a mandatory same-request application capability. It
+receives only approved server-owned inputs and supplies one exact package to a request-local source
+that consumes it once. The package has explicit immutable provenance, validity, scope, operation,
+identity, and digest facts. Missing, stale, ambiguous, substituted, cross-request, cross-operation,
+or reused preparation fails before facade work. No route, dependency, facade, binder, Persistence,
+global registry, current/latest lookup, or default fake can issue or repair it.
+
+Because the callback exists only in that request call stack, preparation has no durable owner and
+no migration `20260808_0024`. Rate admission, deadline budget, and disconnect observation are
+separate mandatory one-shot application capabilities. A dedicated Runtime authentication
+dependency returns verified claims rather than a legacy ORM user. `app.api` alone owns bounded HTTP
+translation; timeout or disconnect creates no Runtime cancellation, retry, compensation, success,
+or external-effect termination authority.
