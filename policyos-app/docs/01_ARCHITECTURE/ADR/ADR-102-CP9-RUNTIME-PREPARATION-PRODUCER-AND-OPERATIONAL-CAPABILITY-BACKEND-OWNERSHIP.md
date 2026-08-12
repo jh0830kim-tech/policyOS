@@ -88,3 +88,11 @@ callback names, route-built preparation, defaults, and migration backfill are pr
 Migration `20260808_0024` is required only for rate admission. This governance gate changes no
 production Python, public contract, model, repository, schema, migration, route, Worker, external
 effect, tag, or release. CP9 remains Planned / Blocked and CP10 remains Planned.
+
+## ADR-103 clarification
+
+The PostgreSQL backend is governed by an immutable exact policy revision, a half-open UTC
+epoch-aligned fixed window, append-only revocation and decision evidence, and a scoped serialized
+counter. Counter creation or increment requires trigger-level proof from the exact admitted
+decision in the same transaction. Migration `20260808_0024` creates exactly four rate-admission
+tables and performs no INSERT, backfill, normalization, deduplication, or default provisioning.

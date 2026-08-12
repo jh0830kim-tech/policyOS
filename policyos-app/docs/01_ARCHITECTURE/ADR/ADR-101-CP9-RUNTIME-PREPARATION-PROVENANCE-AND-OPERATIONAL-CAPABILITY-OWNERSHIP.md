@@ -178,6 +178,14 @@ repository, schema, migration, external effect, Worker, queue, retry, scheduler,
 CP9 remains Planned / Blocked until contract, production route, PostgreSQL/HTTP acceptance, and
 closeout merge. CP10 remains Planned.
 
+## ADR-103 clarification
+
+Rate admission uses an explicitly provisioned immutable policy revision and a trusted-clock UTC
+epoch-aligned fixed window. ADR-103 owns policy lifecycle, provisioning and revocation authority,
+exact decision/counter provenance, concurrent threshold semantics, and migration
+`20260808_0024`. Preparation remains request-local and non-durable; a rate decision grants no
+Runtime approval, admission, permit, execution, state, result, or audit authority.
+
 ## ADR-102 clarification
 
 ADR-102 closes production ownership with an explicit application preparation producer and trusted

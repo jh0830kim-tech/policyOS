@@ -1123,6 +1123,67 @@ def test_cp9_application_integration_gate_is_bounded() -> None:
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
 
 
+def test_cp9_rate_admission_policy_window_governance_is_bounded() -> None:
+    adr = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-103-CP9-RUNTIME-RATE-ADMISSION-POLICY-REVISION-AND-WINDOW-SEMANTICS.md"
+    ).read_text(encoding="utf-8")
+    adr101 = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-101-CP9-RUNTIME-PREPARATION-PROVENANCE-AND-OPERATIONAL-CAPABILITY-OWNERSHIP.md"
+    ).read_text(encoding="utf-8")
+    adr102 = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-102-CP9-RUNTIME-PREPARATION-PRODUCER-AND-OPERATIONAL-CAPABILITY-BACKEND-OWNERSHIP.md"
+    ).read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "UTC epoch-aligned fixed window",
+        "`[window_start, window_end)`",
+        "`runtime.rate_policy.manage`",
+        "decision-first counter proof",
+        "Exact replay",
+        "no INSERT, backfill, normalization, deduplication",
+        "`runtime_rate_policy_revisions`",
+        "`runtime_rate_policy_revocations`",
+        "`runtime_rate_window_counters`",
+        "`runtime_rate_admission_decisions`",
+        "Migration `20260808_0024`",
+        "populated fail-closed downgrade",
+    ):
+        assert phrase in adr
+    for text in (adr101, adr102):
+        assert "ADR-103 clarification" in text
+        assert "migration `20260808_0024`" in text
+    for phrase in (
+        "ADR-103",
+        "decision-first counter proof",
+        "Migration `20260808_0024`",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
+
+
 def test_cp9_preparation_producer_backend_ownership_governance_is_bounded() -> None:
     adr = (
         ROOT
