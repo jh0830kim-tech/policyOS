@@ -23,9 +23,15 @@ from app.models.identity import (
     User,
 )
 from app.models.runtime_api_idempotency import RuntimeApiIdempotencyReceiptRecord
+from app.models.runtime_registry import RuntimeReconciliationRequestRecord
+from app.runtime.persistence import (
+    SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory,
+    SQLAlchemyRuntimeRegistryRepository,
+)
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
     RuntimeApiContractConflict,
+    RuntimeApiDomainOperationResult,
     RuntimeApiInvocationQuery,
     RuntimeApiInvocationQueryFacts,
     RuntimeApiInvocationQueryInput,
@@ -47,6 +53,10 @@ from app.services.runtime_api_facade import (
     SQLAlchemyRuntimeApiApplicationFacade,
 )
 from app.services.runtime_api_idempotency import RuntimeApiIdempotencyPersistenceError
+from app.services.runtime_api_integration import (
+    RuntimeApiActiveTransactionLocalOperation,
+    RuntimeApiExactOrchestrationFactBinder,
+)
 from app.services.runtime_api_validation import (
     build_runtime_api_reconciliation_digest,
     build_runtime_api_submission_digest,
@@ -370,6 +380,187 @@ async def test_postgresql_submission_replay_conflict_and_rollback(database_url):
     async with factory() as session:
         organization = await session.get(Organization, organization_id)
         assert organization.name == "before-receipt-failure"
+    await engine.dispose()
+
+
+class ConcreteDomainCallback:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def __call__(self, command):
+        self.calls += 1
+        return RuntimeApiDomainOperationResult(
+            safe_result=RuntimeApiSafeResult(
+                result_reference="result:concrete-integration",
+                projection=RuntimeApiStatusProjection(
+                    invocation_reference=command.invocation_reference,
+                    status=RuntimeApiPublicStatus.RECONCILIATION_REQUIRED,
+                    status_reference="status:concrete-integration",
+                    correlation_reference=command.identity.correlation_reference,
+                    observed_at=NOW,
+                ),
+            ),
+            stage=command.integration.stage,
+        )
+
+
+def concrete_facade(session, callback):
+    persistence_factory = SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory()
+
+    def local_factory(factory_session):
+        return RuntimeApiActiveTransactionLocalOperation(
+            factory_session,
+            persistence_factory=persistence_factory,
+            state_reader_factory=persistence_factory,
+            logical_result_reader_factory=persistence_factory,
+            domain_callback=callback,
+        )
+
+    return SQLAlchemyRuntimeApiApplicationFacade(
+        session,
+        required_audience=AUDIENCE,
+        binder_factory=RuntimeApiExactOrchestrationFactBinder,
+        local_operation_factory=local_factory,
+    )
+
+
+@pytest.mark.asyncio
+async def test_postgresql_concrete_reconciliation_stage_and_receipt_are_atomic(database_url):
+    engine = create_async_engine(database_url)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    organization_id, tenant_id, _, claims = await seed(factory)
+    selector = RuntimeApiOrganizationSelector(organization_id=organization_id)
+    request = RuntimeApiReconciliationInput(
+        invocation_reference="invocation:concrete-integration",
+        reconciliation_reference="reconciliation:concrete-integration",
+        idempotency_key=f"key-{uuid4()}",
+    )
+    facts = RuntimeApiReconciliationFacts(
+        command_id=(command_id := uuid4()),
+        command_version="v1",
+        receipt_id=(receipt_id := uuid4()),
+        committed_at=NOW,
+        correlation_reference="correlation:concrete-integration",
+        context=context(),
+        integration=reconciliation_integration_facts(
+            receipt_id=receipt_id,
+            command_id=command_id,
+            invocation_reference=request.invocation_reference,
+            reconciliation_reference=request.reconciliation_reference,
+            correlation_reference="correlation:concrete-integration",
+            tenant_id=tenant_id,
+            organization_id=organization_id,
+            classification=DataClassification.INTERNAL,
+        ),
+    )
+    digest = build_runtime_api_reconciliation_digest(request, facts=facts)
+    facts = facts.model_copy(
+        update={"integration": facts.integration.model_copy(update={"command_digest": digest})}
+    )
+    async with factory() as session, session.begin():
+        await SQLAlchemyRuntimeRegistryRepository(session).append_binding(
+            facts.integration.binding.persistence
+        )
+
+    callback = ConcreteDomainCallback()
+    async with factory() as session:
+        first = await concrete_facade(session, callback).request_reconciliation(
+            request,
+            claims,
+            selector,
+            facts,
+        )
+    assert callback.calls == 1
+    async with factory() as session:
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(RuntimeReconciliationRequestRecord)
+                .where(
+                    RuntimeReconciliationRequestRecord.runtime_effect_reconciliation_request_id
+                    == (
+                        facts.integration.stage.reconciliation_request.runtime_effect_reconciliation_request_id
+                    )
+                )
+            )
+            == 1
+        )
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(RuntimeApiIdempotencyReceiptRecord)
+                .where(RuntimeApiIdempotencyReceiptRecord.receipt_id == facts.receipt_id)
+            )
+            == 1
+        )
+
+    async with factory() as session:
+        replay = await concrete_facade(session, callback).request_reconciliation(
+            request,
+            claims,
+            selector,
+            replace_reconciliation_ids(facts),
+        )
+    assert replay.idempotency.receipt == first.idempotency.receipt
+    assert callback.calls == 1
+
+    failed_request = request.model_copy(update={"idempotency_key": f"key-{uuid4()}"})
+    failed_request_record = facts.integration.stage.reconciliation_request.model_copy(
+        update={"runtime_effect_reconciliation_request_id": uuid4()}
+    )
+    failed_stage = facts.integration.stage.model_copy(
+        update={
+            "local_write_set_id": uuid4(),
+            "transport_receipt_id": facts.receipt_id,
+            "reconciliation_request": failed_request_record,
+        }
+    )
+    failed_facts = facts.model_copy(
+        update={
+            "command_id": uuid4(),
+            "receipt_id": facts.receipt_id,
+            "integration": facts.integration.model_copy(
+                update={
+                    "command_id": uuid4(),
+                    "stage": failed_stage,
+                }
+            ),
+        }
+    )
+    failed_facts = failed_facts.model_copy(
+        update={
+            "command_id": failed_facts.integration.command_id,
+            "integration": failed_facts.integration.model_copy(
+                update={
+                    "command_digest": build_runtime_api_reconciliation_digest(
+                        failed_request,
+                        facts=failed_facts,
+                    )
+                }
+            ),
+        }
+    )
+    with pytest.raises(RuntimeApiFacadeError, match="runtime facade operation failed"):
+        async with factory() as session:
+            await concrete_facade(session, callback).request_reconciliation(
+                failed_request,
+                claims,
+                selector,
+                failed_facts,
+            )
+    assert callback.calls == 2
+    async with factory() as session:
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(RuntimeReconciliationRequestRecord)
+                .where(
+                    RuntimeReconciliationRequestRecord.runtime_effect_reconciliation_request_id
+                    == failed_request_record.runtime_effect_reconciliation_request_id
+                )
+            )
+            == 0
+        )
     await engine.dispose()
 
 

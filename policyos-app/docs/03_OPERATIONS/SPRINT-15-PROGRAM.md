@@ -101,6 +101,7 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9 Runtime Lifecycle Public Contracts | Merged, PR #91 | Adds the eight approved public statuses, immutable total lifecycle mapping, strict result-cardinality contract, and pure count validator; persistence/read and concrete integration remain blocked. |
 | CP9 Exact Query Locator and State-Revision Read Contracts | Merged, PR #92 | Adds closed query-only state/result/audit locators, mandatory expected revisions, and an exact state-revision read result exposing only the stored digest; repository implementation and concrete integration remain blocked. |
 | CP9 Authoritative Domain-Operation Result Contracts | Implemented, validated, pending review | Adds one strict sibling-output contract, request-scoped callback Protocol, and trusted expected submission invocation-reference carriage with pure exact command/stage/result binding; implementation remains blocked. |
+| CP9 Application Integration | Implemented, validated, pending review | Composes the existing facade with a one-shot facts provider, pure binder, exact persistence reads, domain callback, local stage, and transport receipt in one caller-owned transaction; routes remain deferred. |
 | CP9 Runtime API | Planned / Blocked | The production facade and production routes remain ordered blockers. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
