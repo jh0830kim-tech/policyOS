@@ -32,6 +32,10 @@ from app.models.mcp import MCPAuditRecord, MCPServerConfig, MCPServerHealthRecor
 from app.models.policy_candidate import PolicyCandidate
 from app.models.provider_audit import ProviderAuditRecord
 from app.models.runtime_api_idempotency import RuntimeApiIdempotencyReceiptRecord
+from app.models.runtime_logical_result import (
+    RuntimeLogicalExecutionResultRecord,
+    RuntimeLogicalExecutionResultRevisionRecord,
+)
 from app.models.runtime_permission_grants import RuntimePermissionGrantEvent
 from app.models.runtime_registry import (
     RuntimeReconciliationRequestRecord,
@@ -76,6 +80,8 @@ __all__ = [
     "Role",
     "RolePermission",
     "RuntimePermissionGrantEvent",
+    "RuntimeLogicalExecutionResultRecord",
+    "RuntimeLogicalExecutionResultRevisionRecord",
     "RuntimeReconciliationRequestRecord",
     "RuntimeRegistryAdmissionBindingRecord",
     "RuntimeRegistryPermitBindingRecord",

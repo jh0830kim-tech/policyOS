@@ -7,15 +7,21 @@ from app.runtime.persistence.errors import (
     RuntimePersistenceError,
     RuntimePersistenceTransactionError,
 )
+from app.runtime.persistence.logical_result_repositories import (
+    SQLAlchemyRuntimeLogicalExecutionResultRepository,
+)
 from app.runtime.persistence.registry_repositories import SQLAlchemyRuntimeRegistryRepository
 from app.runtime.persistence.transaction import _persist_runtime_atomic_write_set
 from app.runtime.ports import (
     RuntimeApiActiveTransactionContext,
+    RuntimeApiExecutionStateRevisionReadResult,
     RuntimeApiLocalWriteSetOperation,
     RuntimeApiLocalWriteSetStage,
     RuntimeApiLocalWriteSetStageResult,
     RuntimeApiLogicalExecutionResultMutationPresent,
+    RuntimeApiLogicalExecutionResultRevisionReadResult,
     RuntimeApiPersistenceBindingRead,
+    RuntimeApiQueryProjectionLocator,
     validate_runtime_atomic_write_set,
 )
 
@@ -62,6 +68,36 @@ class SQLAlchemyRuntimeApiActiveTransactionPersistence:
         except SQLAlchemyError as exc:
             raise RuntimePersistenceError("active Registry read failed") from exc
 
+    async def read_exact_state_revision(
+        self,
+        context: RuntimeApiActiveTransactionContext,
+        locator: RuntimeApiQueryProjectionLocator,
+    ) -> RuntimeApiExecutionStateRevisionReadResult:
+        self._enter(context)
+        try:
+            return await SQLAlchemyRuntimeLogicalExecutionResultRepository(
+                self._session
+            ).read_exact_state_revision(locator)
+        except RuntimePersistenceError:
+            raise
+        except SQLAlchemyError as exc:
+            raise RuntimePersistenceError("active exact state read failed") from exc
+
+    async def read_exact_logical_execution_result_revision(
+        self,
+        context: RuntimeApiActiveTransactionContext,
+        locator: RuntimeApiQueryProjectionLocator,
+    ) -> RuntimeApiLogicalExecutionResultRevisionReadResult:
+        self._enter(context)
+        try:
+            return await SQLAlchemyRuntimeLogicalExecutionResultRepository(
+                self._session
+            ).read_exact_logical_execution_result_revision(locator)
+        except RuntimePersistenceError:
+            raise
+        except SQLAlchemyError as exc:
+            raise RuntimePersistenceError("active exact logical-result read failed") from exc
+
     async def stage_local_write_set(
         self,
         context: RuntimeApiActiveTransactionContext,
@@ -74,19 +110,19 @@ class SQLAlchemyRuntimeApiActiveTransactionPersistence:
                     raise RuntimePersistenceTransactionError(
                         "submission stage requires one atomic write set"
                     )
-                if isinstance(
-                    stage.logical_execution_result,
-                    RuntimeApiLogicalExecutionResultMutationPresent,
-                ):
-                    raise RuntimePersistenceTransactionError(
-                        "logical-result persistence is not implemented"
-                    )
                 validate_runtime_atomic_write_set(stage.write_set)
                 await _persist_runtime_atomic_write_set(
                     self._session,
                     stage.write_set,
                     stored_at=stage.staged_at,
                 )
+                if isinstance(
+                    stage.logical_execution_result,
+                    RuntimeApiLogicalExecutionResultMutationPresent,
+                ):
+                    await SQLAlchemyRuntimeLogicalExecutionResultRepository(
+                        self._session
+                    ).append_from_stage(stage)
             elif stage.operation is RuntimeApiLocalWriteSetOperation.REQUEST_RECONCILIATION:
                 await SQLAlchemyRuntimeRegistryRepository(
                     self._session

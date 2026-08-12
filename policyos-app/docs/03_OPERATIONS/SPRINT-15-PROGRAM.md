@@ -832,3 +832,17 @@ The existing active-transaction implementation rejects result-present staging be
 work until the dedicated migration `20260808_0023` and repository gate is implemented. The gate
 adds no schema, backfill, persistence row, facade behavior, route, external effect, or CP10 work;
 CP9 remains Planned / Blocked.
+
+### CP9 logical execution-result persistence and exact-read implementation
+
+Migration `20260808_0023` and the dedicated logical-result repository implement ADR-099's exact
+identity and append-only revision ownership. The migration performs no INSERT, inference,
+normalization, deduplication, or adapter-result promotion. A populated downgrade fails before any
+destructive DDL; an empty schema may downgrade dependency-safely to `20260808_0022`.
+
+The same-session active-transaction capability stages the existing closed atomic write set before
+the optional logical-result revision, without opening, committing, rolling back, closing, or
+replacing the caller-owned session or root transaction. Result-absent and reconciliation paths add
+no logical-result mutation. Exact reads use caller-supplied record IDs and revisions and return
+stored provenance unchanged. Concrete provider, binder, local operation, facade composition,
+routes, external effects, and CP10 remain deferred.

@@ -24,6 +24,13 @@ from app.runtime.persistence.errors import (
     RuntimeRegistryPersistenceBindingError,
     RuntimeRegistryPersistenceNotFoundError,
 )
+from app.runtime.persistence.logical_result_repositories import (
+    SQLAlchemyRuntimeLogicalExecutionResultRepository,
+)
+from app.runtime.persistence.logical_result_serialization import (
+    deserialize_logical_execution_result,
+    serialize_logical_execution_result,
+)
 from app.runtime.persistence.models import (
     RUNTIME_EFFECT_PERSISTENCE_TABLES,
     RUNTIME_PERSISTENCE_TABLES,
@@ -103,15 +110,18 @@ __all__ = (
     "SQLAlchemyRuntimeApiActiveTransactionPersistence",
     "SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory",
     "SQLAlchemyRuntimeIdempotencyRepository",
+    "SQLAlchemyRuntimeLogicalExecutionResultRepository",
     "SQLAlchemyRuntimeOutboxRepository",
     "SQLAlchemyRuntimePermitRepository",
     "SQLAlchemyRuntimeRegistryRepository",
     "SQLAlchemyRuntimeTransaction",
     "deserialize_delivery_model",
+    "deserialize_logical_execution_result",
     "deserialize_runtime_record",
     "deserialize_registry_payload",
     "metadata_for",
     "serialize_delivery_model",
+    "serialize_logical_execution_result",
     "serialize_runtime_record",
     "serialize_registry_payload",
     "validate_loaded_record",

@@ -1125,7 +1125,7 @@ def test_cp9_logical_execution_result_ownership_governance_is_bounded() -> None:
         "CP9 logical execution-result identity authority",
     ):
         assert phrase in combined
-    assert not (
+    assert (
         ROOT / "alembic" / "versions" / "20260808_0023_runtime_logical_execution_results.py"
     ).exists()
     assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
@@ -1237,11 +1237,65 @@ def test_cp9_logical_execution_result_contract_gate_is_bounded() -> None:
     ):
         assert phrase in persistence
     assert "validate_runtime_api_result_count(state, int(present))" in validation
-    assert "logical-result persistence is not implemented" in active
+    assert "logical-result persistence is not implemented" not in active
     assert "CP9 logical execution-result public domain and Port contracts" in combined
     assert "SQLAlchemy" not in persistence
-    assert not (
+    assert (
         ROOT / "alembic" / "versions" / "20260808_0023_runtime_logical_execution_results.py"
     ).exists()
+    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
+
+def test_cp9_logical_execution_result_persistence_gate_is_bounded() -> None:
+    models = (ROOT / "app" / "models" / "runtime_logical_result.py").read_text(encoding="utf-8")
+    repository = (
+        ROOT / "app" / "runtime" / "persistence" / "logical_result_repositories.py"
+    ).read_text(encoding="utf-8")
+    active = (ROOT / "app" / "runtime" / "persistence" / "active_transaction.py").read_text(
+        encoding="utf-8"
+    )
+    migration = (
+        ROOT / "alembic" / "versions" / "20260808_0023_runtime_logical_execution_results.py"
+    ).read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for name in (
+        "RuntimeLogicalExecutionResultRecord",
+        "RuntimeLogicalExecutionResultRevisionRecord",
+        "uq_runtime_logical_result_request_attempt",
+        "uq_runtime_logical_result_revision_scope",
+    ):
+        assert name in models
+    for name in (
+        "append_from_stage",
+        "read_exact_state_revision",
+        "read_exact_logical_execution_result_revision",
+        "record_digest_reference=stored.record_digest_reference",
+    ):
+        assert name in repository
+    assert "append_from_stage(stage)" in active
+    assert 'revision: str = "20260808_0023"' in migration
+    assert 'down_revision: str | None = "20260808_0022"' in migration
+    assert "BEFORE UPDATE OR DELETE" in migration
+    assert "INSERT" not in migration
+    assert "CP9 logical execution-result persistence and exact reads" in combined
+    for forbidden in (
+        "uuid4(",
+        "datetime.now(",
+        "begin_nested(",
+        ".commit(",
+        ".rollback(",
+        ".close(",
+    ):
+        assert forbidden not in repository + active
     assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
