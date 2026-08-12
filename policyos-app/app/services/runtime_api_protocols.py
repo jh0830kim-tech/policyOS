@@ -13,6 +13,8 @@ from app.runtime.ports import (
 )
 from app.services.runtime_api_contracts import (
     BoundedDigest,
+    BoundedReference,
+    RuntimeApiClockReading,
     RuntimeApiCommandIdentity,
     RuntimeApiDeadlineBudgetRequest,
     RuntimeApiDeadlineBudgetResult,
@@ -339,6 +341,120 @@ class RuntimeApiPreparationIssuer(Protocol):
     ) -> RuntimeApiPreparedReconciliation: ...
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RuntimeApiSubmissionPreparationContext:
+    """Explicit server-owned inputs for one submission preparation."""
+
+    provenance: RuntimeApiPreparationProvenance
+    clock: RuntimeApiClockReading
+    facts: RuntimeApiSubmissionFacts
+    domain_callback: RuntimeApiDomainOperationCallback
+
+    def __post_init__(self) -> None:
+        RuntimeApiPreparedSubmission(
+            provenance=self.provenance,
+            facts=self.facts,
+            domain_callback=self.domain_callback,
+        )
+        if (
+            self.clock.clock_reference != self.provenance.clock_reference
+            or self.clock.observed_at != self.provenance.evaluated_at
+        ):
+            raise ValueError("submission preparation clock differs")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RuntimeApiInvocationQueryPreparationContext:
+    """Explicit server-owned inputs for one read-only query preparation."""
+
+    provenance: RuntimeApiPreparationProvenance
+    clock: RuntimeApiClockReading
+    facts: RuntimeApiInvocationQueryFacts
+
+    def __post_init__(self) -> None:
+        RuntimeApiPreparedInvocationQuery(provenance=self.provenance, facts=self.facts)
+        if (
+            self.clock.clock_reference != self.provenance.clock_reference
+            or self.clock.observed_at != self.provenance.evaluated_at
+        ):
+            raise ValueError("query preparation clock differs")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RuntimeApiReconciliationPreparationContext:
+    """Explicit server-owned inputs for one reconciliation preparation."""
+
+    provenance: RuntimeApiPreparationProvenance
+    clock: RuntimeApiClockReading
+    facts: RuntimeApiReconciliationFacts
+    domain_callback: RuntimeApiDomainOperationCallback
+
+    def __post_init__(self) -> None:
+        RuntimeApiPreparedReconciliation(
+            provenance=self.provenance,
+            facts=self.facts,
+            domain_callback=self.domain_callback,
+        )
+        if (
+            self.clock.clock_reference != self.provenance.clock_reference
+            or self.clock.observed_at != self.provenance.evaluated_at
+        ):
+            raise ValueError("reconciliation preparation clock differs")
+
+
+@runtime_checkable
+class RuntimeApiPreparationProducer(Protocol):
+    """Validate explicit trusted inputs and issue one inert package."""
+
+    async def produce_submission(
+        self,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        request: RuntimeApiSubmissionInput,
+        context: RuntimeApiSubmissionPreparationContext,
+    ) -> RuntimeApiPreparedSubmission: ...
+
+    async def produce_query(
+        self,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        request: RuntimeApiInvocationQueryInput,
+        context: RuntimeApiInvocationQueryPreparationContext,
+    ) -> RuntimeApiPreparedInvocationQuery: ...
+
+    async def produce_reconciliation(
+        self,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        request: RuntimeApiReconciliationInput,
+        context: RuntimeApiReconciliationPreparationContext,
+    ) -> RuntimeApiPreparedReconciliation: ...
+
+
+@runtime_checkable
+class RuntimeApiDomainOperationCapability(Protocol):
+    """Supply one operation-bound callback for the current request only."""
+
+    async def submission_callback(
+        self,
+        provenance: RuntimeApiPreparationProvenance,
+        facts: RuntimeApiSubmissionFacts,
+    ) -> RuntimeApiDomainOperationCallback: ...
+
+    async def reconciliation_callback(
+        self,
+        provenance: RuntimeApiPreparationProvenance,
+        facts: RuntimeApiReconciliationFacts,
+    ) -> RuntimeApiDomainOperationCallback: ...
+
+
+@runtime_checkable
+class RuntimeClockPort(Protocol):
+    """Read one explicitly identified trusted clock for the request scope."""
+
+    async def read(self, clock_reference: BoundedReference) -> RuntimeApiClockReading: ...
+
+
 @runtime_checkable
 class RuntimeApiRateAdmissionCapability(Protocol):
     async def admit(
@@ -415,11 +531,13 @@ class RuntimeApiActiveTransactionPersistenceFactory(Protocol):
 __all__ = (
     "RuntimeApiApplicationFacade",
     "RuntimeApiActiveTransactionPersistenceFactory",
+    "RuntimeApiDomainOperationCapability",
     "RuntimeApiDomainOperationCallback",
     "RuntimeApiDeadlineBudgetCapability",
     "RuntimeApiDisconnectObservationCapability",
     "RuntimeApiIdempotencyTransactionPort",
     "RuntimeApiIntegrationFactsProvider",
+    "RuntimeApiInvocationQueryPreparationContext",
     "RuntimeApiLocalMutation",
     "RuntimeApiLocalOperationPort",
     "RuntimeApiOrchestrationFactBinder",
@@ -429,9 +547,13 @@ __all__ = (
     "RuntimeApiPreparedReconciliation",
     "RuntimeApiPreparedSubmission",
     "RuntimeApiPreparationIssuer",
+    "RuntimeApiPreparationProducer",
     "RuntimeApiPersistedOrchestrationFactBinder",
     "RuntimeApiQueryProjectionLocatorProvider",
     "RuntimeApiRateAdmissionCapability",
+    "RuntimeApiReconciliationPreparationContext",
+    "RuntimeApiSubmissionPreparationContext",
     "RuntimeApiTrustedPreparationSource",
     "RuntimeApiTrustedContextResolver",
+    "RuntimeClockPort",
 )

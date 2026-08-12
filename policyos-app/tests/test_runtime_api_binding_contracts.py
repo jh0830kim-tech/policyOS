@@ -960,6 +960,7 @@ def preparation_provenance(
         canonical_request_digest=command_digest,
         prepared_facts_digest="sha256:preparedfacts1",
         correlation_reference=correlation_reference,
+        clock_reference="clock.caller",
         issued_at=NOW,
         evaluated_at=NOW,
         valid_until=NOW + timedelta(minutes=1),

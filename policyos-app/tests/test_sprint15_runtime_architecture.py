@@ -1163,6 +1163,34 @@ def test_cp9_preparation_producer_backend_ownership_governance_is_bounded() -> N
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
+def test_cp9_preparation_producer_capability_contracts_are_closed() -> None:
+    contracts = (ROOT / "app" / "services" / "runtime_api_contracts.py").read_text()
+    protocols = (ROOT / "app" / "services" / "runtime_api_protocols.py").read_text()
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for name in ("RuntimeApiClockReading", "RuntimeApiRatePolicySelection"):
+        assert f"class {name}" in contracts
+    for name in (
+        "RuntimeApiPreparationProducer",
+        "RuntimeApiDomainOperationCapability",
+        "RuntimeClockPort",
+        "RuntimeApiSubmissionPreparationContext",
+        "RuntimeApiInvocationQueryPreparationContext",
+        "RuntimeApiReconciliationPreparationContext",
+    ):
+        assert f"class {name}" in protocols
+    assert "public-contract correction is implemented and validated" in combined
+    assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
+
+
 def test_cp9_logical_execution_result_ownership_governance_is_bounded() -> None:
     adr = ADR / (
         "ADR-099-CP9-RUNTIME-LOGICAL-EXECUTION-RESULT-IDENTITY-AND-PERSISTENCE-OWNERSHIP.md"

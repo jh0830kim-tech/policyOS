@@ -20,6 +20,7 @@ from app.runtime.registry import (
 )
 from app.runtime.state import RuntimeExecutionState
 from app.services.runtime_api_contracts import (
+    RuntimeApiClockReading,
     RuntimeApiCommandIdentity,
     RuntimeApiContractConflict,
     RuntimeApiDomainOperationResult,
@@ -60,6 +61,21 @@ def validate_runtime_api_preparation_provenance(
     if not actual.issued_at <= actual.evaluated_at < actual.valid_until:
         raise RuntimeApiContractConflict("preparation is stale")
     return actual
+
+
+def validate_runtime_api_clock_binding(
+    clock: RuntimeApiClockReading,
+    *,
+    provenance: RuntimeApiPreparationProvenance,
+) -> RuntimeApiClockReading:
+    """Require the caller-supplied trusted clock used by preparation."""
+
+    if (
+        clock.clock_reference != provenance.clock_reference
+        or clock.observed_at != provenance.evaluated_at
+    ):
+        raise RuntimeApiContractConflict("trusted clock differs from preparation")
+    return clock
 
 
 RUNTIME_API_PUBLIC_STATUS_BY_EXECUTION_STATE: Mapping[
@@ -722,6 +738,7 @@ __all__ = (
     "runtime_api_public_status_for_execution_state",
     "runtime_api_result_cardinality_for_execution_state",
     "validate_runtime_api_commit_result",
+    "validate_runtime_api_clock_binding",
     "validate_runtime_api_domain_operation_result",
     "validate_runtime_api_idempotency_replay",
     "validate_runtime_api_invocation_query_binding",
