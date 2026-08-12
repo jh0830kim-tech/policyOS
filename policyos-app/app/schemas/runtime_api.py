@@ -6,7 +6,6 @@ from app.ai.privacy import DataClassification
 from app.services.runtime_api_contracts import (
     BoundedMessage,
     BoundedReference,
-    IdempotencyKey,
     RuntimeApiErrorCode,
     RuntimeApiPublicStatus,
 )
@@ -21,7 +20,6 @@ class RuntimeInvocationSubmitRequest(RuntimeApiTransportModel):
     command_reference: BoundedReference
     input_reference: BoundedReference | None = None
     classification: DataClassification
-    idempotency_key: IdempotencyKey
 
 
 class RuntimeInvocationStatusQuery(RuntimeApiTransportModel):
@@ -31,7 +29,6 @@ class RuntimeInvocationStatusQuery(RuntimeApiTransportModel):
 class RuntimeReconciliationRequest(RuntimeApiTransportModel):
     invocation_reference: BoundedReference
     reconciliation_reference: BoundedReference
-    idempotency_key: IdempotencyKey
 
 
 class RuntimeStatusResponse(RuntimeApiTransportModel):

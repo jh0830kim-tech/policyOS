@@ -604,3 +604,20 @@ state and logical-result reads require explicit IDs and revisions and return sto
 reference facts without current/latest selection. Existing generic or adapter-result rows are not
 backfilled, promoted, normalized, or deduplicated. Application Integration remains blocked as a
 separate checkpoint; CP9 remains Planned / Blocked and CP10 remains Planned.
+
+### CP9 Runtime route transport and trusted preparation public contracts
+
+The transport/preparation contract gate implements ADR-100's header-only mutation identity by
+removing `idempotency_key` from both mutation body schemas while retaining the existing bounded
+field in the internal application inputs and persistence identity. A route must validate exactly
+one `Idempotency-Key` header and explicitly construct that internal input; body fallback,
+precedence, normalization, truncation, and generated replacement remain prohibited.
+
+The application layer exposes frozen operation-specific prepared packages, one request-scoped
+trusted preparation source Protocol, and one prepared application-entry Protocol. Submission and
+reconciliation packages carry the existing strict outer facts and exact domain callback; the
+query package carries only the strict read-only facts and therefore has no callback, stage, or
+receipt. These candidates remain inert until the facade performs current scope, permission, and
+persisted-fact validation. No provider implementation, route, composition root, schema, migration
+`20260808_0024`, or external effect is added; CP9 remains Planned / Blocked and CP10 remains
+Planned.
