@@ -621,3 +621,21 @@ receipt. These candidates remain inert until the facade performs current scope, 
 persisted-fact validation. No provider implementation, route, composition root, schema, migration
 `20260808_0024`, or external effect is added; CP9 remains Planned / Blocked and CP10 remains
 Planned.
+
+### CP9 Runtime preparation provenance and operational capability ownership
+
+ADR-101 makes preparation a mandatory same-request application capability rather than a durable
+record. An approved server-owned issuer supplies one exact immutable package to a request-local
+source that consumes it once. Explicit provenance binds preparation, request, principal, tenant,
+organization, operation, digest, correlation, and validity facts; missing, stale, ambiguous,
+substituted, cross-request, cross-operation, or reused packages fail before facade work. Routes,
+generic dependency injection, persistence, current/latest selection, mutable registries, callback
+names, and default fakes cannot issue or repair preparation.
+
+Rate admission, deadline budget, and disconnect observation are separate mandatory one-shot
+application capabilities. They use explicit server-owned scope and time facts, fail closed when
+absent, and create no Runtime retry, cancellation, compensation, state, result, or external-effect
+authority. A dedicated Runtime dependency returns verified claims without a legacy ORM user, while
+`app.api` alone maps bounded errors. Preparation is not persisted, so no schema or migration
+`20260808_0024` is approved. Public contracts and production routes remain separate gates; CP9
+remains Planned / Blocked and CP10 remains Planned.

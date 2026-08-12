@@ -867,3 +867,22 @@ and domain callback, while the query package contains read-only facts and no mut
 The prepared application-entry Protocol is the only route-facing application boundary. Concrete
 preparation, composition, routes, HTTP acceptance, schema, migration `20260808_0024`, Worker, and
 CP10 work remain separate checkpoints; CP9 remains Planned / Blocked and CP10 remains Planned.
+
+### CP9 Runtime preparation provenance and operational capabilities
+
+ADR-101 governs a same-request, mandatory server-owned preparation issuer. It emits one immutable
+operation-specific package to a request-local source whose exact method consumes the package once.
+The package carries explicit preparation, request, principal, tenant, organization, operation,
+digest, correlation, and validity provenance. It cannot be produced or repaired by transport,
+FastAPI dependency injection, facade, binder, Persistence, current/latest lookup, global registry,
+callback name, or default fake. Missing, stale, ambiguous, substituted, reused, cross-request, or
+cross-operation packages fail closed before facade entry.
+
+The follow-up public-contract gate must define rate admission, deadline budget, and disconnect
+observation as strict one-shot application capabilities with explicit scope and time inputs. Their
+absence fails closed; timeout or disconnect creates no Runtime cancellation, retry, compensation,
+success, or external-effect authority. A dedicated Runtime verified-claims dependency remains
+separate from the legacy ORM-user dependency, and only `app.api` owns bounded HTTP translation.
+No preparation persistence, model, repository, backfill, schema, or migration `20260808_0024` is
+approved. Contract, production route, PostgreSQL/HTTP acceptance, and closeout remain separate;
+CP9 remains Planned / Blocked and CP10 remains Planned.

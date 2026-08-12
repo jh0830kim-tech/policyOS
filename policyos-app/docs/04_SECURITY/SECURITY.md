@@ -596,3 +596,24 @@ the current principal, tenant, organization, permission, classification, lineage
 admission, permit, revision, digest, session, and root transaction. This contract gate creates no
 default provider, route, global registry, durable preparation state, schema, or migration
 `20260808_0024`.
+
+### CP9 Runtime preparation provenance and operational capability boundary
+
+ADR-101 requires a mandatory server-owned issuer to create one preparation package inside the
+same request call stack. Explicit immutable provenance binds preparation ID, request identity,
+principal, tenant, organization, operation, canonical request and facts digests, correlation, and
+caller-supplied validity times. The request-local source consumes the exact operation once.
+Missing, stale, ambiguous, substituted, reused, cross-request, cross-operation, scope-, digest-, or
+time-mismatched packages fail before facade work. Transport, dependency injection, persistence,
+Audit, mutable registries, callback names, dynamic imports, current/latest lookup, and default
+fakes are not preparation authority.
+
+Rate admission, deadline budget, and disconnect observation are mandatory one-shot application
+capabilities with exact request scope and explicit time inputs. No hidden clock or disabled
+production limiter is allowed, and capability absence fails closed. Timeout or disconnect does not
+create Runtime cancellation, retry, compensation, state, result, success, or proof that an external
+effect stopped. Runtime authentication returns only issuer/audience/expiry-verified claims and
+never downgrades to a legacy ORM user; the facade still resolves principal, membership, binding,
+classification, and permission inside its transaction. `app.api` alone maps bounded non-disclosing
+HTTP errors. Preparation is not durable, so no table, backfill, repository, schema, or migration
+`20260808_0024` is approved.
