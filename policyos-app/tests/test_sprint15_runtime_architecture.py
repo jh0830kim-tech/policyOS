@@ -1013,7 +1013,6 @@ def test_cp9_authoritative_result_projection_governance_is_bounded() -> None:
     assert "CP9-Gate-Authoritative-Result-and-Query-Projection-Ownership" in combined
     assert "CP9 remains Planned / Blocked" in combined
     assert "CP10 remains Planned" in combined
-    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
 
@@ -1077,7 +1076,51 @@ def test_cp9_runtime_lifecycle_projection_governance_is_total_and_bounded() -> N
     ):
         assert phrase in normalized
     assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
-    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+
+
+def test_cp9_application_integration_gate_is_bounded() -> None:
+    integration = (ROOT / "app" / "services" / "runtime_api_integration.py").read_text(
+        encoding="utf-8"
+    )
+    facade = (ROOT / "app" / "services" / "runtime_api_facade.py").read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for name in (
+        "OneShotRuntimeApiIntegrationFactsProvider",
+        "RuntimeApiExactOrchestrationFactBinder",
+        "RuntimeApiActiveTransactionLocalOperation",
+        "validate_runtime_api_persistence_resolution",
+        "validate_runtime_api_domain_operation_result",
+        "read_exact_state_revision",
+        "read_exact_logical_execution_result_revision",
+        "runtime_api_public_status_for_execution_state",
+    ):
+        assert name in integration
+    for forbidden in (
+        "uuid4(",
+        "datetime.now(",
+        "datetime.utcnow(",
+        "begin_nested(",
+        ".commit(",
+        ".rollback(",
+        ".close(",
+        "create_async_engine",
+        "async_sessionmaker",
+    ):
+        assert forbidden not in integration
+    assert "async with self._session.begin()" in facade
+    assert "SQLAlchemyRuntimeApiIdempotencyTransaction(self._session).commit" in facade
+    assert "CP9 concrete application integration boundary" in combined
+    assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
@@ -1128,7 +1171,6 @@ def test_cp9_logical_execution_result_ownership_governance_is_bounded() -> None:
     assert (
         ROOT / "alembic" / "versions" / "20260808_0023_runtime_logical_execution_results.py"
     ).exists()
-    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
@@ -1197,7 +1239,6 @@ def test_cp9_authoritative_operation_result_contract_gate_is_bounded() -> None:
     assert "class RuntimeApiDomainOperationCallback" in protocols
     assert "validate_runtime_api_domain_operation_result" in validation
     assert "domain operation stage differs from command" in validation
-    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
 
 
@@ -1243,7 +1284,6 @@ def test_cp9_logical_execution_result_contract_gate_is_bounded() -> None:
     assert (
         ROOT / "alembic" / "versions" / "20260808_0023_runtime_logical_execution_results.py"
     ).exists()
-    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
@@ -1297,5 +1337,4 @@ def test_cp9_logical_execution_result_persistence_gate_is_bounded() -> None:
         ".close(",
     ):
         assert forbidden not in repository + active
-    assert not (ROOT / "app" / "services" / "runtime_api_integration.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()

@@ -533,3 +533,25 @@ substituted, cross-scope, cross-lineage, wrong-attempt, wrong-revision, or paylo
 fails closed. Existing rows are never promoted or backfilled, and populated downgrade stops before
 DDL. The repository and active-transaction capability do not own transaction control; concrete
 Application Integration and production routes remain blocked.
+
+### CP9 concrete application integration boundary
+
+The request-scoped integration-facts provider returns exactly one already-governed immutable
+operation value and rejects cross-operation access or reuse. The pure binder carries only trusted
+principal, scope, permission, request, digest, and integration facts; it performs no database,
+clock, identifier, authority, or transaction work.
+
+For a new mutation, the local operation exact-reads the expected Registry/admission binding,
+invokes the domain callback once, validates its safe result and closed stage, and stages that
+bundle once. The existing facade then stages one transport receipt in the same `AsyncSession` and
+root transaction. Replay and conflict enter no local operation and therefore perform zero binding
+reads, callbacks, local stages, or local repository mutations. A stage or receipt failure rolls
+back every local row and receipt together.
+
+Queries exact-read the named binding and execution-state revision and read the named logical-result
+revision only for a result-present locator. Public status comes only from the total lifecycle
+mapping, `status_reference` is the stored digest of the exact state revision, and observed time is
+the caller-supplied locator/read time. Missing, stale, substituted, cross-scope, cross-lineage,
+wrong-attempt, wrong-revision, or cardinality mismatch fails closed. The facade retains its five
+public parameters and remains the only transaction owner. Routes, external effects, Workers,
+queues, retries, schedulers, CP10, new schema, and migration `20260808_0024` remain excluded.
