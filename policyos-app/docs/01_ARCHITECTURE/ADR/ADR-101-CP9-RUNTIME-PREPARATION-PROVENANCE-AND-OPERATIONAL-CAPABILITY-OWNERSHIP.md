@@ -177,3 +177,10 @@ absence fails closed. This gate changes no production Python, public contract, r
 repository, schema, migration, external effect, Worker, queue, retry, scheduler, tag, or release.
 CP9 remains Planned / Blocked until contract, production route, PostgreSQL/HTTP acceptance, and
 closeout merge. CP10 remains Planned.
+
+## ADR-102 clarification
+
+ADR-102 closes production ownership with an explicit application preparation producer and trusted
+clock provenance. PostgreSQL owns exact multi-process rate policy/window admission, requiring
+migration `20260808_0024` for that backend only. No preparation or callback is persisted, and no
+policy is inferred or backfilled; unprovisioned scope fails closed.

@@ -1121,6 +1121,45 @@ def test_cp9_application_integration_gate_is_bounded() -> None:
     assert "SQLAlchemyRuntimeApiIdempotencyTransaction(self._session).commit" in facade
     assert "CP9 concrete application integration boundary" in combined
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
+
+
+def test_cp9_preparation_producer_backend_ownership_governance_is_bounded() -> None:
+    adr = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-102-CP9-RUNTIME-PREPARATION-PRODUCER-AND-OPERATIONAL-CAPABILITY-BACKEND-OWNERSHIP.md"
+    ).read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "Authoritative preparation producer and callback",
+        "Trusted clock, deadline, and disconnect",
+        "PostgreSQL rate-admission authority and migration `20260808_0024`",
+        "Ordering and one-shot semantics",
+        "no INSERT, backfill, normalization, deduplication",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in adr
+    for phrase in (
+        "explicit application preparation production",
+        "trusted clock",
+        "PostgreSQL",
+        "migration `20260808_0024`",
+        "no backfill",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 

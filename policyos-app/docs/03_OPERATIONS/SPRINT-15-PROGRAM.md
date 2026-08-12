@@ -789,6 +789,14 @@ transaction. `get_invocation` performs only the exact read-only verification. Th
 contract amendment, concrete integration, routes, acceptance, and closeout remain separate gates;
 CP9 remains Planned / Blocked and CP10 remains Planned.
 
+### CP9 preparation producer and operational backend ownership
+
+ADR-102 binds preparation and callbacks to explicit application inputs and all operational times
+to a trusted clock reference. Exact multi-process rate admission uses PostgreSQL policy revisions
+and scoped window counters in migration `20260808_0024`. The migration creates no default policy
+and performs no backfill; unprovisioned scope fails closed. Preparation remains non-durable, and
+contracts, persistence, production routes, acceptance, and closeout remain separate checkpoints.
+
 ### CP9 explicit integration facts public contracts
 
 The ADR-096 public-contract amendment is implemented and validated, pending review. Existing

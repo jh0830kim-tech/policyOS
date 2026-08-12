@@ -625,3 +625,10 @@ never downgrades to a legacy ORM user; the facade still resolves principal, memb
 classification, and permission inside its transaction. `app.api` alone maps bounded non-disclosing
 HTTP errors. Preparation is not durable, so no table, backfill, repository, schema, or migration
 `20260808_0024` is approved.
+
+ADR-102 assigns preparation production to an explicit request-scoped application Port and binds
+all operational times to a trusted clock reference. Exact multi-process Runtime rate admission is
+owned by PostgreSQL policy revisions and scoped atomic window counters in migration
+`20260808_0024`. No default policy, inferred assignment, backfill, process-local limiter, disabled
+fallback, hidden clock, persisted callback, or current/latest selection is allowed. Missing policy
+or capability fails closed before package consumption and facade work.
