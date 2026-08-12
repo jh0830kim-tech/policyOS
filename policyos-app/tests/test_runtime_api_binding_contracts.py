@@ -1,6 +1,7 @@
 """Focused CP9 local fact-binding and active-transaction contract tests."""
 
 import asyncio
+from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime, timedelta
 from inspect import signature
 from uuid import UUID
@@ -76,18 +77,27 @@ from app.runtime.state import RuntimeExecutionState, RuntimeExecutionStateRecord
 from app.services.runtime_api_contracts import (
     RuntimeApiContractConflict,
     RuntimeApiInvocationQueryBindingFacts,
+    RuntimeApiInvocationQueryFacts,
     RuntimeApiInvocationQueryIntegrationFacts,
     RuntimeApiReconciliationBindingFacts,
+    RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationIntegrationFacts,
     RuntimeApiSubmissionBindingFacts,
+    RuntimeApiSubmissionFacts,
     RuntimeApiSubmissionIntegrationFacts,
+    RuntimeApiTrustedContextFacts,
 )
 from app.services.runtime_api_protocols import (
     RuntimeApiActiveTransactionPersistenceFactory,
     RuntimeApiApplicationFacade,
     RuntimeApiIntegrationFactsProvider,
     RuntimeApiPersistedOrchestrationFactBinder,
+    RuntimeApiPreparedApplicationEntry,
+    RuntimeApiPreparedInvocationQuery,
+    RuntimeApiPreparedReconciliation,
+    RuntimeApiPreparedSubmission,
     RuntimeApiQueryProjectionLocatorProvider,
+    RuntimeApiTrustedPreparationSource,
 )
 from app.services.runtime_api_validation import (
     validate_runtime_api_persistence_binding,
@@ -823,6 +833,79 @@ class QueryProjectionLocatorProvider:
         return query_integration_facts().locator
 
 
+class PreparedDomainCallback:
+    async def __call__(self, command):
+        raise AssertionError("contract-only callback must not execute")
+
+
+class TrustedPreparationSource:
+    async def prepare_submission(self, claims, organization, request):
+        return None
+
+    async def prepare_query(self, claims, organization, request):
+        return None
+
+    async def prepare_reconciliation(self, claims, organization, request):
+        return None
+
+
+class PreparedApplicationEntry:
+    async def submit_invocation(self, request, claims, organization):
+        return None
+
+    async def get_invocation(self, request, claims, organization):
+        return None
+
+    async def request_reconciliation(self, request, claims, organization):
+        return None
+
+
+def trusted_context_facts() -> RuntimeApiTrustedContextFacts:
+    return RuntimeApiTrustedContextFacts(
+        authentication_reference="authentication.reference",
+        validation_reference="validation.reference",
+        authenticated_at=NOW,
+        validated_at=NOW,
+    )
+
+
+def submission_facts() -> RuntimeApiSubmissionFacts:
+    integration = submission_integration_facts()
+    return RuntimeApiSubmissionFacts(
+        command_id=integration.command_id,
+        command_version=integration.command_version,
+        receipt_id=integration.stage.transport_receipt_id,
+        committed_at=NOW,
+        correlation_reference=integration.correlation_reference,
+        context=trusted_context_facts(),
+        integration=integration,
+    )
+
+
+def query_facts() -> RuntimeApiInvocationQueryFacts:
+    integration = query_integration_facts()
+    return RuntimeApiInvocationQueryFacts(
+        query_id=integration.query_id,
+        requested_at=NOW,
+        correlation_reference=integration.correlation_reference,
+        context=trusted_context_facts(),
+        integration=integration,
+    )
+
+
+def reconciliation_facts() -> RuntimeApiReconciliationFacts:
+    integration = reconciliation_integration_facts()
+    return RuntimeApiReconciliationFacts(
+        command_id=integration.command_id,
+        command_version=integration.command_version,
+        receipt_id=integration.stage.transport_receipt_id,
+        committed_at=NOW,
+        correlation_reference=integration.correlation_reference,
+        context=trusted_context_facts(),
+        integration=integration,
+    )
+
+
 class ExactExecutionStateRevisionReader:
     async def read_exact_state_revision(self, context, locator):
         return RuntimeApiExecutionStateRevisionReadResult(
@@ -862,6 +945,51 @@ def test_operation_integration_facts_are_strict_required_and_request_scoped() ->
                 "stage": reconciliation.stage,
             }
         )
+
+
+def test_prepared_operation_packages_are_closed_frozen_and_operation_specific() -> None:
+    callback = PreparedDomainCallback()
+    submission = RuntimeApiPreparedSubmission(facts=submission_facts(), domain_callback=callback)
+    query = RuntimeApiPreparedInvocationQuery(facts=query_facts())
+    reconciliation = RuntimeApiPreparedReconciliation(
+        facts=reconciliation_facts(), domain_callback=callback
+    )
+
+    assert submission.domain_callback is callback
+    assert reconciliation.domain_callback is callback
+    assert not hasattr(query, "domain_callback")
+    with pytest.raises(FrozenInstanceError):
+        submission.facts = submission_facts()
+    with pytest.raises(TypeError, match="submission facts differ"):
+        RuntimeApiPreparedSubmission(
+            facts=query_facts(),  # type: ignore[arg-type]
+            domain_callback=callback,
+        )
+    with pytest.raises(TypeError, match="query facts differ"):
+        RuntimeApiPreparedInvocationQuery(
+            facts=reconciliation_facts()  # type: ignore[arg-type]
+        )
+    with pytest.raises(TypeError, match="reconciliation facts differ"):
+        RuntimeApiPreparedReconciliation(
+            facts=submission_facts(),  # type: ignore[arg-type]
+            domain_callback=callback,
+        )
+    with pytest.raises(TypeError):
+        RuntimeApiPreparedInvocationQuery(query_facts())
+    assert isinstance(TrustedPreparationSource(), RuntimeApiTrustedPreparationSource)
+    assert isinstance(PreparedApplicationEntry(), RuntimeApiPreparedApplicationEntry)
+    assert tuple(signature(RuntimeApiTrustedPreparationSource.prepare_submission).parameters) == (
+        "self",
+        "claims",
+        "organization",
+        "request",
+    )
+    assert tuple(signature(RuntimeApiPreparedApplicationEntry.submit_invocation).parameters) == (
+        "self",
+        "request",
+        "claims",
+        "organization",
+    )
 
 
 def test_query_locator_is_closed_exact_and_separate_from_mutation_binding() -> None:
@@ -1025,8 +1153,7 @@ def test_logical_execution_result_mutation_is_closed_exact_and_strict() -> None:
         RuntimeApiLocalWriteSetStage.model_validate(
             {
                 **{
-                    name: getattr(stage, name)
-                    for name in RuntimeApiLocalWriteSetStage.model_fields
+                    name: getattr(stage, name) for name in RuntimeApiLocalWriteSetStage.model_fields
                 },
                 "logical_execution_result": {
                     "presence": "present",

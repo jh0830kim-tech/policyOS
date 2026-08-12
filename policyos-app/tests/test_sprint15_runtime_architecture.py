@@ -1377,3 +1377,52 @@ def test_cp9_runtime_route_production_composition_governance_is_bounded() -> Non
         assert phrase in combined
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
+
+
+def test_cp9_runtime_route_transport_preparation_contract_gate_is_bounded() -> None:
+    schemas = (ROOT / "app" / "schemas" / "runtime_api.py").read_text(encoding="utf-8")
+    protocols = (ROOT / "app" / "services" / "runtime_api_protocols.py").read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    submit_body = schemas.split("class RuntimeInvocationSubmitRequest", 1)[1].split(
+        "class RuntimeInvocationStatusQuery", 1
+    )[0]
+    reconciliation_body = schemas.split("class RuntimeReconciliationRequest", 1)[1].split(
+        "class RuntimeStatusResponse", 1
+    )[0]
+    assert "idempotency_key" not in submit_body + reconciliation_body
+    for name in (
+        "RuntimeApiPreparedSubmission",
+        "RuntimeApiPreparedInvocationQuery",
+        "RuntimeApiPreparedReconciliation",
+        "RuntimeApiTrustedPreparationSource",
+        "RuntimeApiPreparedApplicationEntry",
+    ):
+        assert name in protocols
+    assert "@dataclass(frozen=True, slots=True, kw_only=True)" in protocols
+    assert (
+        "domain_callback"
+        not in protocols.split("class RuntimeApiPreparedInvocationQuery", 1)[1].split(
+            "class RuntimeApiPreparedReconciliation", 1
+        )[0]
+    )
+    for phrase in (
+        "header-only mutation identity",
+        "frozen operation-specific prepared packages",
+        "prepared application-entry Protocol",
+        "no callback, stage, or receipt",
+        "migration `20260808_0024`",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()

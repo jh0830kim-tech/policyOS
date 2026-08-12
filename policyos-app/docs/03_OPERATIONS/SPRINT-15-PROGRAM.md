@@ -853,3 +853,17 @@ replacing the caller-owned session or root transaction. Result-absent and reconc
 no logical-result mutation. Exact reads use caller-supplied record IDs and revisions and return
 stored provenance unchanged. Concrete provider, binder, local operation, facade composition,
 routes, external effects, and CP10 remain deferred.
+
+### CP9 Runtime route transport and trusted preparation contract gate
+
+This gate is implemented and validated, pending review. Mutation transport bodies no longer carry
+`idempotency_key`; the future routes must obtain exactly one bounded `Idempotency-Key` header and
+pass it explicitly into the unchanged internal submission or reconciliation input. Query transport
+has no idempotency identity.
+
+Frozen submission, query, and reconciliation prepared packages close the request-scoped output of
+the server-owned trusted preparation source. Mutation packages carry the existing exact outer facts
+and domain callback, while the query package contains read-only facts and no mutation capability.
+The prepared application-entry Protocol is the only route-facing application boundary. Concrete
+preparation, composition, routes, HTTP acceptance, schema, migration `20260808_0024`, Worker, and
+CP10 work remain separate checkpoints; CP9 remains Planned / Blocked and CP10 remains Planned.

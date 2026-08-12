@@ -15,7 +15,10 @@ from app.runtime.ports import (
     RuntimeApiLogicalExecutionResultMutationPresent,
 )
 from app.runtime.state import RuntimeExecutionState
-from app.schemas.runtime_api import RuntimeInvocationSubmitRequest
+from app.schemas.runtime_api import (
+    RuntimeInvocationSubmitRequest,
+    RuntimeReconciliationRequest,
+)
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
     RuntimeApiContractConflict,
@@ -245,7 +248,6 @@ def test_transport_is_strict_bounded_and_excludes_internal_facts() -> None:
         action_reference="action-1",
         command_reference="command-1",
         classification=DataClassification.INTERNAL,
-        idempotency_key="key-1",
     )
     with pytest.raises(ValidationError):
         request.model_copy(update={"tenant_id": str(TENANT)}).model_validate(
@@ -262,6 +264,27 @@ def test_transport_is_strict_bounded_and_excludes_internal_facts() -> None:
         "retry",
     }
     assert forbidden.isdisjoint(RuntimeInvocationSubmitRequest.model_fields)
+
+
+def test_mutation_transport_idempotency_is_header_only() -> None:
+    submission = RuntimeInvocationSubmitRequest(
+        action_reference="action-1",
+        command_reference="command-1",
+        classification=DataClassification.INTERNAL,
+    )
+    reconciliation = RuntimeReconciliationRequest(
+        invocation_reference="invocation-1",
+        reconciliation_reference="reconciliation-1",
+    )
+    for model, value in (
+        (RuntimeInvocationSubmitRequest, submission),
+        (RuntimeReconciliationRequest, reconciliation),
+    ):
+        assert "idempotency_key" not in model.model_fields
+        with pytest.raises(ValidationError):
+            model.model_validate({**value.model_dump(), "idempotency_key": "key-1"})
+    assert "idempotency_key" in RuntimeApiSubmissionInput.model_fields
+    assert "idempotency_key" in RuntimeApiReconciliationInput.model_fields
 
 
 def test_contracts_are_frozen_and_require_issuer_audience() -> None:

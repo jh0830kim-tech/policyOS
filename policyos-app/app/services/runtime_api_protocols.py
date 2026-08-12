@@ -1,5 +1,6 @@
 """Protocols for the CP9 trusted Runtime API application boundary."""
 
+from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -179,6 +180,97 @@ class RuntimeApiDomainOperationCallback(Protocol):
     ) -> RuntimeApiDomainOperationResult: ...
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RuntimeApiPreparedSubmission:
+    """One inert, server-owned submission candidate for one request."""
+
+    facts: RuntimeApiSubmissionFacts
+    domain_callback: RuntimeApiDomainOperationCallback
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.facts, RuntimeApiSubmissionFacts):
+            raise TypeError("prepared submission facts differ")
+        if not isinstance(self.domain_callback, RuntimeApiDomainOperationCallback):
+            raise TypeError("prepared submission callback differs")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RuntimeApiPreparedInvocationQuery:
+    """One inert, server-owned exact query candidate for one request."""
+
+    facts: RuntimeApiInvocationQueryFacts
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.facts, RuntimeApiInvocationQueryFacts):
+            raise TypeError("prepared query facts differ")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RuntimeApiPreparedReconciliation:
+    """One inert, server-owned reconciliation candidate for one request."""
+
+    facts: RuntimeApiReconciliationFacts
+    domain_callback: RuntimeApiDomainOperationCallback
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.facts, RuntimeApiReconciliationFacts):
+            raise TypeError("prepared reconciliation facts differ")
+        if not isinstance(self.domain_callback, RuntimeApiDomainOperationCallback):
+            raise TypeError("prepared reconciliation callback differs")
+
+
+@runtime_checkable
+class RuntimeApiTrustedPreparationSource(Protocol):
+    """Select exactly one already-governed candidate for one request scope."""
+
+    async def prepare_submission(
+        self,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        request: RuntimeApiSubmissionInput,
+    ) -> RuntimeApiPreparedSubmission: ...
+
+    async def prepare_query(
+        self,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        request: RuntimeApiInvocationQueryInput,
+    ) -> RuntimeApiPreparedInvocationQuery: ...
+
+    async def prepare_reconciliation(
+        self,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        request: RuntimeApiReconciliationInput,
+    ) -> RuntimeApiPreparedReconciliation: ...
+
+
+@runtime_checkable
+class RuntimeApiPreparedApplicationEntry(Protocol):
+    """Expose one trusted prepared application boundary to thin routes."""
+
+    async def submit_invocation(
+        self,
+        request: RuntimeApiSubmissionInput,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+    ) -> RuntimeApiSubmissionResult: ...
+
+    async def get_invocation(
+        self,
+        request: RuntimeApiInvocationQueryInput,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+    ) -> RuntimeApiStatusProjection: ...
+
+    async def request_reconciliation(
+        self,
+        request: RuntimeApiReconciliationInput,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+    ) -> RuntimeApiReconciliationResult: ...
+
+
 @runtime_checkable
 class RuntimeApiLocalMutation(Protocol):
     async def __call__(self) -> RuntimeApiSafeResult: ...
@@ -215,7 +307,12 @@ __all__ = (
     "RuntimeApiLocalOperationPort",
     "RuntimeApiOrchestrationFactBinder",
     "RuntimeApiPermissionFactResolver",
+    "RuntimeApiPreparedApplicationEntry",
+    "RuntimeApiPreparedInvocationQuery",
+    "RuntimeApiPreparedReconciliation",
+    "RuntimeApiPreparedSubmission",
     "RuntimeApiPersistedOrchestrationFactBinder",
     "RuntimeApiQueryProjectionLocatorProvider",
+    "RuntimeApiTrustedPreparationSource",
     "RuntimeApiTrustedContextResolver",
 )

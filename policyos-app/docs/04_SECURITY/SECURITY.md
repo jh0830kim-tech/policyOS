@@ -579,3 +579,20 @@ denials bounded `403`, exact conflicts `409`, strict input failures `422`, rate 
 contain no raw body, bearer material, secret, provider payload, SQL detail, cross-scope existence,
 session, or transaction identity. ADR-100 adds no schema or migration `20260808_0024`; a need
 for new durable preparation state requires a separate schema-governance stop.
+
+### CP9 Runtime route transport and trusted preparation contracts
+
+Mutation body schemas exclude `idempotency_key`; exactly one bounded ASCII `Idempotency-Key`
+header is the only approved transport source. The internal application request retains the key so
+the existing tenant-, organization-, principal-, operation-, version-, and digest-bound
+idempotency identity remains exact. Missing, repeated, malformed, body-substituted, normalized,
+truncated, or generated keys fail closed before facade invocation.
+
+The trusted preparation source returns one frozen operation-specific package from an approved
+server-owned output. Submission and reconciliation packages carry the existing immutable outer
+facts and exact callback; query preparation carries no callback, stage, receipt, or mutation
+capability. The package cannot supply authority and becomes usable only after the facade revalidates
+the current principal, tenant, organization, permission, classification, lineage, Registry,
+admission, permit, revision, digest, session, and root transaction. This contract gate creates no
+default provider, route, global registry, durable preparation state, schema, or migration
+`20260808_0024`.
