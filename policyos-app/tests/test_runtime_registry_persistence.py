@@ -7,6 +7,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
+from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.runtime_registry import (
     RuntimeReconciliationRequestRecord,
     RuntimeRegistryAdmissionBindingRecord,
@@ -31,8 +34,6 @@ from app.runtime.ports import (
     RuntimeApiLocalWriteSetStage,
     RuntimeApiLogicalExecutionResultMutationAbsent,
 )
-from pydantic import ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 _SUPPORT = runpy.run_path(str(Path(__file__).with_name("test_runtime_api_binding_contracts.py")))
 binding = _SUPPORT["binding"]

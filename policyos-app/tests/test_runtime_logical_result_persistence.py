@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
+
 from app.models.runtime_logical_result import (
     RuntimeLogicalExecutionResultRecord,
     RuntimeLogicalExecutionResultRevisionRecord,
