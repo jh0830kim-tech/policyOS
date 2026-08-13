@@ -662,3 +662,11 @@ role assignment, membership assignment, or default. Only an actor already holdin
 `runtime.grant.manage` in the same active tenant/organization scope may grant or revoke it through
 the immutable ledger. Self-grant, same-transaction privilege activation, wildcard substitution,
 cross-scope binding, collision, inferred bootstrap, and automatic administration fail closed.
+
+## Runtime rate-admission persistence boundary
+
+Migration `20260808_0024` creates only the fixed permission definition and four governed tables.
+It grants no authority and performs no backfill. Policy management revalidates exact existing
+authority in the caller-owned transaction. Immutable triggers reject policy, revocation, and
+decision mutation; a counter trigger requires the exact admitted decision in the same transaction.
+Replay, denial, collision, stale scope, and rollback leave counter mutation residue at zero.

@@ -4,6 +4,12 @@ from app.models.runtime_logical_result import (
     RuntimeLogicalExecutionResultRecord,
     RuntimeLogicalExecutionResultRevisionRecord,
 )
+from app.models.runtime_rate_admission import (
+    RuntimeRateAdmissionDecisionRecord,
+    RuntimeRatePolicyRevisionRecord,
+    RuntimeRatePolicyRevocationRecord,
+    RuntimeRateWindowCounterRecord,
+)
 from app.runtime.persistence.active_transaction import (
     SQLAlchemyRuntimeApiActiveTransactionPersistence,
     SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory,
@@ -25,6 +31,10 @@ from app.runtime.persistence.errors import (
     RuntimePersistenceError,
     RuntimePersistenceSerializationError,
     RuntimePersistenceTransactionError,
+    RuntimeRatePermissionDeniedError,
+    RuntimeRatePersistenceConflictError,
+    RuntimeRatePolicyUnavailableError,
+    RuntimeRateTransactionError,
     RuntimeRegistryPersistenceBindingError,
     RuntimeRegistryPersistenceNotFoundError,
 )
@@ -45,6 +55,17 @@ from app.runtime.persistence.models import (
     RuntimeRecordHead,
     RuntimeRecordRevision,
     RuntimeTransactionRecord,
+)
+from app.runtime.persistence.rate_admission_repositories import (
+    SQLAlchemyRuntimeRateAdmissionRepository,
+)
+from app.runtime.persistence.rate_admission_serialization import (
+    deserialize_rate_admission_decision,
+    deserialize_rate_policy_provision,
+    deserialize_rate_policy_revocation,
+    serialize_rate_admission_decision,
+    serialize_rate_policy_provision,
+    serialize_rate_policy_revocation,
 )
 from app.runtime.persistence.registry_repositories import SQLAlchemyRuntimeRegistryRepository
 from app.runtime.persistence.registry_serialization import (
@@ -84,11 +105,18 @@ RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES = (
     RuntimeLogicalExecutionResultRecord.__table__,
     RuntimeLogicalExecutionResultRevisionRecord.__table__,
 )
+RUNTIME_RATE_ADMISSION_PERSISTENCE_TABLES = (
+    RuntimeRatePolicyRevisionRecord.__table__,
+    RuntimeRatePolicyRevocationRecord.__table__,
+    RuntimeRateAdmissionDecisionRecord.__table__,
+    RuntimeRateWindowCounterRecord.__table__,
+)
 
 __all__ = (
     "RUNTIME_EFFECT_PERSISTENCE_TABLES",
     "RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES",
     "RUNTIME_PERSISTENCE_TABLES",
+    "RUNTIME_RATE_ADMISSION_PERSISTENCE_TABLES",
     "RuntimeEffect",
     "RuntimeEffectLifecycleHead",
     "RuntimeEffectLifecycleRevision",
@@ -105,6 +133,10 @@ __all__ = (
     "RuntimeRegistryPayloadType",
     "RuntimeRegistryPersistenceBindingError",
     "RuntimeRegistryPersistenceNotFoundError",
+    "RuntimeRatePermissionDeniedError",
+    "RuntimeRatePersistenceConflictError",
+    "RuntimeRatePolicyUnavailableError",
+    "RuntimeRateTransactionError",
     "RuntimeRecordHead",
     "RuntimeRecordRevision",
     "RuntimeTransactionRecord",
@@ -121,6 +153,7 @@ __all__ = (
     "SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory",
     "SQLAlchemyRuntimeIdempotencyRepository",
     "SQLAlchemyRuntimeLogicalExecutionResultRepository",
+    "SQLAlchemyRuntimeRateAdmissionRepository",
     "SQLAlchemyRuntimeOutboxRepository",
     "SQLAlchemyRuntimePermitRepository",
     "SQLAlchemyRuntimeRegistryRepository",
@@ -128,11 +161,17 @@ __all__ = (
     "deserialize_delivery_model",
     "deserialize_logical_execution_result",
     "deserialize_runtime_record",
+    "deserialize_rate_admission_decision",
+    "deserialize_rate_policy_provision",
+    "deserialize_rate_policy_revocation",
     "deserialize_registry_payload",
     "metadata_for",
     "serialize_delivery_model",
     "serialize_logical_execution_result",
     "serialize_runtime_record",
+    "serialize_rate_admission_decision",
+    "serialize_rate_policy_provision",
+    "serialize_rate_policy_revocation",
     "serialize_registry_payload",
     "validate_loaded_record",
     "validate_persistence_read_request",

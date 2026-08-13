@@ -34,11 +34,13 @@ PERMISSION_IDS = {
     RuntimeApiPermission.READ: UUID("00000000-0000-0000-0000-000000001901"),
     RuntimeApiPermission.INVOKE: UUID("00000000-0000-0000-0000-000000001902"),
     RuntimeApiPermission.RECONCILE: UUID("00000000-0000-0000-0000-000000001903"),
+    RuntimeApiPermission.RATE_POLICY_MANAGE: UUID("00000000-0000-0000-0000-000000001905"),
 }
 PERSISTED_RUNTIME_API_PERMISSIONS = (
     RuntimeApiPermission.READ,
     RuntimeApiPermission.INVOKE,
     RuntimeApiPermission.RECONCILE,
+    RuntimeApiPermission.RATE_POLICY_MANAGE,
 )
 RATE_POLICY_MANAGE_PERMISSION_ID = UUID("00000000-0000-0000-0000-000000001905")
 NOW = datetime(2026, 8, 8, tzinfo=UTC)
@@ -141,22 +143,16 @@ async def test_postgres_exact_permissions_allow_and_other_permission_denies(
 
 
 @pytest.mark.asyncio
-async def test_postgres_unprovisioned_rate_policy_manage_permission_denies(
+async def test_postgres_rate_policy_manage_definition_exists_without_default_grant(
     database_url: str,
 ) -> None:
     engine = create_async_engine(database_url)
     factory = async_sessionmaker(engine, expire_on_commit=False)
     principal, scope, _ = await seed(factory, RuntimeApiPermission.READ)
     async with factory() as session, session.begin():
-        assert await session.get(Permission, RATE_POLICY_MANAGE_PERMISSION_ID) is None
-        assert (
-            await session.scalar(
-                select(Permission).where(
-                    Permission.key == RuntimeApiPermission.RATE_POLICY_MANAGE.value
-                )
-            )
-            is None
-        )
+        definition = await session.get(Permission, RATE_POLICY_MANAGE_PERMISSION_ID)
+        assert definition is not None
+        assert definition.key == RuntimeApiPermission.RATE_POLICY_MANAGE.value
         with pytest.raises(RuntimePermissionDeniedError):
             await SQLAlchemyRuntimeApiPermissionFactResolver(session).resolve_permission_fact(
                 principal,

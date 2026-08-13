@@ -38,6 +38,22 @@ class RuntimeRegistryPersistenceBindingError(RuntimePersistenceError):
     """Registry persistence facts did not match their exact binding."""
 
 
+class RuntimeRatePersistenceConflictError(RuntimePersistenceConflictError):
+    """A rate-policy, replay, decision, or counter fact conflicted."""
+
+
+class RuntimeRatePolicyUnavailableError(RuntimePersistenceError):
+    """An exact active Runtime rate policy was unavailable."""
+
+
+class RuntimeRatePermissionDeniedError(RuntimePersistenceError):
+    """Rate-policy management authority was unavailable or mismatched."""
+
+
+class RuntimeRateTransactionError(RuntimePersistenceTransactionError):
+    """Rate-admission persistence lacked one caller-owned root transaction."""
+
+
 __all__ = (
     "RuntimeEffectPersistenceConflictError",
     "RuntimePersistenceConflictError",
@@ -46,4 +62,8 @@ __all__ = (
     "RuntimePersistenceTransactionError",
     "RuntimeRegistryPersistenceBindingError",
     "RuntimeRegistryPersistenceNotFoundError",
+    "RuntimeRatePermissionDeniedError",
+    "RuntimeRatePersistenceConflictError",
+    "RuntimeRatePolicyUnavailableError",
+    "RuntimeRateTransactionError",
 )
