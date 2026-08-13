@@ -72,4 +72,5 @@ def test_managed_permission_set_excludes_management_authority() -> None:
         "runtime.read",
         "runtime.invoke",
         "runtime.reconcile",
+        "runtime.rate_policy.manage",
     }

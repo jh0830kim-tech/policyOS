@@ -160,6 +160,7 @@ def test_protocol_signature_and_exact_permission_set_are_frozen() -> None:
         RuntimeApiPermission.READ,
         RuntimeApiPermission.INVOKE,
         RuntimeApiPermission.RECONCILE,
+        RuntimeApiPermission.RATE_POLICY_MANAGE,
     )
     assert tuple(
         signature(RuntimeApiPermissionFactResolver.resolve_permission_fact).parameters
