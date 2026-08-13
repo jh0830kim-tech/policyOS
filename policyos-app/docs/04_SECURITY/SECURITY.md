@@ -653,3 +653,12 @@ Rate-policy management requires `runtime.rate_policy.manage`. Policy, actor,
 tenant, organization, principal, operation, classification, window, request,
 clock, decision, and provenance facts bind exactly and fail closed. Contracts
 do not create identifiers, revisions, digests, references, or time values.
+
+## Runtime rate-policy management permission ownership
+
+`runtime.rate_policy.manage` has fixed definition ID
+`00000000-0000-0000-0000-000000001905`. Its migration definition creates no authority, grant,
+role assignment, membership assignment, or default. Only an actor already holding exact
+`runtime.grant.manage` in the same active tenant/organization scope may grant or revoke it through
+the immutable ledger. Self-grant, same-transaction privilege activation, wildcard substitution,
+cross-scope binding, collision, inferred bootstrap, and automatic administration fail closed.

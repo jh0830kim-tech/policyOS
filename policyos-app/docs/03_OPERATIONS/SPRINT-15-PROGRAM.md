@@ -921,3 +921,10 @@ CP9 remains Planned / Blocked and CP10 remains Planned.
 
 Status: Implemented / Validated, Pending Review. Public immutable contracts
 only; persistence, routes, production composition, and CP10 remain blocked.
+
+## CP9 rate-policy permission governance correction
+
+Status: Governed / Validated, Pending Review. ADR-104 separates the immutable permission
+definition from active authority, prohibits automatic grants and backfill, and requires exact
+transactional grant/revoke evidence. PR #106 remains blocked pending the separated correction and
+persistence gates. CP10 remains Planned.

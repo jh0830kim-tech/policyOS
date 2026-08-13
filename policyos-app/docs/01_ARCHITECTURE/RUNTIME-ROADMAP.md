@@ -671,3 +671,10 @@ The immutable ADR-103 policy revision, explicit provisioning and revocation,
 UTC epoch-aligned fixed window, durable decision, exact replay/conflict, and
 counter-provenance Ports are implemented and validated pending review.
 The production backend and migration `20260808_0024` remain a separate gate.
+
+## CP9 rate-policy management permission governance
+
+ADR-104 governs fixed definition ID `00000000-0000-0000-0000-000000001905`, definition-only
+migration ownership, zero automatic grants/backfill, and additive exact grant/revoke management by
+`runtime.grant.manage`. Public correction, migration `20260808_0024`, persistence, production, and
+acceptance remain separate blocked gates.
