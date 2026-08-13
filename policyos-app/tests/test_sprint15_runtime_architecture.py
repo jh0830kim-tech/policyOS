@@ -1123,6 +1123,41 @@ def test_cp9_application_integration_gate_is_bounded() -> None:
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
 
 
+def test_cp9_rate_admission_persistence_gate_is_bounded() -> None:
+    migration = (ROOT / "alembic" / "versions" / "20260808_0024_rate_admission.py").read_text(
+        encoding="utf-8"
+    )
+    repository = (
+        ROOT / "app" / "runtime" / "persistence" / "rate_admission_repositories.py"
+    ).read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    assert 'revision: str = "20260808_0024"' in migration
+    assert 'down_revision: str | None = "20260808_0023"' in migration
+    assert migration.count("op.create_table(") == 4
+    assert "00000000-0000-0000-0000-000000001905" in migration
+    assert "txid_current()" in repository
+    assert "begin(" not in repository
+    assert "commit(" not in repository
+    assert "rollback(" not in repository
+    for phrase in (
+        "Migration `20260808_0024`",
+        "zero grants",
+        "exactly four governed",
+        "caller-owned transaction",
+        "CP10 remain blocked",
+    ):
+        assert phrase in combined
+
+
 def test_adr_103_rate_admission_public_contract_gate() -> None:
     port = (ROOT / "app" / "runtime" / "ports" / "rate_admission.py").read_text(encoding="utf-8")
     contracts = (ROOT / "app" / "services" / "runtime_api_contracts.py").read_text(encoding="utf-8")
@@ -1167,7 +1202,11 @@ def test_adr_104_rate_policy_management_permission_ownership() -> None:
         "backfill",
     ):
         assert phrase in combined
-    assert not (ROOT / "alembic" / "versions" / "20260808_0024_rate_admission.py").exists()
+    migration = (ROOT / "alembic" / "versions" / "20260808_0024_rate_admission.py").read_text(
+        encoding="utf-8"
+    )
+    assert 'revision: str = "20260808_0024"' in migration
+    assert "00000000-0000-0000-0000-000000001905" in migration
 
 
 def test_cp9_rate_admission_policy_window_governance_is_bounded() -> None:

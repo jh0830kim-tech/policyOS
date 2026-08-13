@@ -928,3 +928,10 @@ Status: Governed / Validated, Pending Review. ADR-104 separates the immutable pe
 definition from active authority, prohibits automatic grants and backfill, and requires exact
 transactional grant/revoke evidence. PR #106 remains blocked pending the separated correction and
 persistence gates. CP10 remains Planned.
+
+## CP9 rate-admission persistence gate
+
+Status: Implemented / Validated, Pending Review. Migration `20260808_0024` creates the fixed
+permission definition with zero grants and exactly four governed persistence tables. Exact replay
+and denial mutate no counter; an admitted decision permits one counter mutation in the same caller
+transaction. Production backend composition, facade/routes, and CP10 remain blocked.

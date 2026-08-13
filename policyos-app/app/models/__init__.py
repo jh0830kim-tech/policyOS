@@ -37,6 +37,12 @@ from app.models.runtime_logical_result import (
     RuntimeLogicalExecutionResultRevisionRecord,
 )
 from app.models.runtime_permission_grants import RuntimePermissionGrantEvent
+from app.models.runtime_rate_admission import (
+    RuntimeRateAdmissionDecisionRecord,
+    RuntimeRatePolicyRevisionRecord,
+    RuntimeRatePolicyRevocationRecord,
+    RuntimeRateWindowCounterRecord,
+)
 from app.models.runtime_registry import (
     RuntimeReconciliationRequestRecord,
     RuntimeRegistryAdmissionBindingRecord,
@@ -80,6 +86,10 @@ __all__ = [
     "Role",
     "RolePermission",
     "RuntimePermissionGrantEvent",
+    "RuntimeRateAdmissionDecisionRecord",
+    "RuntimeRatePolicyRevisionRecord",
+    "RuntimeRatePolicyRevocationRecord",
+    "RuntimeRateWindowCounterRecord",
     "RuntimeLogicalExecutionResultRecord",
     "RuntimeLogicalExecutionResultRevisionRecord",
     "RuntimeReconciliationRequestRecord",

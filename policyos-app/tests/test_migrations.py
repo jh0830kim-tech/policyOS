@@ -12,7 +12,25 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_alembic_has_single_head() -> None:
     config = Config("alembic.ini")
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["20260808_0023"]
+    assert scripts.get_heads() == ["20260808_0024"]
+
+
+def test_rate_admission_migration_is_exact_and_fail_closed() -> None:
+    path = ROOT / "alembic" / "versions" / "20260808_0024_rate_admission.py"
+    source = path.read_text(encoding="utf-8")
+    assert 'revision: str = "20260808_0024"' in source
+    assert 'down_revision: str | None = "20260808_0023"' in source
+    for table in (
+        "runtime_rate_policy_revisions",
+        "runtime_rate_policy_revocations",
+        "runtime_rate_admission_decisions",
+        "runtime_rate_window_counters",
+    ):
+        assert table in source
+    assert "00000000-0000-0000-0000-000000001905" in source
+    downgrade = source.index("def downgrade")
+    assert source.index("sa.select", downgrade) < source.index("op.drop_table", downgrade)
+    assert source.index("raise RuntimeError", downgrade) < source.index("op.drop_table", downgrade)
 
 
 def test_runtime_logical_result_migration_is_append_only_and_fail_closed() -> None:

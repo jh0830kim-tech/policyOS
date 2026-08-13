@@ -40,6 +40,7 @@ from app.services.runtime_permission_grants_contracts import (
 
 MANAGE_ID = UUID("00000000-0000-0000-0000-000000001904")
 READ_ID = UUID("00000000-0000-0000-0000-000000001901")
+RATE_POLICY_MANAGE_ID = UUID("00000000-0000-0000-0000-000000001905")
 
 
 @pytest.fixture(scope="module")
@@ -115,7 +116,14 @@ async def seed(factory: async_sessionmaker):
     return tenant_id, org_id, actor_id, membership_id, target_role_id
 
 
-def make_command(ids, *, operation=RuntimePermissionGrantOperation.GRANT, revision=0):
+def make_command(
+    ids,
+    *,
+    operation=RuntimePermissionGrantOperation.GRANT,
+    revision=0,
+    permission_id=READ_ID,
+    permission_key=RuntimeManagedPermission.READ,
+):
     tenant_id, org_id, actor_id, membership_id, target_role_id = ids
     now = datetime(2026, 8, 8, 2, tzinfo=UTC)
     return RuntimePermissionGrantCommand(
@@ -133,8 +141,8 @@ def make_command(ids, *, operation=RuntimePermissionGrantOperation.GRANT, revisi
         actor_user_id=actor_id,
         actor_membership_id=membership_id,
         target_role_id=target_role_id,
-        permission_id=READ_ID,
-        permission_key=RuntimeManagedPermission.READ,
+        permission_id=permission_id,
+        permission_key=permission_key,
         reason_reference="change:approved",
         provenance_reference="ticket:CP9",
         classification_ceiling=DataClassification.INTERNAL,
@@ -176,6 +184,34 @@ async def test_grant_replay_revoke_and_append_only_atomicity(database_url: str) 
                 await session.execute(
                     text("UPDATE runtime_permission_grant_events SET command_version='changed'")
                 )
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_rate_policy_manage_can_be_explicitly_granted_and_revoked(
+    database_url: str,
+) -> None:
+    engine = create_async_engine(database_url)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    ids = await seed(factory)
+    grant = make_command(
+        ids,
+        permission_id=RATE_POLICY_MANAGE_ID,
+        permission_key=RuntimeManagedPermission.RATE_POLICY_MANAGE,
+    )
+    async with factory() as session:
+        result = await SQLAlchemyRuntimePermissionGrantService(session).execute(grant)
+    assert result.receipt.resulting_active is True
+    revoke = make_command(
+        ids,
+        operation=RuntimePermissionGrantOperation.REVOKE,
+        revision=1,
+        permission_id=RATE_POLICY_MANAGE_ID,
+        permission_key=RuntimeManagedPermission.RATE_POLICY_MANAGE,
+    )
+    async with factory() as session:
+        result = await SQLAlchemyRuntimePermissionGrantService(session).execute(revoke)
+    assert result.receipt.resulting_active is False
     await engine.dispose()
 
 

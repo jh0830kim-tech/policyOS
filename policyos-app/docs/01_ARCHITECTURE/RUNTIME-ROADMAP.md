@@ -678,3 +678,13 @@ ADR-104 governs fixed definition ID `00000000-0000-0000-0000-000000001905`, defi
 migration ownership, zero automatic grants/backfill, and additive exact grant/revoke management by
 `runtime.grant.manage`. Public correction, migration `20260808_0024`, persistence, production, and
 acceptance remain separate blocked gates.
+
+### CP9 rate-admission persistence and permission definition
+
+Migration `20260808_0024` defines `runtime.rate_policy.manage` at its fixed ID without granting
+it and creates exactly four governed rate-admission tables. Immutable policy revisions,
+append-only revocations and decisions, and serialized counters preserve exact scoped binding.
+Existing authority is revalidated in the caller-owned transaction. Replay and denial mutate no
+counter; each admitted decision permits exactly one counter mutation. Populated downgrade and
+permission collisions fail closed before destructive DDL. Production composition, facade/routes,
+and CP10 remain blocked.
