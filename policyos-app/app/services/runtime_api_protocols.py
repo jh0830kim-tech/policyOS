@@ -10,6 +10,10 @@ from app.runtime.ports import (
     RuntimeApiActiveTransactionContext,
     RuntimeApiActiveTransactionPersistencePort,
     RuntimeApiQueryProjectionLocator,
+    RuntimeRatePolicyProvisionCommand,
+    RuntimeRatePolicyProvisionResult,
+    RuntimeRatePolicyRevocationCommand,
+    RuntimeRatePolicyRevocationResult,
 )
 from app.services.runtime_api_contracts import (
     BoundedDigest,
@@ -463,6 +467,19 @@ class RuntimeApiRateAdmissionCapability(Protocol):
 
 
 @runtime_checkable
+class RuntimeRatePolicyManagementCapability(Protocol):
+    """Provision or revoke one exact policy revision outside public routes."""
+
+    async def provision(
+        self, command: RuntimeRatePolicyProvisionCommand
+    ) -> RuntimeRatePolicyProvisionResult: ...
+
+    async def revoke(
+        self, command: RuntimeRatePolicyRevocationCommand
+    ) -> RuntimeRatePolicyRevocationResult: ...
+
+
+@runtime_checkable
 class RuntimeApiDeadlineBudgetCapability(Protocol):
     async def evaluate(
         self, request: RuntimeApiDeadlineBudgetRequest
@@ -551,6 +568,7 @@ __all__ = (
     "RuntimeApiPersistedOrchestrationFactBinder",
     "RuntimeApiQueryProjectionLocatorProvider",
     "RuntimeApiRateAdmissionCapability",
+    "RuntimeRatePolicyManagementCapability",
     "RuntimeApiReconciliationPreparationContext",
     "RuntimeApiSubmissionPreparationContext",
     "RuntimeApiTrustedPreparationSource",

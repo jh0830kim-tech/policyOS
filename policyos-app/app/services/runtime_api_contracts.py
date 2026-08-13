@@ -14,6 +14,12 @@ from app.runtime.ports import (
     RuntimeApiLocalWriteSetStage,
     RuntimeApiPersistenceBindingRead,
     RuntimeApiQueryProjectionLocator,
+    RuntimeRateAdmissionDecisionRequest,
+    RuntimeRateAdmissionPersistenceResult,
+    RuntimeRatePolicyRevision,
+)
+from app.runtime.ports import (
+    RuntimeRateAdmissionDisposition as RuntimeApiRateAdmissionDisposition,
 )
 
 BoundedReference = Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,199}$")]
@@ -31,6 +37,7 @@ class RuntimeApiPermission(StrEnum):
     READ = "runtime.read"
     INVOKE = "runtime.invoke"
     RECONCILE = "runtime.reconcile"
+    RATE_POLICY_MANAGE = "runtime.rate_policy.manage"
 
 
 class RuntimeApiOrganizationSelector(RuntimeApiModel):
@@ -70,11 +77,6 @@ class RuntimeApiResultCardinality(StrEnum):
     EXACTLY_ZERO = "exactly_zero"
     ZERO_OR_ONE = "zero_or_one"
     EXACTLY_ONE = "exactly_one"
-
-
-class RuntimeApiRateAdmissionDisposition(StrEnum):
-    ADMITTED = "admitted"
-    DENIED = "denied"
 
 
 class RuntimeApiDeadlineDisposition(StrEnum):
@@ -233,20 +235,20 @@ class RuntimeApiClockReading(RuntimeApiModel):
 
 
 class RuntimeApiRatePolicySelection(RuntimeApiModel):
-    tenant_id: UUID
-    organization_id: UUID
-    principal_id: UUID
-    operation: RuntimeApiOperation
-    classification: DataClassification
-    policy_id: UUID
-    policy_revision: int = Field(ge=1)
-    policy_reference: BoundedReference
+    revision: RuntimeRatePolicyRevision
+
+    @model_validator(mode="after")
+    def exact_operation(self):
+        if self.revision.locator.operation not in tuple(item.value for item in RuntimeApiOperation):
+            raise ValueError("rate policy operation is unsupported")
+        return self
 
 
 class RuntimeApiRateAdmissionRequest(RuntimeApiModel):
     provenance: RuntimeApiPreparationProvenance
     policy: RuntimeApiRatePolicySelection
     clock: RuntimeApiClockReading
+    decision: RuntimeRateAdmissionDecisionRequest
 
     @model_validator(mode="after")
     def exact_binding(self):
@@ -254,19 +256,25 @@ class RuntimeApiRateAdmissionRequest(RuntimeApiModel):
             self.clock.clock_reference != self.provenance.clock_reference
             or self.clock.observed_at != self.provenance.evaluated_at
             or (
-                self.policy.tenant_id,
-                self.policy.organization_id,
-                self.policy.principal_id,
-                self.policy.operation,
-                self.policy.classification,
+                self.policy.revision.locator.tenant_id,
+                self.policy.revision.locator.organization_id,
+                self.policy.revision.locator.principal_id,
+                self.policy.revision.locator.operation.value,
+                self.policy.revision.locator.classification,
             )
             != (
                 self.provenance.tenant_id,
                 self.provenance.organization_id,
                 self.provenance.principal_id,
-                self.provenance.operation,
+                self.provenance.operation.value,
                 self.provenance.classification,
             )
+            or self.decision.policy != self.policy.revision
+            or self.decision.preparation_id != self.provenance.preparation_id
+            or self.decision.request_id != self.provenance.request_identity
+            or self.decision.request_digest != self.provenance.canonical_request_digest
+            or self.decision.clock_reference != self.clock.clock_reference
+            or self.decision.observed_at != self.clock.observed_at
         ):
             raise ValueError("rate admission binding differs from preparation")
         return self
@@ -274,16 +282,12 @@ class RuntimeApiRateAdmissionRequest(RuntimeApiModel):
 
 class RuntimeApiRateAdmissionResult(RuntimeApiModel):
     request: RuntimeApiRateAdmissionRequest
-    disposition: RuntimeApiRateAdmissionDisposition
-    retry_after_seconds: int | None = Field(default=None, ge=0, le=86_400)
+    persistence: RuntimeRateAdmissionPersistenceResult
 
     @model_validator(mode="after")
     def closed_disposition(self):
-        if self.disposition is RuntimeApiRateAdmissionDisposition.ADMITTED:
-            if self.retry_after_seconds is not None:
-                raise ValueError("admitted rate result cannot retry")
-        elif self.retry_after_seconds is None:
-            raise ValueError("denied rate result requires retry-after seconds")
+        if self.persistence.decision.request != self.request.decision:
+            raise ValueError("rate decision differs from exact request")
         return self
 
 

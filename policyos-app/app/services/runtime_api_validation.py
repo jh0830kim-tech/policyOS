@@ -1,6 +1,7 @@
 """Pure fail-closed validation for CP9 Runtime API contracts."""
 
 from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from types import MappingProxyType
 from uuid import UUID
@@ -12,6 +13,10 @@ from app.runtime.ports import (
     RuntimeApiLogicalExecutionResultMutationPresent,
     RuntimeApiPersistenceBindingRead,
     RuntimeApiRegistryResolutionAdmissionFact,
+    RuntimeRatePolicyProvisionCommand,
+    RuntimeRatePolicyRevision,
+    RuntimeRatePolicyRevocationCommand,
+    RuntimeRateWindowIdentity,
 )
 from app.runtime.registry import (
     RuntimeActionResolutionStatus,
@@ -76,6 +81,106 @@ def validate_runtime_api_clock_binding(
     ):
         raise RuntimeApiContractConflict("trusted clock differs from preparation")
     return clock
+
+
+def validate_runtime_rate_policy_management_permission(
+    command: RuntimeRatePolicyProvisionCommand | RuntimeRatePolicyRevocationCommand,
+    fact: RuntimeApiPermissionFact,
+    *,
+    principal: RuntimeApiTrustedPrincipal,
+    scope: RuntimeApiTrustedScope,
+) -> RuntimeApiPermissionFact:
+    """Require the dedicated management permission and exact active actor scope."""
+
+    if fact.permission is not RuntimeApiPermission.RATE_POLICY_MANAGE:
+        raise RuntimeApiContractConflict("rate policy management permission differs")
+    policy = command.policy if isinstance(command, RuntimeRatePolicyProvisionCommand) else None
+    locator = policy.locator if policy is not None else command.locator
+    actor_principal_id = (
+        policy.actor_principal_id if policy is not None else command.actor_principal_id
+    )
+    actor_user_id = policy.actor_user_id if policy is not None else command.actor_user_id
+    actor_membership_id = (
+        policy.actor_membership_id if policy is not None else command.actor_membership_id
+    )
+    if (
+        fact.principal_id,
+        fact.membership_id,
+        fact.organization_id,
+        principal.principal_id,
+        principal.user_id,
+        scope.tenant_id,
+        scope.organization_id,
+        scope.membership_id,
+    ) != (
+        actor_principal_id,
+        actor_membership_id,
+        locator.organization_id,
+        actor_principal_id,
+        actor_user_id,
+        locator.tenant_id,
+        locator.organization_id,
+        actor_membership_id,
+    ):
+        raise RuntimeApiContractConflict("rate policy management actor or scope differs")
+    return fact
+
+
+def runtime_rate_window_for(
+    policy: RuntimeRatePolicyRevision,
+    clock: RuntimeApiClockReading,
+) -> RuntimeRateWindowIdentity:
+    """Calculate one UTC epoch-aligned half-open window without a hidden clock."""
+
+    observed = clock.observed_at.astimezone(UTC)
+    epoch = datetime(1970, 1, 1, tzinfo=UTC)
+    elapsed = observed - epoch
+    elapsed_microseconds = (
+        elapsed.days * 86_400 + elapsed.seconds
+    ) * 1_000_000 + elapsed.microseconds
+    window_microseconds = policy.window_seconds * 1_000_000
+    start_microseconds = (elapsed_microseconds // window_microseconds) * window_microseconds
+    window_start = epoch + timedelta(microseconds=start_microseconds)
+    return RuntimeRateWindowIdentity(
+        window_start=window_start,
+        window_end=window_start + timedelta(seconds=policy.window_seconds),
+    )
+
+
+def validate_runtime_rate_policy_active(
+    policy: RuntimeRatePolicyRevision,
+    *,
+    clock: RuntimeApiClockReading,
+    revoked_at: datetime | None,
+) -> RuntimeRatePolicyRevision:
+    """Fail closed for inactive, expired, or explicitly revoked policy facts."""
+
+    observed = clock.observed_at
+    if not policy.effective_from <= observed < policy.valid_until:
+        raise RuntimeApiContractConflict("rate policy is not active")
+    if revoked_at is not None:
+        if revoked_at.tzinfo is None or revoked_at.utcoffset() is None:
+            raise RuntimeApiContractConflict("rate policy revocation time is not aware")
+        if observed >= revoked_at:
+            raise RuntimeApiContractConflict("rate policy is revoked")
+    return policy
+
+
+def runtime_rate_retry_after_seconds(
+    window: RuntimeRateWindowIdentity,
+    *,
+    observed_at: datetime,
+) -> int:
+    """Return ceil(window_end - observed_at), bounded by ADR-103."""
+
+    if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+        raise RuntimeApiContractConflict("rate observation time is not aware")
+    remaining = window.window_end - observed_at
+    microseconds = (
+        remaining.days * 86_400 + remaining.seconds
+    ) * 1_000_000 + remaining.microseconds
+    seconds = (microseconds + 999_999) // 1_000_000
+    return min(86_400, max(1, seconds))
 
 
 RUNTIME_API_PUBLIC_STATUS_BY_EXECUTION_STATE: Mapping[
@@ -754,4 +859,8 @@ __all__ = (
     "validate_runtime_api_submission",
     "validate_runtime_api_submission_binding",
     "validate_runtime_api_trusted_context_facts",
+    "runtime_rate_retry_after_seconds",
+    "runtime_rate_window_for",
+    "validate_runtime_rate_policy_active",
+    "validate_runtime_rate_policy_management_permission",
 )

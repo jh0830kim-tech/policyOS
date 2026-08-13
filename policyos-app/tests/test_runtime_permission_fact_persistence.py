@@ -14,6 +14,7 @@ from app.models.identity import (
     Membership,
     MembershipRole,
     Organization,
+    Permission,
     Role,
     RolePermission,
     TenantOrganizationBinding,
@@ -34,6 +35,12 @@ PERMISSION_IDS = {
     RuntimeApiPermission.INVOKE: UUID("00000000-0000-0000-0000-000000001902"),
     RuntimeApiPermission.RECONCILE: UUID("00000000-0000-0000-0000-000000001903"),
 }
+PERSISTED_RUNTIME_API_PERMISSIONS = (
+    RuntimeApiPermission.READ,
+    RuntimeApiPermission.INVOKE,
+    RuntimeApiPermission.RECONCILE,
+)
+RATE_POLICY_MANAGE_PERMISSION_ID = UUID("00000000-0000-0000-0000-000000001905")
 NOW = datetime(2026, 8, 8, tzinfo=UTC)
 
 
@@ -113,7 +120,7 @@ async def seed(factory: async_sessionmaker, permission: RuntimeApiPermission):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("permission", tuple(RuntimeApiPermission))
+@pytest.mark.parametrize("permission", PERSISTED_RUNTIME_API_PERMISSIONS)
 async def test_postgres_exact_permissions_allow_and_other_permission_denies(
     database_url: str, permission: RuntimeApiPermission
 ) -> None:
@@ -129,6 +136,32 @@ async def test_postgres_exact_permissions_allow_and_other_permission_denies(
         with pytest.raises(RuntimePermissionDeniedError):
             await SQLAlchemyRuntimeApiPermissionFactResolver(session).resolve_permission_fact(
                 principal, scope, denied_permission
+            )
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_postgres_unprovisioned_rate_policy_manage_permission_denies(
+    database_url: str,
+) -> None:
+    engine = create_async_engine(database_url)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    principal, scope, _ = await seed(factory, RuntimeApiPermission.READ)
+    async with factory() as session, session.begin():
+        assert await session.get(Permission, RATE_POLICY_MANAGE_PERMISSION_ID) is None
+        assert (
+            await session.scalar(
+                select(Permission).where(
+                    Permission.key == RuntimeApiPermission.RATE_POLICY_MANAGE.value
+                )
+            )
+            is None
+        )
+        with pytest.raises(RuntimePermissionDeniedError):
+            await SQLAlchemyRuntimeApiPermissionFactResolver(session).resolve_permission_fact(
+                principal,
+                scope,
+                RuntimeApiPermission.RATE_POLICY_MANAGE,
             )
     await engine.dispose()
 

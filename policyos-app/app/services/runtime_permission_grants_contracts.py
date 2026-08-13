@@ -27,6 +27,7 @@ class RuntimeManagedPermission(StrEnum):
     READ = "runtime.read"
     INVOKE = "runtime.invoke"
     RECONCILE = "runtime.reconcile"
+    RATE_POLICY_MANAGE = "runtime.rate_policy.manage"
 
 
 class RuntimePermissionGrantDisposition(StrEnum):
