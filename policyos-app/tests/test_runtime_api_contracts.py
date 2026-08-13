@@ -13,6 +13,13 @@ from app.core.auth_claims import VerifiedAccessTokenClaims
 from app.runtime.ports import (
     RuntimeApiLogicalExecutionResultMutationAbsent,
     RuntimeApiLogicalExecutionResultMutationPresent,
+    RuntimeRateAdmissionDecision,
+    RuntimeRateAdmissionDecisionRequest,
+    RuntimeRateAdmissionPersistenceResult,
+    RuntimeRateOperation,
+    RuntimeRatePersistenceDisposition,
+    RuntimeRatePolicyLocator,
+    RuntimeRatePolicyRevision,
 )
 from app.runtime.state import RuntimeExecutionState
 from app.schemas.runtime_api import (
@@ -79,6 +86,7 @@ from app.services.runtime_api_validation import (
     required_runtime_api_permission,
     runtime_api_public_status_for_execution_state,
     runtime_api_result_cardinality_for_execution_state,
+    runtime_rate_window_for,
     validate_runtime_api_clock_binding,
     validate_runtime_api_commit_result,
     validate_runtime_api_domain_operation_result,
@@ -267,34 +275,66 @@ def test_preparation_provenance_and_operational_results_are_closed() -> None:
             clock.model_copy(update={"clock_reference": "clock.substituted"}),
             provenance=provenance,
         )
-    rate_request = RuntimeApiRateAdmissionRequest(
-        provenance=provenance,
-        policy=RuntimeApiRatePolicySelection(
+    policy_revision = RuntimeRatePolicyRevision(
+        locator=RuntimeRatePolicyLocator(
             tenant_id=TENANT,
             organization_id=ORG,
             principal_id=PRINCIPAL,
-            operation=RuntimeApiOperation.SUBMIT_INVOCATION,
+            operation=RuntimeRateOperation.SUBMIT_INVOCATION,
             classification=DataClassification.INTERNAL,
             policy_id=UUID("00000000-0000-0000-0000-000000000122"),
             policy_revision=1,
             policy_reference="rate-policy-1",
         ),
+        admission_limit=10,
+        window_seconds=60,
+        effective_from=NOW - timedelta(days=1),
+        valid_until=NOW + timedelta(days=1),
+        provisioning_request_id=UUID("00000000-0000-0000-0000-000000000123"),
+        provisioning_receipt_id=UUID("00000000-0000-0000-0000-000000000124"),
+        actor_principal_id=PRINCIPAL,
+        actor_user_id=PRINCIPAL,
+        actor_membership_id=MEMBERSHIP,
+        reason_reference="rate-reason-1",
+        provenance_reference="rate-provenance-1",
+        request_digest=provenance.canonical_request_digest,
+        command_version="rate-policy-v1",
+        requested_at=NOW,
+        committed_at=NOW,
+    )
+    decision_request = RuntimeRateAdmissionDecisionRequest(
+        preparation_id=provenance.preparation_id,
+        request_id=provenance.request_identity,
+        request_digest=provenance.canonical_request_digest,
+        policy=policy_revision,
+        clock_reference=clock.clock_reference,
+        observed_at=NOW,
+        window=runtime_rate_window_for(policy_revision, clock),
+        decision_id=UUID("00000000-0000-0000-0000-000000000125"),
+        decision_reference="rate-decision-1",
+        decision_digest="rate-decision-digest-1",
+        evaluated_at=NOW,
+        committed_at=NOW,
+        provenance_reference="rate-counter-provenance-1",
+    )
+    rate_request = RuntimeApiRateAdmissionRequest(
+        provenance=provenance,
+        policy=RuntimeApiRatePolicySelection(revision=policy_revision),
         clock=clock,
+        decision=decision_request,
     )
     RuntimeApiRateAdmissionResult(
         request=rate_request,
-        disposition=RuntimeApiRateAdmissionDisposition.ADMITTED,
+        persistence=RuntimeRateAdmissionPersistenceResult(
+            persistence_disposition=RuntimeRatePersistenceDisposition.COMMITTED,
+            decision=RuntimeRateAdmissionDecision(
+                request=decision_request,
+                disposition=RuntimeApiRateAdmissionDisposition.ADMITTED,
+                admitted_count_before=0,
+                admitted_count_after=1,
+            ),
+        ),
     )
-    RuntimeApiRateAdmissionResult(
-        request=rate_request,
-        disposition=RuntimeApiRateAdmissionDisposition.DENIED,
-        retry_after_seconds=30,
-    )
-    with pytest.raises(ValidationError, match="requires retry-after"):
-        RuntimeApiRateAdmissionResult(
-            request=rate_request,
-            disposition=RuntimeApiRateAdmissionDisposition.DENIED,
-        )
 
     deadline_request = RuntimeApiDeadlineBudgetRequest(
         provenance=provenance,

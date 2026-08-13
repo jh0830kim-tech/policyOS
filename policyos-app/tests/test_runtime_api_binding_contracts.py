@@ -45,6 +45,7 @@ from app.runtime.ports import (
     RuntimeEffectReconciliationRequest,
     RuntimeIdempotencyReservation,
     RuntimePortScope,
+    RuntimeRateAdmissionPersistencePort,
 )
 from app.runtime.registry import (
     RuntimeActionAdapterReference,
@@ -108,6 +109,7 @@ from app.services.runtime_api_protocols import (
     RuntimeApiQueryProjectionLocatorProvider,
     RuntimeApiRateAdmissionCapability,
     RuntimeApiTrustedPreparationSource,
+    RuntimeRatePolicyManagementCapability,
 )
 from app.services.runtime_api_validation import (
     validate_runtime_api_persistence_binding,
@@ -1080,6 +1082,14 @@ def test_prepared_operation_packages_are_closed_frozen_and_operation_specific() 
     assert isinstance(PreparedApplicationEntry(), RuntimeApiPreparedApplicationEntry)
     assert isinstance(PreparationIssuer(), RuntimeApiPreparationIssuer)
     assert isinstance(RateAdmissionCapability(), RuntimeApiRateAdmissionCapability)
+    assert tuple(signature(RuntimeRateAdmissionPersistencePort.admit).parameters) == (
+        "self",
+        "request",
+    )
+    assert tuple(signature(RuntimeRatePolicyManagementCapability.provision).parameters) == (
+        "self",
+        "command",
+    )
     assert isinstance(DeadlineBudgetCapability(), RuntimeApiDeadlineBudgetCapability)
     assert isinstance(DisconnectObservationCapability(), RuntimeApiDisconnectObservationCapability)
     assert tuple(signature(RuntimeApiTrustedPreparationSource.prepare_submission).parameters) == (

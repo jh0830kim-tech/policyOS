@@ -665,3 +665,9 @@ counter creation or increment to the exact decision in the same transaction. Mig
 normalization, deduplication, inferred assignment, or default policy. Public contracts,
 persistence, production/HTTP acceptance, and closeout remain separate; CP9 remains Planned /
 Blocked and CP10 remains Planned.
+## CP9 rate-admission public contracts
+
+The immutable ADR-103 policy revision, explicit provisioning and revocation,
+UTC epoch-aligned fixed window, durable decision, exact replay/conflict, and
+counter-provenance Ports are implemented and validated pending review.
+The production backend and migration `20260808_0024` remain a separate gate.

@@ -1123,6 +1123,17 @@ def test_cp9_application_integration_gate_is_bounded() -> None:
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
 
 
+def test_adr_103_rate_admission_public_contract_gate() -> None:
+    port = (ROOT / "app" / "runtime" / "ports" / "rate_admission.py").read_text(encoding="utf-8")
+    contracts = (ROOT / "app" / "services" / "runtime_api_contracts.py").read_text(encoding="utf-8")
+    assert "class RuntimeRatePolicyRevision" in port
+    assert "class RuntimeRateAdmissionPersistencePort" in port
+    assert "RuntimeRateOperation" in port
+    assert "runtime.rate_policy.manage" in contracts
+    assert "RuntimeRateAdmissionDecisionRequest" in contracts
+    assert not (ROOT / "alembic" / "versions" / "20260808_0024_rate_admission.py").exists()
+
+
 def test_cp9_rate_admission_policy_window_governance_is_bounded() -> None:
     adr = (
         ROOT

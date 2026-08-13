@@ -647,3 +647,9 @@ requires trigger-level proof of the exact admitted decision in the same transact
 exact replay do not mutate counters, and failures leave no decision or counter residue. Migration
 `20260808_0024` may create only the four governed append/serialized tables and may not insert,
 backfill, normalize, deduplicate, infer, or default policy authority.
+## Runtime rate-admission contract boundary
+
+Rate-policy management requires `runtime.rate_policy.manage`. Policy, actor,
+tenant, organization, principal, operation, classification, window, request,
+clock, decision, and provenance facts bind exactly and fail closed. Contracts
+do not create identifiers, revisions, digests, references, or time values.
