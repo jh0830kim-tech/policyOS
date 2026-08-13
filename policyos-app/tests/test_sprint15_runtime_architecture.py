@@ -1123,6 +1123,43 @@ def test_cp9_application_integration_gate_is_bounded() -> None:
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
 
 
+def test_adr_104_rate_policy_management_permission_ownership() -> None:
+    adr = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-104-CP9-RUNTIME-RATE-POLICY-MANAGEMENT-PERMISSION-DEFINITION-AND-GRANT-AUTHORITY.md"
+    ).read_text(encoding="utf-8")
+    combined = "\n".join(
+        (ROOT / path).read_text(encoding="utf-8")
+        for path in (
+            "docs/01_ARCHITECTURE/ADR/ADR-088-CP9-RUNTIME-PERMISSION-GRANT-AUTHORITY-PROVENANCE-AUDIT-AND-IDEMPOTENCY.md",
+            "docs/01_ARCHITECTURE/ADR/ADR-103-CP9-RUNTIME-RATE-ADMISSION-POLICY-REVISION-AND-WINDOW-SEMANTICS.md",
+            "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+    for phrase in (
+        "00000000-0000-0000-0000-000000001905",
+        "runtime.rate_policy.manage",
+        "definition is not authority",
+        "creates no `RolePermission`",
+        "cannot authorize the same command or transaction",
+        "zero partial DDL or row deletion",
+    ):
+        assert phrase in adr
+    for phrase in (
+        "runtime.rate_policy.manage",
+        "00000000-0000-0000-0000-000000001905",
+        "automatic grant",
+        "backfill",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "alembic" / "versions" / "20260808_0024_rate_admission.py").exists()
+
+
 def test_cp9_rate_admission_policy_window_governance_is_bounded() -> None:
     adr = (
         ROOT
