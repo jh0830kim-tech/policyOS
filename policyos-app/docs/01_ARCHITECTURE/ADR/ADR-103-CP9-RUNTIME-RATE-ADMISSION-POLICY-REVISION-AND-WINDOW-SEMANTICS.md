@@ -55,8 +55,10 @@ containing epoch-second window without changing the supplied instant. Retry-afte
 Policy provisioning is an explicit server-owned, one-shot command outside public Runtime routes.
 It requires the dedicated permission `runtime.rate_policy.manage`, an active actor user and
 membership, exact tenant/organization binding, and every immutable field above. Missing permission
-fails closed; this migration does not insert or default the permission. Permission provisioning is
-separately governed trusted administration.
+fails closed. ADR-104 authorizes migration `20260808_0024` to insert only the exact definition row
+at fixed ID `00000000-0000-0000-0000-000000001905`; it creates no active grant, default,
+role/membership assignment, or backfill. Grant and revoke use the separately governed
+`runtime.grant.manage` transaction and immutable ledger.
 
 For a new request, provisioning appends exactly one revision. Exact replay returns the same receipt
 with zero mutation. Reuse with any differing identity, scope, payload, digest, revision, or receipt
@@ -125,9 +127,11 @@ Policy, revocation, and decision rows reject UPDATE and DELETE through ORM guard
 triggers. Counter DELETE is forbidden and UPDATE is allowed only by the trigger-proven one-step
 increment above. Application code cannot bypass these repositories.
 
-The migration performs no INSERT, backfill, normalization, deduplication, inference, or default
-policy creation. Existing deployments upgrade with empty new tables. Downgrade checks all four
-tables before destructive DDL; if any is populated it fails closed before any object is removed.
+Except for ADR-104's exact definition-only permission row, the migration performs
+no INSERT, backfill, normalization, deduplication, inference, grant, or default policy creation. Existing
+deployments upgrade with empty new tables. Downgrade checks the definition, its active grants and
+ledger references, and all four tables before destructive DDL; if any is populated it fails closed
+before any object is removed.
 Only an empty schema is dropped atomically in dependency-safe order.
 
 ## Follow-up gates

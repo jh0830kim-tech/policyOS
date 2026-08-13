@@ -163,3 +163,12 @@ audit fact.
 PostgreSQL acceptance merged in PR #67. CP9 Runtime API remains Planned / Blocked on the production
 permission-fact resolver, transport idempotency persistence, trusted application facade, and
 production routes. CP10 remains Planned.
+
+## ADR-104 amendment
+
+ADR-104 additively permits the existing `runtime.grant.manage` service to target the exact
+`runtime.rate_policy.manage` permission definition at fixed ID
+`00000000-0000-0000-0000-000000001905`. Management of `runtime.grant.manage` remains prohibited.
+Both management permissions remain definition-only until separately granted, cannot self-grant,
+and cannot authorize the transaction that creates their own active grant. All existing exact
+scope, transaction revalidation, ledger, replay, revision, and no-automatic-grant rules remain.

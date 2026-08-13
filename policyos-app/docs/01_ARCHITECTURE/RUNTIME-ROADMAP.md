@@ -665,3 +665,10 @@ counter creation or increment to the exact decision in the same transaction. Mig
 normalization, deduplication, inferred assignment, or default policy. Public contracts,
 persistence, production/HTTP acceptance, and closeout remain separate; CP9 remains Planned /
 Blocked and CP10 remains Planned.
+
+## CP9 rate-policy management permission governance
+
+ADR-104 governs fixed definition ID `00000000-0000-0000-0000-000000001905`, definition-only
+migration ownership, zero automatic grants/backfill, and additive exact grant/revoke management by
+`runtime.grant.manage`. Public correction, migration `20260808_0024`, persistence, production, and
+acceptance remain separate blocked gates.

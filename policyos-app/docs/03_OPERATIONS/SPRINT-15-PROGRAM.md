@@ -917,3 +917,9 @@ separate from the legacy ORM-user dependency, and only `app.api` owns bounded HT
 No preparation persistence, model, repository, backfill, schema, or migration `20260808_0024` is
 approved. Contract, production route, PostgreSQL/HTTP acceptance, and closeout remain separate;
 CP9 remains Planned / Blocked and CP10 remains Planned.
+## CP9 rate-policy permission governance correction
+
+Status: Governed / Validated, Pending Review. ADR-104 separates the immutable permission
+definition from active authority, prohibits automatic grants and backfill, and requires exact
+transactional grant/revoke evidence. PR #106 remains blocked pending the separated correction and
+persistence gates. CP10 remains Planned.
