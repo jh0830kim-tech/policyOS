@@ -183,3 +183,11 @@ application then constructs provider, producer, issuer, source, and prepared ent
 The disconnect observer receives only a transport-neutral asynchronous boolean signal; its
 reference and trusted time remain fixed preparation facts. Missing composition returns bounded
 `503` before inspection, while an incomplete supplied bundle fails application construction.
+
+## ADR-107 factory-signature correction
+
+The request scope accepts one transport-neutral disconnect signal and yields one immutable
+dependency set containing the exact domain-operation, clock, rate, deadline, disconnect, and
+upstream capabilities. Provider, producer, issuer, source, and prepared entry are built only after
+successful scope entry. Scope exit returns false, suppresses no exception, and disposes exactly
+once in reverse construction order on success, rejection, exception, or partial construction.

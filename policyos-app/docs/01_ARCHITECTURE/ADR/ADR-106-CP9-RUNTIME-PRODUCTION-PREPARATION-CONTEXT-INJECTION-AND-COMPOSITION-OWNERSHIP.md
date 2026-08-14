@@ -171,3 +171,13 @@ signal. The SQLAlchemy-free public rate factory hides its concrete session facto
 bundle installs only the closed unavailable Runtime composition and yields bounded `503` before
 inspection; an incomplete supplied bundle fails application construction. No preparation
 persistence or migration `20260808_0025` is introduced.
+
+## ADR-107 factory-signature correction
+
+The immutable bundle has exactly one field: the request-capability-scope factory. That factory
+privately captures the six leaf factories and accepts only the current request's transport-neutral
+disconnect signal. It yields one immutable six-capability dependency set through an async context
+manager whose exit returns false and never suppresses exceptions. The preparation upstream is
+constructed last from the exact domain-operation and trusted-clock instances. Missing-bundle
+unavailability remains an `app.api` production-only entry, not a public bundle variant; any supplied
+partial bundle fails application construction.
