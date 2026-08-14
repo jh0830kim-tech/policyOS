@@ -114,3 +114,13 @@ preparation capability. The producer validates and binds only. The trusted clock
 approved reference and reading, while the disconnect adapter owns only the current-request boolean
 observation. The PostgreSQL rate capability alone owns its fresh session, root transaction, commit
 or rollback, and close; it never shares the facade transaction.
+
+## ADR-107 clarification
+
+The authoritative upstream returns exactly one existing operation-specific preparation context.
+Only the domain-operation capability supplies mutation callbacks, and query preparation supplies
+none. One immutable production bundle and asynchronous request-capability scope create and dispose
+fresh request objects exactly once. Provider, producer, issuer, source, and entry are constructed in
+that order and cannot generate or replace facts. The transport-neutral disconnect signal exposes
+only an asynchronous strict boolean; FastAPI remains confined to `app.api`. The public independent
+rate factory remains SQLAlchemy-free, and preparation still requires no migration `20260808_0025`.

@@ -174,3 +174,12 @@ context comes only from the injected upstream preparation capability. Missing co
 before inspection and all request objects are disposed without reuse. Rate admission owns an
 independent PostgreSQL transaction, while the facade remains sole owner of its application
 transaction. Preparation remains non-durable and migration `20260808_0025` is prohibited.
+
+## ADR-107 clarification
+
+One asynchronous request-capability scope constructs fresh upstream, callback, clock, rate,
+deadline, and disconnect capabilities and disposes them exactly once in reverse order. The
+application then constructs provider, producer, issuer, source, and prepared entry in that order.
+The disconnect observer receives only a transport-neutral asynchronous boolean signal; its
+reference and trusted time remain fixed preparation facts. Missing composition returns bounded
+`503` before inspection, while an incomplete supplied bundle fails application construction.

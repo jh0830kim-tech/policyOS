@@ -968,3 +968,17 @@ and transaction; the facade remains sole owner of its application transaction. N
 persistence or migration `20260808_0025` is introduced. Public contracts, production routes,
 combined acceptance, and closeout remain separate; CP9 remains Planned / Blocked and CP10 remains
 Planned.
+### CP9 production dependency-bundle factory graph governance
+
+ADR-107 fixes one frozen production dependency bundle containing the authoritative preparation
+upstream, domain-operation, trusted-clock, independent rate, deadline, disconnect, and asynchronous
+request-scope factories. The upstream returns exactly one existing operation-specific preparation
+context. The application constructs provider, producer, issuer, source, and prepared entry in that
+order, and the async scope disposes every request object exactly once in reverse order.
+
+FastAPI `Request` remains inside `app.api`; application contracts see only a transport-neutral
+asynchronous strict-boolean disconnect signal. The public rate factory is SQLAlchemy-free. Missing
+composition returns bounded `503` before inspection, while an incomplete supplied bundle fails
+application construction. Facade five-parameter signatures and query non-mutation remain intact.
+Preparation remains request-local, migration `20260808_0025` is prohibited, CP9 remains Planned /
+Blocked, and CP10 remains Planned.
