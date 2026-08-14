@@ -209,3 +209,12 @@ create fresh upstream preparation, clock, rate, deadline, disconnect, provider, 
 and source capabilities per request. Missing composition fails closed with bounded `503` before
 candidate inspection. Mutable global injection and dependency overrides as production
 configuration are prohibited.
+
+## ADR-109 clarification
+
+The validated organization selector originates only from one required canonical
+`organization_id` query parameter and remains untrusted until facade revalidation. Deadline expiry,
+disconnect, capability absence, and capability failure share one non-disclosing `503`
+dependency-unavailable envelope; the public response does not expose the internal cause or claim a
+domain transition. Invalid selector transport remains `422`, authoritative scope mismatch remains
+`404`, and rate denial remains `429`.

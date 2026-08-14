@@ -200,3 +200,11 @@ releases it. Denial, expiry, disconnect, exception, cancellation, and partial co
 release acquired resources exactly once in reverse order without changing the candidate's governed
 consumption count. Escaped dependencies cannot be used after scope exit, and no lifecycle fact is
 persisted.
+
+## ADR-109 transport clarification
+
+Strict canonical `organization_id` query validation occurs before inspection. Deadline expiry and
+disconnect both reject the inspected candidate with consumption and facade work zero, then map to
+the generic non-disclosing `503` dependency-unavailable envelope. An already disconnected transport
+does not trigger a second response attempt; cleanup still completes. Rate denial remains the only
+operational `429`, using the exact persisted retry-after value.
