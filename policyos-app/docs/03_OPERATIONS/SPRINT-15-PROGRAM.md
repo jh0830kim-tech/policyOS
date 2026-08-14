@@ -982,3 +982,17 @@ composition returns bounded `503` before inspection, while an incomplete supplie
 application construction. Facade five-parameter signatures and query non-mutation remain intact.
 Preparation remains request-local, migration `20260808_0025` is prohibited, CP9 remains Planned /
 Blocked, and CP10 remains Planned.
+
+### CP9 dependency-bundle factory-signature correction
+
+The corrected ADR-107 bundle exposes exactly one request-capability-scope factory. It privately
+captures the domain-operation, clock, independent rate, deadline, disconnect, and preparation-
+upstream leaf factories and invokes each exactly once. The scope accepts only the current request's
+transport-neutral disconnect signal, constructs the upstream last from the exact callback and
+clock capabilities, and yields one frozen six-field dependency set.
+
+Async exit returns false, suppresses no exception, and disposes complete or partial construction
+exactly once in reverse order. Missing-bundle unavailability is an `app.api` production-only entry;
+a supplied partial bundle fails application construction. The correction changes no public Python,
+production composition, persistence, or migration `20260808_0025`. CP9 remains Planned / Blocked
+and CP10 remains Planned.

@@ -1763,6 +1763,72 @@ def test_cp9_dependency_bundle_factory_graph_governance_is_bounded() -> None:
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
+def test_cp9_dependency_bundle_factory_signature_correction_is_closed() -> None:
+    adr = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / (
+            "ADR-107-CP9-RUNTIME-PRODUCTION-DEPENDENCY-BUNDLE-FACTORY-"
+            "GRAPH-AND-TRANSPORT-NEUTRAL-OBSERVER-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "Factory-signature and request-scope lifecycle correction",
+        "request_capability_scope_factory: RuntimeApiRequestCapabilityScopeFactory",
+        "Exact leaf-factory signatures and construction order",
+        "Exact upstream Protocol",
+        "Exact disconnect and request-scope signatures",
+        "async is_disconnected() -> bool",
+        "async __aenter__() -> RuntimeApiRequestDependencies",
+        ") -> Literal[False]",
+        "Unavailable composition ownership",
+        "Corrected follow-up scope",
+    ):
+        assert phrase in adr
+    for name in (
+        "RuntimeApiDomainOperationCapabilityFactory",
+        "RuntimeClockFactory",
+        "RuntimeApiRateAdmissionCapabilityFactory",
+        "RuntimeApiDeadlineBudgetCapabilityFactory",
+        "RuntimeApiDisconnectObservationCapabilityFactory",
+        "RuntimeApiPreparationContextUpstreamFactory",
+    ):
+        assert name in adr
+    for field in (
+        "domain_operation: RuntimeApiDomainOperationCapability",
+        "clock: RuntimeClockPort",
+        "rate_admission: RuntimeApiRateAdmissionCapability",
+        "deadline_budget: RuntimeApiDeadlineBudgetCapability",
+        "disconnect_observation: RuntimeApiDisconnectObservationCapability",
+        "preparation_upstream: RuntimeApiPreparationContextUpstream",
+    ):
+        assert field in adr
+    for phrase in (
+        "exactly one request-capability-scope factory",
+        "six privately captured leaf factories",
+        "suppresses no exception",
+        "production-only",
+        "migration `20260808_0025`",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
+
+
 def test_cp9_runtime_preparation_provenance_capability_contracts_are_bounded() -> None:
     contracts = (ROOT / "app/services/runtime_api_contracts.py").read_text(encoding="utf-8")
     protocols = (ROOT / "app/services/runtime_api_protocols.py").read_text(encoding="utf-8")

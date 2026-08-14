@@ -728,3 +728,18 @@ transaction. Missing approved composition maps to a generic bounded `503`; suppl
 composition fails application construction. No mutable `app.state`, service locator, environment
 selection, default fake, preparation persistence, or migration `20260808_0025` is permitted. CP9
 remains Planned / Blocked and CP10 remains Planned.
+
+### CP9 dependency-bundle lifecycle correction security boundary
+
+The corrected ADR-107 bundle exposes only one immutable scope-factory field, preventing direct leaf
+factory invocation outside the lifecycle coordinator. Six leaf factories are captured privately
+and invoked exactly once. Only the disconnect factory receives the current request's
+transport-neutral signal, and only the upstream factory receives the exact domain-operation and
+trusted-clock instances already created for that scope.
+
+The async scope yields a frozen six-field dependency set, returns false from exit, never suppresses
+exceptions, and disposes partial or complete construction exactly once in reverse order. Re-entry,
+duplicate exit, pre-enter or post-exit use, escape, cross-request reuse, mutable or partial bundle,
+and non-boolean disconnect observations fail closed. Unavailable composition remains an `app.api`
+production-only boundary returning generic `503`; it carries no public bundle variant or facts. No
+preparation persistence or migration `20260808_0025` is permitted.

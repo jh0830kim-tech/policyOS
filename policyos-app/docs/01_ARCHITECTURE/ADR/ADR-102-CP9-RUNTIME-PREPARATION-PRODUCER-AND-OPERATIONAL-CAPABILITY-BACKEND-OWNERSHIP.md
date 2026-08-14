@@ -124,3 +124,12 @@ fresh request objects exactly once. Provider, producer, issuer, source, and entr
 that order and cannot generate or replace facts. The transport-neutral disconnect signal exposes
 only an asynchronous strict boolean; FastAPI remains confined to `app.api`. The public independent
 rate factory remains SQLAlchemy-free, and preparation still requires no migration `20260808_0025`.
+
+## ADR-107 factory-signature correction
+
+The production bundle exposes only one immutable `request_capability_scope_factory`. That factory
+privately captures the six typed leaf factories and alone invokes them exactly once. The
+preparation-upstream factory receives the exact request-scoped domain-operation and clock objects;
+the disconnect factory alone receives the transport-neutral signal. The async scope yields one
+closed six-field dependency set, never suppresses exceptions, and disposes partial or complete
+construction exactly once in reverse order.

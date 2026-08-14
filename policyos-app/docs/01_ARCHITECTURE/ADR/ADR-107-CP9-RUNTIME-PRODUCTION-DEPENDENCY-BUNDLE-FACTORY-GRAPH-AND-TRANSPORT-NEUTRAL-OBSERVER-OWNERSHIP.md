@@ -169,3 +169,152 @@ The production factory graph and request lifetime are now deterministic and inde
 reviewable. This governance gate changes no production/public Python, route, model, repository,
 schema, or migration. CP9 remains Planned / Blocked until its separate public-contract,
 production, acceptance, and closeout gates merge. CP10 remains Planned.
+
+## Factory-signature and request-scope lifecycle correction
+
+This section supersedes the earlier statement that the bundle exposes the six leaf factories and
+the request-scope factory as seven peer fields. Exposing both is redundant and permits composition
+to bypass the lifecycle coordinator.
+
+### Exact public bundle and private leaf factories
+
+`RuntimeApiProductionDependencyBundle` is one frozen, slots-based, keyword-only dataclass with
+exactly one field:
+
+```text
+request_capability_scope_factory: RuntimeApiRequestCapabilityScopeFactory
+```
+
+The bundle has no optional fields, mapping, metadata, unavailable discriminator, prepared facts,
+or direct leaf-factory fields. `RuntimeApiRequestCapabilityScopeFactory` is configured once at
+process assembly and privately, immutably captures exactly these six leaf factories:
+
+- `RuntimeApiDomainOperationCapabilityFactory`
+- `RuntimeClockFactory`
+- `RuntimeApiRateAdmissionCapabilityFactory`
+- `RuntimeApiDeadlineBudgetCapabilityFactory`
+- `RuntimeApiDisconnectObservationCapabilityFactory`
+- `RuntimeApiPreparationContextUpstreamFactory`
+
+The leaf factories remain additive public structural Protocols so composition can be type-checked
+and tested, but they are not separately reachable through the bundle. The scope factory is the
+only bundle entry point and the only owner allowed to invoke them.
+
+### Exact leaf-factory signatures and construction order
+
+The signatures are closed as follows:
+
+```text
+RuntimeApiDomainOperationCapabilityFactory.__call__()
+    -> RuntimeApiDomainOperationCapability
+RuntimeClockFactory.__call__()
+    -> RuntimeClockPort
+RuntimeApiRateAdmissionCapabilityFactory.__call__()
+    -> RuntimeApiRateAdmissionCapability
+RuntimeApiDeadlineBudgetCapabilityFactory.__call__()
+    -> RuntimeApiDeadlineBudgetCapability
+RuntimeApiDisconnectObservationCapabilityFactory.__call__(
+    signal: RuntimeApiDisconnectSignal,
+) -> RuntimeApiDisconnectObservationCapability
+RuntimeApiPreparationContextUpstreamFactory.__call__(
+    domain_operation: RuntimeApiDomainOperationCapability,
+    clock: RuntimeClockPort,
+) -> RuntimeApiPreparationContextUpstream
+```
+
+The scope factory invokes them exactly once and only in this order: domain operation, clock, rate
+admission, deadline budget, disconnect observation, and preparation upstream. The upstream is
+created last from the exact domain-operation and clock objects already present in the scope. It
+cannot construct or replace either dependency.
+
+### Exact upstream Protocol
+
+`RuntimeApiPreparationContextUpstream` exposes exactly three asynchronous methods. Their inputs
+and outputs are:
+
+```text
+prepare_submission(
+    claims: VerifiedAccessTokenClaims,
+    organization: RuntimeApiOrganizationSelector,
+    request: RuntimeApiSubmissionInput,
+) -> RuntimeApiSubmissionPreparationContext
+prepare_query(
+    claims: VerifiedAccessTokenClaims,
+    organization: RuntimeApiOrganizationSelector,
+    request: RuntimeApiInvocationQueryInput,
+) -> RuntimeApiInvocationQueryPreparationContext
+prepare_reconciliation(
+    claims: VerifiedAccessTokenClaims,
+    organization: RuntimeApiOrganizationSelector,
+    request: RuntimeApiReconciliationInput,
+) -> RuntimeApiReconciliationPreparationContext
+```
+
+Submission and reconciliation obtain exactly one callback from the injected domain-operation
+capability. Query obtains zero callbacks and carries no mutation field. All three use the injected
+clock only to exact-read the caller-approved clock reference already present in the authoritative
+preparation output; the clock cannot select a reference or generate hidden time.
+
+### Exact disconnect and request-scope signatures
+
+`RuntimeApiDisconnectSignal` exposes only:
+
+```text
+async is_disconnected() -> bool
+```
+
+The signal is the sole argument to
+`RuntimeApiRequestCapabilityScopeFactory.__call__(signal)`. The scope factory passes that same
+object identity exactly once to `RuntimeApiDisconnectObservationCapabilityFactory`; no other leaf
+factory receives it. The concrete observer must reject a non-`bool` result. The signal supplies no
+reference, timestamp, body, bearer, cancellation, retry, compensation, or Runtime state fact.
+
+The scope factory returns one `RuntimeApiRequestCapabilityScope`. That Protocol is an asynchronous
+context manager with exact methods:
+
+```text
+async __aenter__() -> RuntimeApiRequestDependencies
+async __aexit__(
+    exc_type: type[BaseException] | None,
+    exc: BaseException | None,
+    traceback: TracebackType | None,
+) -> Literal[False]
+```
+
+Returning `False` is mandatory: cleanup never suppresses an exception. Enter may succeed exactly
+once and exit may complete exactly once. Re-entry, duplicate exit, use before enter, use after
+exit, cross-request reuse, or partial construction fails closed. If construction fails, every
+already-created object is disposed exactly once in reverse order and no dependency set is yielded.
+
+`RuntimeApiRequestDependencies` is one frozen, slots-based, keyword-only dataclass with exactly
+these fields in construction order:
+
+```text
+domain_operation: RuntimeApiDomainOperationCapability
+clock: RuntimeClockPort
+rate_admission: RuntimeApiRateAdmissionCapability
+deadline_budget: RuntimeApiDeadlineBudgetCapability
+disconnect_observation: RuntimeApiDisconnectObservationCapability
+preparation_upstream: RuntimeApiPreparationContextUpstream
+```
+
+It contains no request, claims, organization selector, prepared facts, database object, mutable
+mapping, close callback, or transport type. The dependency set borrows the scope lifetime and
+cannot escape or be reused.
+
+### Unavailable composition ownership
+
+Unavailable composition is production-only and is not a Runtime public contract, bundle variant,
+or sentinel field. `app.api` owns one closed unavailable prepared-entry implementation used only
+when no bundle was supplied at application construction. It returns generic bounded `503` before
+creating a request scope or inspecting a candidate. Supplying a bundle that is incomplete,
+mutable, duplicated, or structurally invalid fails application construction and cannot select the
+unavailable entry.
+
+### Corrected follow-up scope
+
+The next public-contract gate may add the bundle and dependency-set dataclasses plus the upstream,
+disconnect-signal, six leaf-factory, request-scope-factory, and request-scope Protocols only in
+`app.services.runtime_api_protocols`. It may update its focused structural tests and bounded
+architecture/document status. It cannot implement a factory, lifecycle, FastAPI adapter, route,
+SQLAlchemy session owner, unavailable entry, or migration `20260808_0025`.
