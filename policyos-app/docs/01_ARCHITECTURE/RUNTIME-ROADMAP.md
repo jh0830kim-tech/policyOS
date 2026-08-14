@@ -168,6 +168,8 @@ grants permission or causes automatic execution.
 | CP9 Application Integration | Merged, PR #98 | Concrete application composition | Adds a request-scoped one-shot facts provider, pure binder, domain-callback local operation, exact binding/state/result reads, and same-transaction staging through the existing facade | Production routes and CP9 closeout remain separate |
 | CP9-Gate-Runtime-Route-Trusted-Preparation-and-Production-Composition | Governed, pending review | Route and composition governance | ADR-100 fixes header-only idempotency, server-owned prepared-operation sourcing, thin routes, error mapping, and composition ownership | Governance only; contract correction and routes remain separate |
 | CP9 Runtime Preparation Provenance and Operational Capability Contracts | Implemented, validated, pending review | Application public contracts | Adds immutable exact preparation provenance, server-owned package issuance, and request-scoped rate, deadline, and disconnect capability contracts | No production issuer, source, capability, dependency, or route; migration `20260808_0024` remains prohibited |
+| CP9-Gate-Operational-Preflight-and-Preparation-Consumption-Governance | Merged, PR #109 | Preflight ordering governance | ADR-105 fixes closed operational inputs, non-consuming inspection, terminal rejection, and consume-after-success ordering | Governance only; public contracts and production remain separate |
+| CP9 Operational Preflight and Preparation Consumption Public Contracts | Implemented, validated, pending review | Application public contracts | Adds one closed exact preflight, operation-specific candidate carriage, server-owned context provision, and distinct inspect/consume/reject Protocols | No production lifecycle, capabilities, composition, route, or migration `20260808_0025` |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires production facade implementation and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -706,3 +708,10 @@ request-local, the facade retains its five-parameter methods and transaction own
 migration `20260808_0025` is required. Public-contract correction, production composition/routes,
 combined PostgreSQL/HTTP acceptance, and closeout remain separate gates. CP9 remains Planned /
 Blocked and CP10 remains Planned.
+
+The public-contract correction adds one strict frozen operational-preflight value whose exact rate,
+deadline, and disconnect requests share preparation provenance and trusted clock facts. Submission,
+query, and reconciliation candidates and preparation contexts carry that value. A server-owned
+context provider supplies the complete context, while the request-local source exposes distinct
+inspect, consume, and reject operations. No source state implementation, capability backend,
+composition, route, persistence, schema, or migration `20260808_0025` is included.

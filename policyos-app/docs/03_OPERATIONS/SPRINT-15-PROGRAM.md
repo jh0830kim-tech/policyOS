@@ -946,3 +946,13 @@ or failure terminally rejects the candidate with consumption and facade work zer
 admitted rate evidence remains durable if a later check rejects the request. Public contracts,
 production routes, combined PostgreSQL/HTTP acceptance, and CP9 closeout remain separate. No
 preparation schema or migration `20260808_0025` is approved. CP10 remains Planned.
+
+## CP9 operational preflight and preparation consumption public contracts
+
+Status: Implemented / Validated, Pending Review. One strict frozen operational-preflight value
+closes the exact rate-admission, deadline, and disconnect requests over the same preparation and
+trusted clock. Operation-specific candidates and preparation contexts require that value. A
+server-owned context-provider Protocol supplies complete inputs, and the request-local source now
+separates non-consuming inspection from exact consumption and terminal rejection. Production
+source state, capabilities, composition, routes, PostgreSQL/HTTP acceptance, and CP9 closeout
+remain separate; migration `20260808_0025` remains prohibited and CP10 remains Planned.

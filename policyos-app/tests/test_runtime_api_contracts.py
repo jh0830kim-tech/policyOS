@@ -45,6 +45,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiInvocationQueryFacts,
     RuntimeApiInvocationQueryInput,
     RuntimeApiOperation,
+    RuntimeApiOperationalPreflight,
     RuntimeApiOrganizationSelector,
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
@@ -92,6 +93,7 @@ from app.services.runtime_api_validation import (
     validate_runtime_api_domain_operation_result,
     validate_runtime_api_idempotency_replay,
     validate_runtime_api_invocation_query_binding,
+    validate_runtime_api_operational_preflight,
     validate_runtime_api_preparation_provenance,
     validate_runtime_api_projection_binding,
     validate_runtime_api_public_status,
@@ -363,6 +365,35 @@ def test_preparation_provenance_and_operational_results_are_closed() -> None:
         disposition=RuntimeApiDisconnectDisposition.CONNECTED,
         observed_at=NOW,
     )
+    preflight = RuntimeApiOperationalPreflight(
+        rate_admission=rate_request,
+        deadline_budget=deadline_request,
+        disconnect_observation=observation_request,
+    )
+    assert validate_runtime_api_operational_preflight(preflight, provenance=provenance) is preflight
+    with pytest.raises(RuntimeApiContractConflict, match="preflight differs"):
+        validate_runtime_api_operational_preflight(
+            preflight,
+            provenance=preparation_provenance(
+                preparation_id=UUID("00000000-0000-0000-0000-000000000121")
+            ),
+        )
+    with pytest.raises(ValidationError, match="operational preflight binding"):
+        RuntimeApiOperationalPreflight(
+            rate_admission=rate_request,
+            deadline_budget=deadline_request.model_copy(
+                update={
+                    "provenance": preparation_provenance(
+                        preparation_id=UUID("00000000-0000-0000-0000-000000000121")
+                    )
+                }
+            ),
+            disconnect_observation=observation_request,
+        )
+    with pytest.raises(ValidationError):
+        RuntimeApiOperationalPreflight.model_validate(
+            {**preflight.model_dump(), "metadata": {"unsafe": True}}
+        )
     with pytest.raises(ValidationError, match="trusted clock"):
         RuntimeApiDisconnectObservationResult(
             request=observation_request,

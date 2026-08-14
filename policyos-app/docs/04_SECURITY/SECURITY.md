@@ -687,3 +687,12 @@ success from rate admission, deadline, and disconnect permits one `CONSUMED` tra
 facade entry. An admitted rate decision may remain durable after a later preflight rejection but
 creates no Runtime approval, permit, execution, cancellation, state, result, or audit authority.
 Preparation state remains request-local and no migration `20260808_0025` is permitted.
+
+The public contracts require one strict operational-preflight value on every prepared candidate
+and preparation context. Its rate-admission, deadline, and disconnect requests must share the
+candidate's exact provenance and trusted clock. Only a server-owned request-scoped context provider
+may supply the complete context. The source exposes distinct inspect, consume, and reject methods;
+those Protocols do not implement state, generate facts, persist callbacks, or authorize facade
+entry. Query candidates remain callback-, stage-, receipt-, and mutation-free. Production lifecycle
+enforcement and bounded HTTP translation remain separate, and no migration `20260808_0025` is
+introduced.

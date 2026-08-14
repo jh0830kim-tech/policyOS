@@ -35,6 +35,7 @@ from app.services.runtime_api_contracts import (
     RuntimeApiInvocationQueryFacts,
     RuntimeApiInvocationQueryInput,
     RuntimeApiOperation,
+    RuntimeApiOperationalPreflight,
     RuntimeApiPermission,
     RuntimeApiPermissionFact,
     RuntimeApiPreparationProvenance,
@@ -81,6 +82,22 @@ def validate_runtime_api_clock_binding(
     ):
         raise RuntimeApiContractConflict("trusted clock differs from preparation")
     return clock
+
+
+def validate_runtime_api_operational_preflight(
+    preflight: RuntimeApiOperationalPreflight,
+    *,
+    provenance: RuntimeApiPreparationProvenance,
+) -> RuntimeApiOperationalPreflight:
+    """Require one closed preflight bound to the exact prepared candidate."""
+
+    if (
+        preflight.provenance != provenance
+        or preflight.clock.clock_reference != provenance.clock_reference
+        or preflight.clock.observed_at != provenance.evaluated_at
+    ):
+        raise RuntimeApiContractConflict("operational preflight differs from preparation")
+    return preflight
 
 
 def validate_runtime_rate_policy_management_permission(
@@ -847,6 +864,7 @@ __all__ = (
     "validate_runtime_api_domain_operation_result",
     "validate_runtime_api_idempotency_replay",
     "validate_runtime_api_invocation_query_binding",
+    "validate_runtime_api_operational_preflight",
     "validate_runtime_api_permission",
     "validate_runtime_api_preparation_provenance",
     "validate_runtime_api_principal",
