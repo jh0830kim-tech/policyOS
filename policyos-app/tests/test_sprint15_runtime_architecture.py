@@ -1664,6 +1664,42 @@ def test_cp9_operational_preflight_consumption_ordering_governance_is_bounded() 
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
+def test_cp9_runtime_http_semantics_are_governed_before_production_routes() -> None:
+    adr_name = (
+        "ADR-109-CP9-RUNTIME-ORGANIZATION-SELECTOR-TRANSPORT-AND-"
+        "OPERATIONAL-REJECTION-HTTP-SEMANTICS.md"
+    )
+    adr = (ROOT / "docs" / "01_ARCHITECTURE" / "ADR" / adr_name).read_text(encoding="utf-8")
+    adr100 = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-100-CP9-RUNTIME-ROUTE-TRUSTED-PREPARATION-AND-PRODUCTION-COMPOSITION.md"
+    ).read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((adr, adr100, roadmap, program, security))
+    for phrase in (
+        "exactly one query parameter named `organization_id`",
+        "lowercase canonical hyphenated",
+        "fail with bounded `422` before request-capability scope creation",
+        "non-disclosing `404`",
+        "RuntimeApiErrorCode.DEPENDENCY_UNAVAILABLE",
+        "Runtime operation unavailable",
+        "Rate denial remains the only operational rejection mapped to `429`",
+        "no second response attempt",
+        "migration `20260808_0025`",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert "`X-Organization-ID`" in adr
+    assert "headers, bodies, path expansion" in combined
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
+
+
 def test_cp9_managed_request_capability_lifetime_governance_is_closed() -> None:
     adr = " ".join(
         (

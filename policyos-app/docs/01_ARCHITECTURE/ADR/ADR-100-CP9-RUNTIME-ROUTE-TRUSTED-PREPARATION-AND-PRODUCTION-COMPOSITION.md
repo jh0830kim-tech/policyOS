@@ -235,3 +235,12 @@ fresh request-scoped capabilities. Mutable `app.state`, service locators, enviro
 objects, callback names, dynamic imports, and default fakes are prohibited. Missing approved
 composition returns bounded `503` before inspection. Rate admission owns a transaction separate
 from the facade-owned application transaction, and migration `20260808_0025` is prohibited.
+
+## ADR-109 clarification
+
+The fixed three routes require exactly one canonical lowercase hyphenated UUID query parameter
+named `organization_id`; headers, bodies, path expansion, aliases, duplicates, and inferred
+organization selection are prohibited. Deadline expiry and observed disconnect use the same
+generic `503` dependency-unavailable envelope as missing operational composition without creating
+Runtime cancellation or effect-termination authority. Rate denial alone remains `429` with the
+exact persisted retry-after value.

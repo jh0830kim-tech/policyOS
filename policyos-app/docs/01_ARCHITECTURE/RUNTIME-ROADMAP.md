@@ -765,3 +765,11 @@ The public-contract gate now exposes the covariant structural managed-resource P
 only the six leaf-factory return annotations. Factory inputs, capability methods, dependency fields,
 request-scope signatures, and facade signatures remain unchanged. Concrete lifecycle enforcement
 and production composition remain blocked.
+
+ADR-109 governs the remaining Runtime HTTP semantics before production composition. All three
+fixed endpoints require exactly one canonical `organization_id` query parameter; invalid transport
+fails `422`, while authoritative scope mismatch remains non-disclosing `404`. Deadline expiry,
+disconnect, and operational dependency failure share one generic `503` envelope without creating
+Runtime cancellation or effect authority. Rate denial alone remains `429` with exact persisted
+retry-after provenance. This governance adds no production code, schema, or migration
+`20260808_0025`; production composition, acceptance, regression, and closeout remain blocked.

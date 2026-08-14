@@ -1025,3 +1025,15 @@ Planned.
 The follow-up public-contract gate adds only the governed managed-resource Protocol and six exact
 factory return annotations. It does not implement acquisition, guarded views, disposal, production
 composition, routes, persistence, or transaction control.
+
+### CP9 Runtime organization transport and operational rejection governance
+
+Status: Governed / Validated, Pending Review. ADR-109 requires exactly one canonical lowercase
+hyphenated UUID `organization_id` query parameter on each fixed Runtime endpoint. Missing,
+duplicate, aliased, malformed, or non-canonical selectors fail `422` before preparation work;
+facade-revalidated scope mismatch remains non-disclosing `404`. Deadline expiry, disconnect,
+capability failure, and missing preparation/composition share a generic `503`
+dependency-unavailable envelope and create no cancellation, retry, compensation, success, or
+effect-termination authority. Rate denial alone remains `429` with exact persisted retry-after.
+Production Python, HTTP acceptance, migration `20260808_0025`, CP10, tag, and release remain
+deferred.

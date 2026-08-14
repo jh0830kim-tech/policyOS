@@ -777,3 +777,19 @@ is permitted. CP9 remains Planned / Blocked and CP10 remains Planned.
 The public-contract gate exposes only the covariant managed-resource boundary and the six exact
 factory return annotations. It adds no public cleanup method, lifecycle implementation, session or
 transaction authority, mutable registry, credential path, persistence, or transport behavior.
+
+### CP9 Runtime organization selector and operational rejection security boundary
+
+ADR-109 confines organization selection to one required canonical `organization_id` query
+parameter. It cannot be sourced from bearer claims, request bodies, headers, opaque Runtime
+references, defaults, or current/latest database selection. Transport invalidity returns bounded
+`422` without existence disclosure; tenant, organization, membership, classification, permission,
+lineage, and persisted bindings remain facade-owned exact revalidation, with mismatch returning
+generic `404`.
+
+Deadline expiry, observed disconnect, capability failure, and missing preparation/composition use
+the same generic `503` dependency-unavailable envelope. Responses and logs do not expose the
+internal cause, deadline, observation, package, callback, policy, provider, database, session,
+transaction, bearer, body, or cross-scope facts. Disconnect creates no second response attempt and
+no Runtime cancellation or external-effect conclusion. Rate denial alone uses `429` and only the
+exact persisted retry-after value. No schema or migration `20260808_0025` is permitted.
