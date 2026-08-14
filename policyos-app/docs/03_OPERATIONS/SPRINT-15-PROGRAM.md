@@ -996,3 +996,16 @@ exactly once in reverse order. Missing-bundle unavailability is an `app.api` pro
 a supplied partial bundle fails application construction. The correction changes no public Python,
 production composition, persistence, or migration `20260808_0025`. CP9 remains Planned / Blocked
 and CP10 remains Planned.
+
+### CP9 dependency-bundle and upstream public contracts
+
+This gate adds ADR-107's closed public Protocols and immutable values only: exactly one
+scope-factory field, six private leaf-factory signatures, an authoritative operation-specific
+upstream, a transport-neutral disconnect signal, one async request scope, and one frozen
+six-field request dependency set. The bundle exposes no leaf factory directly and the scope exit
+suppresses no exception.
+
+Production factories, lifecycle enforcement, preparation source/backend, FastAPI composition,
+routes, PostgreSQL/HTTP acceptance, and closeout remain separate. Preparation persistence and
+migration `20260808_0025` remain prohibited. CP9 remains Planned / Blocked and CP10 remains
+Planned.

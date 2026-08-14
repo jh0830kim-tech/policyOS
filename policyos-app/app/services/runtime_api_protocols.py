@@ -1,7 +1,8 @@
 """Protocols for the CP9 trusted Runtime API application boundary."""
 
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from types import TracebackType
+from typing import Literal, Protocol, runtime_checkable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -563,6 +564,133 @@ class RuntimeApiDisconnectObservationCapability(Protocol):
 
 
 @runtime_checkable
+class RuntimeApiDisconnectSignal(Protocol):
+    """Observe only whether the current transport request disconnected."""
+
+    async def is_disconnected(self) -> bool: ...
+
+
+@runtime_checkable
+class RuntimeApiPreparationContextUpstream(Protocol):
+    """Return one authoritative operation-specific preparation context."""
+
+    async def prepare_submission(
+        self,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        request: RuntimeApiSubmissionInput,
+    ) -> RuntimeApiSubmissionPreparationContext: ...
+
+    async def prepare_query(
+        self,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        request: RuntimeApiInvocationQueryInput,
+    ) -> RuntimeApiInvocationQueryPreparationContext: ...
+
+    async def prepare_reconciliation(
+        self,
+        claims: VerifiedAccessTokenClaims,
+        organization: RuntimeApiOrganizationSelector,
+        request: RuntimeApiReconciliationInput,
+    ) -> RuntimeApiReconciliationPreparationContext: ...
+
+
+@runtime_checkable
+class RuntimeApiDomainOperationCapabilityFactory(Protocol):
+    def __call__(self) -> RuntimeApiDomainOperationCapability: ...
+
+
+@runtime_checkable
+class RuntimeClockFactory(Protocol):
+    def __call__(self) -> RuntimeClockPort: ...
+
+
+@runtime_checkable
+class RuntimeApiRateAdmissionCapabilityFactory(Protocol):
+    def __call__(self) -> RuntimeApiRateAdmissionCapability: ...
+
+
+@runtime_checkable
+class RuntimeApiDeadlineBudgetCapabilityFactory(Protocol):
+    def __call__(self) -> RuntimeApiDeadlineBudgetCapability: ...
+
+
+@runtime_checkable
+class RuntimeApiDisconnectObservationCapabilityFactory(Protocol):
+    def __call__(
+        self, signal: RuntimeApiDisconnectSignal
+    ) -> RuntimeApiDisconnectObservationCapability: ...
+
+
+@runtime_checkable
+class RuntimeApiPreparationContextUpstreamFactory(Protocol):
+    def __call__(
+        self,
+        domain_operation: RuntimeApiDomainOperationCapability,
+        clock: RuntimeClockPort,
+    ) -> RuntimeApiPreparationContextUpstream: ...
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RuntimeApiRequestDependencies:
+    """The exact fresh dependency set for one request capability scope."""
+
+    domain_operation: RuntimeApiDomainOperationCapability
+    clock: RuntimeClockPort
+    rate_admission: RuntimeApiRateAdmissionCapability
+    deadline_budget: RuntimeApiDeadlineBudgetCapability
+    disconnect_observation: RuntimeApiDisconnectObservationCapability
+    preparation_upstream: RuntimeApiPreparationContextUpstream
+
+    def __post_init__(self) -> None:
+        expected = (
+            (self.domain_operation, RuntimeApiDomainOperationCapability),
+            (self.clock, RuntimeClockPort),
+            (self.rate_admission, RuntimeApiRateAdmissionCapability),
+            (self.deadline_budget, RuntimeApiDeadlineBudgetCapability),
+            (
+                self.disconnect_observation,
+                RuntimeApiDisconnectObservationCapability,
+            ),
+            (self.preparation_upstream, RuntimeApiPreparationContextUpstream),
+        )
+        if any(not isinstance(value, contract) for value, contract in expected):
+            raise TypeError("request dependency contract differs")
+
+
+@runtime_checkable
+class RuntimeApiRequestCapabilityScope(Protocol):
+    async def __aenter__(self) -> RuntimeApiRequestDependencies: ...
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> Literal[False]: ...
+
+
+@runtime_checkable
+class RuntimeApiRequestCapabilityScopeFactory(Protocol):
+    def __call__(self, signal: RuntimeApiDisconnectSignal) -> RuntimeApiRequestCapabilityScope: ...
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RuntimeApiProductionDependencyBundle:
+    """The sole immutable production entry point for Runtime dependencies."""
+
+    request_capability_scope_factory: RuntimeApiRequestCapabilityScopeFactory
+
+    def __post_init__(self) -> None:
+        if not isinstance(
+            self.request_capability_scope_factory,
+            RuntimeApiRequestCapabilityScopeFactory,
+        ):
+            raise TypeError("request capability scope factory differs")
+
+
+@runtime_checkable
 class RuntimeApiPreparedApplicationEntry(Protocol):
     """Expose one trusted prepared application boundary to thin routes."""
 
@@ -618,9 +746,13 @@ __all__ = (
     "RuntimeApiApplicationFacade",
     "RuntimeApiActiveTransactionPersistenceFactory",
     "RuntimeApiDomainOperationCapability",
+    "RuntimeApiDomainOperationCapabilityFactory",
     "RuntimeApiDomainOperationCallback",
     "RuntimeApiDeadlineBudgetCapability",
+    "RuntimeApiDeadlineBudgetCapabilityFactory",
+    "RuntimeApiDisconnectSignal",
     "RuntimeApiDisconnectObservationCapability",
+    "RuntimeApiDisconnectObservationCapabilityFactory",
     "RuntimeApiIdempotencyTransactionPort",
     "RuntimeApiIntegrationFactsProvider",
     "RuntimeApiInvocationQueryPreparationContext",
@@ -634,14 +766,22 @@ __all__ = (
     "RuntimeApiPreparedSubmission",
     "RuntimeApiPreparationIssuer",
     "RuntimeApiPreparationContextProvider",
+    "RuntimeApiPreparationContextUpstream",
+    "RuntimeApiPreparationContextUpstreamFactory",
     "RuntimeApiPreparationProducer",
     "RuntimeApiPersistedOrchestrationFactBinder",
     "RuntimeApiQueryProjectionLocatorProvider",
     "RuntimeApiRateAdmissionCapability",
+    "RuntimeApiRateAdmissionCapabilityFactory",
+    "RuntimeApiProductionDependencyBundle",
+    "RuntimeApiRequestCapabilityScope",
+    "RuntimeApiRequestCapabilityScopeFactory",
+    "RuntimeApiRequestDependencies",
     "RuntimeRatePolicyManagementCapability",
     "RuntimeApiReconciliationPreparationContext",
     "RuntimeApiSubmissionPreparationContext",
     "RuntimeApiTrustedPreparationSource",
     "RuntimeApiTrustedContextResolver",
     "RuntimeClockPort",
+    "RuntimeClockFactory",
 )

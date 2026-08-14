@@ -668,6 +668,19 @@ counter creation or increment to the exact decision in the same transaction. Mig
 normalization, deduplication, inferred assignment, or default policy. Public contracts,
 persistence, production/HTTP acceptance, and closeout remain separate; CP9 remains Planned /
 Blocked and CP10 remains Planned.
+
+### CP9 dependency-bundle and upstream public contracts
+
+The public-contract gate implements ADR-107 with a frozen production bundle containing exactly
+one scope-factory field. Additive structural Protocols close the six private leaf-factory
+signatures, authoritative operation-specific preparation upstream, asynchronous strict-boolean
+disconnect signal, one-shot request scope, and frozen six-field request dependency set. Async exit
+returns false and cannot suppress an exception.
+
+These contracts create no production source, backend, composition, route, session, transaction,
+or unavailable-bundle variant. Preparation remains request-local, migration `20260808_0025`
+remains prohibited, and PostgreSQL/HTTP acceptance and closeout remain separate gates. CP9 remains
+Planned / Blocked and CP10 remains Planned.
 ## CP9 rate-admission public contracts
 
 The immutable ADR-103 policy revision, explicit provisioning and revocation,

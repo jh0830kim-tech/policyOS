@@ -109,10 +109,17 @@ from app.services.runtime_api_protocols import (
     RuntimeApiActiveTransactionPersistenceFactory,
     RuntimeApiApplicationFacade,
     RuntimeApiDeadlineBudgetCapability,
+    RuntimeApiDeadlineBudgetCapabilityFactory,
     RuntimeApiDisconnectObservationCapability,
+    RuntimeApiDisconnectObservationCapabilityFactory,
+    RuntimeApiDisconnectSignal,
+    RuntimeApiDomainOperationCapability,
+    RuntimeApiDomainOperationCapabilityFactory,
     RuntimeApiIntegrationFactsProvider,
     RuntimeApiPersistedOrchestrationFactBinder,
     RuntimeApiPreparationContextProvider,
+    RuntimeApiPreparationContextUpstream,
+    RuntimeApiPreparationContextUpstreamFactory,
     RuntimeApiPreparationIssuer,
     RuntimeApiPreparedApplicationEntry,
     RuntimeApiPreparedInvocationQuery,
@@ -120,7 +127,13 @@ from app.services.runtime_api_protocols import (
     RuntimeApiPreparedSubmission,
     RuntimeApiQueryProjectionLocatorProvider,
     RuntimeApiRateAdmissionCapability,
+    RuntimeApiRateAdmissionCapabilityFactory,
+    RuntimeApiRequestCapabilityScope,
+    RuntimeApiRequestCapabilityScopeFactory,
+    RuntimeApiRequestDependencies,
     RuntimeApiTrustedPreparationSource,
+    RuntimeClockFactory,
+    RuntimeClockPort,
     RuntimeRatePolicyManagementCapability,
 )
 from app.services.runtime_api_validation import (
@@ -949,6 +962,136 @@ class DeadlineBudgetCapability:
 class DisconnectObservationCapability:
     async def observe(self, request):
         return None
+
+
+class DisconnectSignal:
+    async def is_disconnected(self):
+        return False
+
+
+class DomainOperationCapability:
+    async def submission_callback(self, provenance, facts):
+        return PreparedDomainCallback()
+
+    async def reconciliation_callback(self, provenance, facts):
+        return PreparedDomainCallback()
+
+
+class Clock:
+    async def read(self, clock_reference):
+        return None
+
+
+class PreparationContextUpstream:
+    async def prepare_submission(self, claims, organization, request):
+        return None
+
+    async def prepare_query(self, claims, organization, request):
+        return None
+
+    async def prepare_reconciliation(self, claims, organization, request):
+        return None
+
+
+class DomainOperationCapabilityFactory:
+    def __call__(self):
+        return DomainOperationCapability()
+
+
+class ClockFactory:
+    def __call__(self):
+        return Clock()
+
+
+class RateAdmissionCapabilityFactory:
+    def __call__(self):
+        return RateAdmissionCapability()
+
+
+class DeadlineBudgetCapabilityFactory:
+    def __call__(self):
+        return DeadlineBudgetCapability()
+
+
+class DisconnectObservationCapabilityFactory:
+    def __call__(self, signal):
+        return DisconnectObservationCapability()
+
+
+class PreparationContextUpstreamFactory:
+    def __call__(self, domain_operation, clock):
+        return PreparationContextUpstream()
+
+
+class RequestCapabilityScope:
+    def __init__(self, dependencies):
+        self.dependencies = dependencies
+
+    async def __aenter__(self):
+        return self.dependencies
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        return False
+
+
+class RequestCapabilityScopeFactory:
+    def __init__(self, dependencies):
+        self.dependencies = dependencies
+
+    def __call__(self, signal):
+        return RequestCapabilityScope(self.dependencies)
+
+
+def test_dependency_factory_graph_protocols_and_request_scope_are_exact() -> None:
+    domain_operation = DomainOperationCapability()
+    clock = Clock()
+    rate = RateAdmissionCapability()
+    deadline = DeadlineBudgetCapability()
+    disconnect = DisconnectObservationCapability()
+    upstream = PreparationContextUpstream()
+    dependencies = RuntimeApiRequestDependencies(
+        domain_operation=domain_operation,
+        clock=clock,
+        rate_admission=rate,
+        deadline_budget=deadline,
+        disconnect_observation=disconnect,
+        preparation_upstream=upstream,
+    )
+    scope_factory = RequestCapabilityScopeFactory(dependencies)
+    scope = scope_factory(DisconnectSignal())
+
+    assert isinstance(domain_operation, RuntimeApiDomainOperationCapability)
+    assert isinstance(clock, RuntimeClockPort)
+    assert isinstance(upstream, RuntimeApiPreparationContextUpstream)
+    assert isinstance(DisconnectSignal(), RuntimeApiDisconnectSignal)
+    assert isinstance(
+        DomainOperationCapabilityFactory(), RuntimeApiDomainOperationCapabilityFactory
+    )
+    assert isinstance(ClockFactory(), RuntimeClockFactory)
+    assert isinstance(RateAdmissionCapabilityFactory(), RuntimeApiRateAdmissionCapabilityFactory)
+    assert isinstance(DeadlineBudgetCapabilityFactory(), RuntimeApiDeadlineBudgetCapabilityFactory)
+    assert isinstance(
+        DisconnectObservationCapabilityFactory(),
+        RuntimeApiDisconnectObservationCapabilityFactory,
+    )
+    assert isinstance(
+        PreparationContextUpstreamFactory(),
+        RuntimeApiPreparationContextUpstreamFactory,
+    )
+    assert isinstance(scope_factory, RuntimeApiRequestCapabilityScopeFactory)
+    assert isinstance(scope, RuntimeApiRequestCapabilityScope)
+    assert asyncio.run(scope.__aenter__()) is dependencies
+    assert asyncio.run(scope.__aexit__(None, None, None)) is False
+    assert tuple(signature(RuntimeApiDisconnectSignal.is_disconnected).parameters) == ("self",)
+    assert tuple(signature(RuntimeApiRequestCapabilityScopeFactory.__call__).parameters) == (
+        "self",
+        "signal",
+    )
+    assert tuple(signature(RuntimeApiPreparationContextUpstreamFactory.__call__).parameters) == (
+        "self",
+        "domain_operation",
+        "clock",
+    )
 
 
 def trusted_context_facts() -> RuntimeApiTrustedContextFacts:
