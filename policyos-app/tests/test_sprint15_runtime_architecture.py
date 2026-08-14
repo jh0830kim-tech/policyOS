@@ -1716,6 +1716,53 @@ def test_cp9_production_preparation_composition_governance_is_bounded() -> None:
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
+def test_cp9_dependency_bundle_factory_graph_governance_is_bounded() -> None:
+    adr = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / (
+            "ADR-107-CP9-RUNTIME-PRODUCTION-DEPENDENCY-BUNDLE-FACTORY-"
+            "GRAPH-AND-TRANSPORT-NEUTRAL-OBSERVER-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "Exact upstream input and output",
+        "Callback ownership",
+        "Immutable bundle and factory graph",
+        "Request lifetime and disposal",
+        "Transport-neutral disconnect signal",
+        "Independent rate capability factory",
+        "Missing and partial composition",
+        "No durable preparation table",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in adr
+    for phrase in (
+        "asynchronous request-capability scope",
+        "strict-boolean disconnect signal",
+        "SQLAlchemy-free",
+        "bounded `503` before inspection",
+        "incomplete supplied bundle fails application construction",
+        "migration `20260808_0025` is prohibited",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
+
+
 def test_cp9_runtime_preparation_provenance_capability_contracts_are_bounded() -> None:
     contracts = (ROOT / "app/services/runtime_api_contracts.py").read_text(encoding="utf-8")
     protocols = (ROOT / "app/services/runtime_api_protocols.py").read_text(encoding="utf-8")

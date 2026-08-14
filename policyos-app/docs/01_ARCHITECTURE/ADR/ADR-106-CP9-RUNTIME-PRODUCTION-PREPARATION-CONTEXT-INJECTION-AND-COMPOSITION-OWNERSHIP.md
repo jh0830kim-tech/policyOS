@@ -156,3 +156,18 @@ Production composition has one auditable injection boundary and every request ha
 capability lifecycle. This governance gate changes no production Python, public contract, route,
 model, repository, schema, migration, PostgreSQL data, Worker, queue, retry, scheduler, tag, or
 release. CP9 remains Planned / Blocked and CP10 remains Planned.
+
+## ADR-107 clarification
+
+ADR-107 closes the public factory graph. The immutable bundle owns factories for the preparation
+upstream, domain-operation capability, trusted clock, independent rate admission, deadline,
+disconnect observation, and one asynchronous request-capability scope. The scope yields one
+immutable dependency set and disposes all request objects exactly once in reverse order. The
+upstream returns one existing operation-specific preparation context; callback creation remains
+exclusive to the domain-operation capability and query requests no callback.
+
+`app.api` adapts FastAPI `Request` to a transport-neutral asynchronous strict-boolean disconnect
+signal. The SQLAlchemy-free public rate factory hides its concrete session factory. A missing
+bundle installs only the closed unavailable Runtime composition and yields bounded `503` before
+inspection; an incomplete supplied bundle fails application construction. No preparation
+persistence or migration `20260808_0025` is introduced.

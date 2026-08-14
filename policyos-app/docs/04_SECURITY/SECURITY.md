@@ -712,3 +712,19 @@ trusted time. Rate admission owns a fresh independent PostgreSQL session and roo
 facade session remains separate and exclusively facade-owned. No error exposes package, policy,
 provider, callback, database, session, transaction, bearer, body, or cross-scope facts.
 Preparation remains non-durable and migration `20260808_0025` is prohibited.
+### CP9 production dependency-bundle and observer security boundary
+
+ADR-107 requires one immutable, complete production dependency bundle and one asynchronous
+request-capability scope. Every upstream, callback, clock, rate, deadline, and disconnect object is
+fresh, request-bound, non-reusable, and disposed exactly once. Missing, incomplete, stale,
+substituted, cross-request, cross-operation, cross-tenant, cross-organization,
+cross-classification, lineage-, digest-, clock-, policy-, callback-, or lifecycle-mismatched inputs
+fail closed before preparation consumption or facade invocation.
+
+Only `app.api` may bind FastAPI `Request` to the transport-neutral asynchronous disconnect signal.
+The signal exposes one strict boolean and no body, bearer, reference, timestamp, or cancellation
+authority. The public rate factory exposes no SQLAlchemy engine, session, sessionmaker, or
+transaction. Missing approved composition maps to a generic bounded `503`; supplied partial
+composition fails application construction. No mutable `app.state`, service locator, environment
+selection, default fake, preparation persistence, or migration `20260808_0025` is permitted. CP9
+remains Planned / Blocked and CP10 remains Planned.
