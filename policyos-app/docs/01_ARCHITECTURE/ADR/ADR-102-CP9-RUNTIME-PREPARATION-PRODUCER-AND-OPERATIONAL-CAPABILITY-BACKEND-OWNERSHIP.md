@@ -106,3 +106,11 @@ terminally rejects the candidate with consumption and facade invocation both zer
 allow exactly one consumption before facade entry. A committed admitted rate decision remains
 durable if a later deadline or disconnect check rejects the request. No preparation persistence or
 migration `20260808_0025` is introduced.
+
+## ADR-106 clarification
+
+The authoritative context upstream is an injected request-scoped command/orchestration
+preparation capability. The producer validates and binds only. The trusted clock returns the exact
+approved reference and reading, while the disconnect adapter owns only the current-request boolean
+observation. The PostgreSQL rate capability alone owns its fresh session, root transaction, commit
+or rollback, and close; it never shares the facade transaction.

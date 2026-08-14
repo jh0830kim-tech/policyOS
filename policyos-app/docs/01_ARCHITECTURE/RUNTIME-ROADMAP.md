@@ -715,3 +715,18 @@ query, and reconciliation candidates and preparation contexts carry that value. 
 context provider supplies the complete context, while the request-local source exposes distinct
 inspect, consume, and reject operations. No source state implementation, capability backend,
 composition, route, persistence, schema, or migration `20260808_0025` is included.
+
+### CP9 production preparation-context injection and composition ownership
+
+ADR-106 assigns production assembly to one immutable dependency bundle supplied explicitly to an
+application factory. Its factories create fresh request-scoped preparation upstream, provider,
+producer, issuer, source, clock, rate, deadline, and disconnect capabilities. Mutable `app.state`,
+service locators, environment-selected objects, dynamic imports, callback names, dependency
+overrides as production configuration, and default fakes are prohibited. Missing approved
+composition fails closed with bounded `503` before candidate inspection.
+
+The PostgreSQL rate capability owns its own session and root transaction and commits durable rate
+evidence before later preflight checks. The facade remains sole owner of its separate application
+transaction. Preparation stays request-local, migration `20260808_0025` is prohibited, and the
+public-contract, production route, acceptance, and closeout gates remain separate. CP9 remains
+Planned / Blocked and CP10 remains Planned.

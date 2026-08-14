@@ -1664,6 +1664,58 @@ def test_cp9_operational_preflight_consumption_ordering_governance_is_bounded() 
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
+def test_cp9_production_preparation_composition_governance_is_bounded() -> None:
+    adr = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / (
+            "ADR-106-CP9-RUNTIME-PRODUCTION-PREPARATION-CONTEXT-"
+            "INJECTION-AND-COMPOSITION-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "Immutable production dependency bundle",
+        "Authoritative preparation-context upstream",
+        "Request-local creation, use, and disposal",
+        "Trusted clock and disconnect provenance",
+        "Independent rate-admission transaction",
+        "Bounded unavailability and HTTP ownership",
+        "No preparation persistence or migration `20260808_0025`",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in adr
+    for forbidden in (
+        "Mutable `app.state`",
+        "service locators",
+        "environment-selected objects",
+        "dynamic imports",
+        "default fakes",
+    ):
+        assert forbidden in combined
+    for phrase in (
+        "bounded `503` before inspection",
+        "independent PostgreSQL",
+        "facade remains sole owner",
+        "migration `20260808_0025` is prohibited",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
+
+
 def test_cp9_runtime_preparation_provenance_capability_contracts_are_bounded() -> None:
     contracts = (ROOT / "app/services/runtime_api_contracts.py").read_text(encoding="utf-8")
     protocols = (ROOT / "app/services/runtime_api_protocols.py").read_text(encoding="utf-8")

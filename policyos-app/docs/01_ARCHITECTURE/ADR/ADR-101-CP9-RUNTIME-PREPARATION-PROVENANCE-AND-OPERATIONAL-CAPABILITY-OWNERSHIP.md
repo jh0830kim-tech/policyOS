@@ -201,3 +201,11 @@ Denied, expired, disconnected, malformed, missing, or failed preflight paths ter
 `REJECTED` with package consumption and facade work both zero. Only three exact successful
 capability results permit `INSPECTED` to become `CONSUMED` once. Preparation lifecycle remains
 request-local and requires no migration `20260808_0025`.
+
+## ADR-106 clarification
+
+The production application factory receives one immutable dependency bundle whose factories
+create fresh upstream preparation, clock, rate, deadline, disconnect, provider, producer, issuer,
+and source capabilities per request. Missing composition fails closed with bounded `503` before
+candidate inspection. Mutable global injection and dependency overrides as production
+configuration are prohibited.

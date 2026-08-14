@@ -227,3 +227,11 @@ fact, digest, identity, and clock inputs. It assigns multi-process rate admissio
 policy revisions and scoped window counters in migration `20260808_0024`; preparation and
 callbacks remain non-durable. Defaults, backfill, hidden clocks, and process-local fallbacks remain
 prohibited.
+
+## ADR-106 clarification
+
+Production uses an immutable dependency bundle supplied explicitly to an application factory and
+fresh request-scoped capabilities. Mutable `app.state`, service locators, environment-selected
+objects, callback names, dynamic imports, and default fakes are prohibited. Missing approved
+composition returns bounded `503` before inspection. Rate admission owns a transaction separate
+from the facade-owned application transaction, and migration `20260808_0025` is prohibited.
