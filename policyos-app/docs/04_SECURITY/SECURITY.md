@@ -758,3 +758,18 @@ Missing, substituted, partial, reused, or cross-request dependencies fail closed
 production implementation. This contract gate creates no unavailable public variant, durable
 preparation fact, schema, or migration; migration `20260808_0025` remains prohibited. CP9 remains
 Planned / Blocked and CP10 remains Planned.
+
+### CP9 managed request-capability lifetime security boundary
+
+ADR-108 requires each private leaf factory to return one fresh single-use asynchronous managed
+resource. Only the request scope may enter or exit those resources. It acquires them in the fixed
+order and releases every acquired resource exactly once in reverse order on success, rejection,
+exception, cancellation, or partial construction. Cleanup attempts continue after an exit failure
+and never suppress or replace an active primary exception.
+
+Guarded capability views reject pre-entry, exiting, post-exit, escaped, substituted, and
+cross-request calls. Capability Protocols expose no public close, reset, retry, pool, session, or
+transaction control. Rate admission closes its independent per-call session before returning;
+scope cleanup cannot touch the facade transaction. Lifecycle state is request-local and carries no
+authority, facts, credentials, or sensitive payload. No persistence or migration `20260808_0025`
+is permitted. CP9 remains Planned / Blocked and CP10 remains Planned.

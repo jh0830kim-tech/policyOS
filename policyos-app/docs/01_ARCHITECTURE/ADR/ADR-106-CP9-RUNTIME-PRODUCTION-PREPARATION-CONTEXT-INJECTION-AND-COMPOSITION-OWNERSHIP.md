@@ -181,3 +181,12 @@ manager whose exit returns false and never suppresses exceptions. The preparatio
 constructed last from the exact domain-operation and trusted-clock instances. Missing-bundle
 unavailability remains an `app.api` production-only entry, not a public bundle variant; any supplied
 partial bundle fails application construction.
+
+## ADR-108 managed-resource clarification
+
+The injected scope factory privately captures six factories returning single-use asynchronous
+managed resources. It enters them in the approved order, yields guarded capability views only
+while the scope is active, and exits acquired resources exactly once in reverse order. Cleanup
+never suppresses or replaces an active exception. Rate admission still closes each independent
+per-call session before returning; request-scope cleanup never owns the facade transaction. No
+preparation persistence or migration `20260808_0025` is introduced.

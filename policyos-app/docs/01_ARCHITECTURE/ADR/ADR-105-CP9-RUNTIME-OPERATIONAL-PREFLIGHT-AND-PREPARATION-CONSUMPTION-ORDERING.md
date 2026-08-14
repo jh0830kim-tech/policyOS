@@ -191,3 +191,12 @@ dependency set containing the exact domain-operation, clock, rate, deadline, dis
 upstream capabilities. Provider, producer, issuer, source, and prepared entry are built only after
 successful scope entry. Scope exit returns false, suppresses no exception, and disposes exactly
 once in reverse construction order on success, rejection, exception, or partial construction.
+
+## ADR-108 managed-resource clarification
+
+Operational rejection and preparation consumption remain separate from resource cleanup. Each leaf
+factory returns a single-use async managed resource, and the scope coordinator alone acquires and
+releases it. Denial, expiry, disconnect, exception, cancellation, and partial construction all
+release acquired resources exactly once in reverse order without changing the candidate's governed
+consumption count. Escaped dependencies cannot be used after scope exit, and no lifecycle fact is
+persisted.

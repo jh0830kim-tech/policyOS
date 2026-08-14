@@ -133,3 +133,12 @@ preparation-upstream factory receives the exact request-scoped domain-operation 
 the disconnect factory alone receives the transport-neutral signal. The async scope yields one
 closed six-field dependency set, never suppresses exceptions, and disposes partial or complete
 construction exactly once in reverse order.
+
+## ADR-108 managed-resource clarification
+
+Each private leaf factory returns one single-use asynchronous managed resource whose entry yields
+the exact typed request capability. The request scope alone enters the six resources in the fixed
+order and exits acquired resources exactly once in reverse order, including partial construction.
+Raw capabilities gain no public close method, escaped dependency views fail closed after scope
+exit, and request-local lifecycle state is not persisted. Migration `20260808_0025` remains
+prohibited.

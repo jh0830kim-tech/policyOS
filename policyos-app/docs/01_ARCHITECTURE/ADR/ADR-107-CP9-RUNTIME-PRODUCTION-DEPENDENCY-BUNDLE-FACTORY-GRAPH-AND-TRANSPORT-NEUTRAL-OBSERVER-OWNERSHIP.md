@@ -318,3 +318,16 @@ disconnect-signal, six leaf-factory, request-scope-factory, and request-scope Pr
 `app.services.runtime_api_protocols`. It may update its focused structural tests and bounded
 architecture/document status. It cannot implement a factory, lifecycle, FastAPI adapter, route,
 SQLAlchemy session owner, unavailable entry, or migration `20260808_0025`.
+
+## ADR-108 managed-resource correction
+
+ADR-108 supersedes only the raw leaf-factory return values. Each of the six factories returns one
+fresh single-use asynchronous managed resource, and entry yields the exact capability named by the
+existing signature. Construction order and factory inputs are unchanged. The request scope alone
+enters resources and exits every acquired resource exactly once in reverse acquisition order.
+
+Partial construction yields no dependency set. Cleanup continues after an exit failure and never
+suppresses or replaces an active primary exception. The frozen dependency set is a borrowed view;
+concrete guarded capability views reject calls before entry, during exit, after exit, or from a
+different request scope. Capability Protocols expose no public close, reset, retry, or reuse API.
+Lifecycle state remains request-local, so persistence and migration `20260808_0025` are prohibited.
