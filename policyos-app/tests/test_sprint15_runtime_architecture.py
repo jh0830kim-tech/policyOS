@@ -1593,6 +1593,77 @@ def test_cp9_runtime_route_production_composition_governance_is_bounded() -> Non
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
 
 
+def test_cp9_operational_preflight_consumption_ordering_governance_is_bounded() -> None:
+    adr = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-105-CP9-RUNTIME-OPERATIONAL-PREFLIGHT-AND-PREPARATION-CONSUMPTION-ORDERING.md"
+    ).read_text(encoding="utf-8")
+    adr101 = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-101-CP9-RUNTIME-PREPARATION-PROVENANCE-AND-OPERATIONAL-CAPABILITY-OWNERSHIP.md"
+    ).read_text(encoding="utf-8")
+    adr102 = (
+        ROOT
+        / "docs"
+        / "01_ARCHITECTURE"
+        / "ADR"
+        / "ADR-102-CP9-RUNTIME-PREPARATION-PRODUCER-AND-OPERATIONAL-CAPABILITY-BACKEND-OWNERSHIP.md"
+    ).read_text(encoding="utf-8")
+    adr102_normalized = " ".join(adr102.split())
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "Authoritative operational-preflight owner",
+        "Closed operation-specific candidate envelope",
+        "Two-phase inspection and consumption",
+        "AVAILABLE -> INSPECTED -> CONSUMED",
+        "Fixed preflight ordering and mutation effects",
+        "Trusted clock and exact policy boundary",
+        "Migration `20260808_0025`",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in adr
+    for phrase in (
+        "Candidate inspection is distinct from one-shot consumption",
+        "package consumption and facade work both zero",
+        "no migration `20260808_0025`",
+    ):
+        assert phrase in adr101
+    for phrase in (
+        "The source first inspects without consuming",
+        "all successes allow exactly one consumption",
+        "admitted rate decision remains durable",
+    ):
+        assert phrase in adr102_normalized
+    for phrase in (
+        "operational preflight",
+        "AVAILABLE` to `INSPECTED",
+        "terminal `REJECTED`",
+        "consumption and facade work both zero",
+        "no migration `20260808_0025`",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
+
+
 def test_cp9_runtime_preparation_provenance_capability_contracts_are_bounded() -> None:
     contracts = (ROOT / "app/services/runtime_api_contracts.py").read_text(encoding="utf-8")
     protocols = (ROOT / "app/services/runtime_api_protocols.py").read_text(encoding="utf-8")

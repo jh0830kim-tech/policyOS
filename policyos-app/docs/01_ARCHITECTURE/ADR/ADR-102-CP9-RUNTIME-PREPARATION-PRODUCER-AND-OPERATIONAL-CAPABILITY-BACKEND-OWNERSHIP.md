@@ -96,3 +96,13 @@ epoch-aligned fixed window, append-only revocation and decision evidence, and a 
 counter. Counter creation or increment requires trigger-level proof from the exact admitted
 decision in the same transaction. Migration `20260808_0024` creates exactly four rate-admission
 tables and performs no INSERT, backfill, normalization, deduplication, or default provisioning.
+
+## ADR-105 clarification
+
+The server-owned preparation-context provider supplies one closed operation candidate containing
+the exact rate-admission, deadline, and disconnect requests. The source first inspects without
+consuming. Rate admission, deadline, and disconnect then run in that fixed order. Any failure
+terminally rejects the candidate with consumption and facade invocation both zero; all successes
+allow exactly one consumption before facade entry. A committed admitted rate decision remains
+durable if a later deadline or disconnect check rejects the request. No preparation persistence or
+migration `20260808_0025` is introduced.
