@@ -76,6 +76,7 @@ from app.services.runtime_api_protocols import (
     RuntimeApiLocalMutation,
     RuntimeApiLocalOperationPort,
     RuntimeApiOrchestrationFactBinder,
+    RuntimeApiProductionDependencyBundle,
     RuntimeApiTrustedContextResolver,
 )
 from app.services.runtime_api_validation import (
@@ -124,6 +125,28 @@ TENANT = UUID("00000000-0000-0000-0000-000000000101")
 ORG = UUID("00000000-0000-0000-0000-000000000102")
 PRINCIPAL = UUID("00000000-0000-0000-0000-000000000103")
 MEMBERSHIP = UUID("00000000-0000-0000-0000-000000000104")
+
+
+class RequestCapabilityScopeFactory:
+    def __call__(self, signal):
+        return None
+
+
+def test_production_dependency_bundle_is_closed_and_keyword_only() -> None:
+    factory = RequestCapabilityScopeFactory()
+    bundle = RuntimeApiProductionDependencyBundle(request_capability_scope_factory=factory)
+
+    assert bundle.request_capability_scope_factory is factory
+    assert tuple(signature(RuntimeApiProductionDependencyBundle).parameters) == (
+        "request_capability_scope_factory",
+    )
+    assert not hasattr(bundle, "__dict__")
+    with pytest.raises(TypeError):
+        RuntimeApiProductionDependencyBundle(factory)  # type: ignore[misc]
+    with pytest.raises(TypeError, match="scope factory differs"):
+        RuntimeApiProductionDependencyBundle(
+            request_capability_scope_factory=object()  # type: ignore[arg-type]
+        )
 
 
 def submission_integration_facts(**kwargs):

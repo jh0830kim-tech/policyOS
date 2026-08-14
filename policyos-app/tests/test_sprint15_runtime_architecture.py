@@ -1829,6 +1829,63 @@ def test_cp9_dependency_bundle_factory_signature_correction_is_closed() -> None:
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
+def test_cp9_dependency_bundle_upstream_public_contracts_are_closed() -> None:
+    protocols = (ROOT / "app/services/runtime_api_protocols.py").read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+                ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+                ROOT / "docs/04_SECURITY/SECURITY.md",
+            )
+        ).split()
+    )
+    for name in (
+        "RuntimeApiDisconnectSignal",
+        "RuntimeApiPreparationContextUpstream",
+        "RuntimeApiDomainOperationCapabilityFactory",
+        "RuntimeClockFactory",
+        "RuntimeApiRateAdmissionCapabilityFactory",
+        "RuntimeApiDeadlineBudgetCapabilityFactory",
+        "RuntimeApiDisconnectObservationCapabilityFactory",
+        "RuntimeApiPreparationContextUpstreamFactory",
+        "RuntimeApiRequestDependencies",
+        "RuntimeApiRequestCapabilityScope",
+        "RuntimeApiRequestCapabilityScopeFactory",
+        "RuntimeApiProductionDependencyBundle",
+    ):
+        assert f"class {name}" in protocols
+        assert f'"{name}"' in protocols
+    bundle = protocols.split("class RuntimeApiProductionDependencyBundle", 1)[1].split(
+        "class RuntimeApiPreparedApplicationEntry", 1
+    )[0]
+    assert bundle.count("request_capability_scope_factory:") == 1
+    for forbidden in (
+        "AsyncSession",
+        "sessionmaker",
+        "FastAPI",
+        "from fastapi",
+        "app.state",
+        "metadata:",
+    ):
+        assert forbidden not in bundle
+    assert "async def is_disconnected(self) -> bool" in protocols
+    assert "async def __aenter__(self) -> RuntimeApiRequestDependencies" in protocols
+    assert ") -> Literal[False]" in protocols
+    for phrase in (
+        "dependency-bundle and upstream public contracts",
+        "exactly one scope-factory field",
+        "six-field request dependency set",
+        "migration `20260808_0025` remains prohibited",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
+
+
 def test_cp9_runtime_preparation_provenance_capability_contracts_are_bounded() -> None:
     contracts = (ROOT / "app/services/runtime_api_contracts.py").read_text(encoding="utf-8")
     protocols = (ROOT / "app/services/runtime_api_protocols.py").read_text(encoding="utf-8")

@@ -743,3 +743,18 @@ duplicate exit, pre-enter or post-exit use, escape, cross-request reuse, mutable
 and non-boolean disconnect observations fail closed. Unavailable composition remains an `app.api`
 production-only boundary returning generic `503`; it carries no public bundle variant or facts. No
 preparation persistence or migration `20260808_0025` is permitted.
+
+### CP9 dependency-bundle and upstream public-contract security boundary
+
+The public bundle exposes exactly one scope-factory field. Its public structural contracts close
+the six private leaf-factory signatures without exposing SQLAlchemy, FastAPI, sessions,
+transactions, mutable configuration, metadata, or a service locator. The frozen six-field request
+dependency set preserves the exact domain-operation, clock, rate, deadline, disconnect, and
+preparation-upstream objects for one request only.
+
+The disconnect signal returns only a strict asynchronous boolean, the upstream returns only the
+matching operation-specific preparation context, and async scope exit suppresses no exception.
+Missing, substituted, partial, reused, or cross-request dependencies fail closed in the later
+production implementation. This contract gate creates no unavailable public variant, durable
+preparation fact, schema, or migration; migration `20260808_0025` remains prohibited. CP9 remains
+Planned / Blocked and CP10 remains Planned.
