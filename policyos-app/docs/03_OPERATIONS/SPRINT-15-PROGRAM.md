@@ -1009,3 +1009,14 @@ Production factories, lifecycle enforcement, preparation source/backend, FastAPI
 routes, PostgreSQL/HTTP acceptance, and closeout remain separate. Preparation persistence and
 migration `20260808_0025` remain prohibited. CP9 remains Planned / Blocked and CP10 remains
 Planned.
+
+### CP9 managed request-capability resource lifetime governance
+
+Status: Governed / Validated, Pending Review. ADR-108 requires each private leaf factory to return
+one single-use asynchronous managed resource. The request scope is the sole coordinator, enters
+resources in fixed order, exits acquired resources exactly once in reverse order, handles partial
+construction, preserves active exceptions, and rejects escape or reuse. Rate admission retains
+independent per-call session ownership and facade transaction ownership is unchanged. Public
+contracts, production composition/routes, combined PostgreSQL/HTTP acceptance, and closeout remain
+separate. No migration `20260808_0025` is approved; CP9 remains Planned / Blocked and CP10 remains
+Planned.

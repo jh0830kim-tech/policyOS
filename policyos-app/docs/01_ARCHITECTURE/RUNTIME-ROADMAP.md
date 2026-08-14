@@ -744,3 +744,18 @@ evidence before later preflight checks. The facade remains sole owner of its sep
 transaction. Preparation stays request-local, migration `20260808_0025` is prohibited, and the
 public-contract, production route, acceptance, and closeout gates remain separate. CP9 remains
 Planned / Blocked and CP10 remains Planned.
+
+### CP9 managed request-capability resource lifetime governance
+
+ADR-108 closes the lifecycle gap between ADR-107's exactly-once disposal requirement and leaf
+factories that previously returned raw capabilities. Each leaf factory is governed to return one
+single-use asynchronous managed resource. The request scope enters six resources in fixed order,
+exits acquired resources exactly once in reverse order, handles partial construction, preserves a
+primary exception, and rejects re-entry, duplicate exit, escape, use-after-exit, and cross-request
+reuse.
+
+Capability Protocols gain no public close method. Rate admission retains its independent per-call
+session ownership, and scope cleanup cannot control the facade transaction. This governance gate
+changes no public Python or production implementation and creates no schema or migration
+`20260808_0025`. Public-contract correction, production composition/routes, PostgreSQL/HTTP
+acceptance, and closeout remain separate. CP9 remains Planned / Blocked and CP10 remains Planned.

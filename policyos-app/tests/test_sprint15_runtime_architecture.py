@@ -1664,6 +1664,64 @@ def test_cp9_operational_preflight_consumption_ordering_governance_is_bounded() 
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
+def test_cp9_managed_request_capability_lifetime_governance_is_closed() -> None:
+    adr = " ".join(
+        (
+            ROOT
+            / "docs"
+            / "01_ARCHITECTURE"
+            / "ADR"
+            / "ADR-108-CP9-RUNTIME-MANAGED-REQUEST-CAPABILITY-RESOURCE-LIFETIME.md"
+        )
+        .read_text(encoding="utf-8")
+        .split()
+    )
+    protocols = (ROOT / "app/services/runtime_api_protocols.py").read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+                ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+                ROOT / "docs/04_SECURITY/SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "Managed leaf resource",
+        "Construction and partial failure",
+        "Closed state machine",
+        "Rate transaction separation",
+        "single-use asynchronous managed resource",
+        "RuntimeApiManagedRequestCapability",
+        "covariant `CapabilityT_co`",
+        "async __aenter__() -> CapabilityT_co",
+        "reverse acquisition order",
+        "never replaces or suppresses that primary exception",
+        "scope-local guarded capability views",
+        "No preparation table",
+        "migration `20260808_0025`",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in adr
+    for phrase in (
+        "managed request-capability resource lifetime governance",
+        "exactly once in reverse order",
+        "partial construction",
+        "use-after-exit",
+        "independent per-call session",
+        "No migration `20260808_0025`",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    for forbidden in ("def close", "def aclose"):
+        assert forbidden not in protocols
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
+
+
 def test_cp9_production_preparation_composition_governance_is_bounded() -> None:
     adr = (
         ROOT
