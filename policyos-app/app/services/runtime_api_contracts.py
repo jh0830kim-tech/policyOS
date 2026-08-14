@@ -371,6 +371,34 @@ class RuntimeApiDisconnectObservationResult(RuntimeApiModel):
         return self
 
 
+class RuntimeApiOperationalPreflight(RuntimeApiModel):
+    """Closed operational requests for one exact prepared Runtime operation."""
+
+    rate_admission: RuntimeApiRateAdmissionRequest
+    deadline_budget: RuntimeApiDeadlineBudgetRequest
+    disconnect_observation: RuntimeApiDisconnectObservationRequest
+
+    @model_validator(mode="after")
+    def exact_candidate_binding(self):
+        provenance = self.rate_admission.provenance
+        if (
+            self.deadline_budget.provenance != provenance
+            or self.disconnect_observation.provenance != provenance
+            or self.deadline_budget.clock != self.rate_admission.clock
+            or self.disconnect_observation.clock != self.rate_admission.clock
+        ):
+            raise ValueError("operational preflight binding differs")
+        return self
+
+    @property
+    def provenance(self) -> RuntimeApiPreparationProvenance:
+        return self.rate_admission.provenance
+
+    @property
+    def clock(self) -> RuntimeApiClockReading:
+        return self.rate_admission.clock
+
+
 class RuntimeApiSubmissionBindingFacts(RuntimeApiModel):
     persistence: RuntimeApiPersistenceBindingRead
 
@@ -740,6 +768,7 @@ __all__ = (
     "RuntimeApiInvocationQuery",
     "RuntimeApiModel",
     "RuntimeApiOperation",
+    "RuntimeApiOperationalPreflight",
     "RuntimeApiOrganizationSelector",
     "RuntimeApiPermission",
     "RuntimeApiPermissionFact",

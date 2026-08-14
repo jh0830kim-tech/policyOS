@@ -45,7 +45,12 @@ from app.runtime.ports import (
     RuntimeEffectReconciliationRequest,
     RuntimeIdempotencyReservation,
     RuntimePortScope,
+    RuntimeRateAdmissionDecisionRequest,
     RuntimeRateAdmissionPersistencePort,
+    RuntimeRateOperation,
+    RuntimeRatePolicyLocator,
+    RuntimeRatePolicyRevision,
+    RuntimeRateWindowIdentity,
 )
 from app.runtime.registry import (
     RuntimeActionAdapterReference,
@@ -80,12 +85,18 @@ from app.runtime.state import (
     RuntimeStateScope,
 )
 from app.services.runtime_api_contracts import (
+    RuntimeApiClockReading,
     RuntimeApiContractConflict,
+    RuntimeApiDeadlineBudgetRequest,
+    RuntimeApiDisconnectObservationRequest,
     RuntimeApiInvocationQueryBindingFacts,
     RuntimeApiInvocationQueryFacts,
     RuntimeApiInvocationQueryIntegrationFacts,
     RuntimeApiOperation,
+    RuntimeApiOperationalPreflight,
     RuntimeApiPreparationProvenance,
+    RuntimeApiRateAdmissionRequest,
+    RuntimeApiRatePolicySelection,
     RuntimeApiReconciliationBindingFacts,
     RuntimeApiReconciliationFacts,
     RuntimeApiReconciliationIntegrationFacts,
@@ -101,6 +112,7 @@ from app.services.runtime_api_protocols import (
     RuntimeApiDisconnectObservationCapability,
     RuntimeApiIntegrationFactsProvider,
     RuntimeApiPersistedOrchestrationFactBinder,
+    RuntimeApiPreparationContextProvider,
     RuntimeApiPreparationIssuer,
     RuntimeApiPreparedApplicationEntry,
     RuntimeApiPreparedInvocationQuery,
@@ -851,13 +863,42 @@ class PreparedDomainCallback:
 
 
 class TrustedPreparationSource:
-    async def prepare_submission(self, claims, organization, request):
+    async def inspect_submission(self, claims, organization, request):
         return None
 
-    async def prepare_query(self, claims, organization, request):
+    async def inspect_query(self, claims, organization, request):
         return None
 
-    async def prepare_reconciliation(self, claims, organization, request):
+    async def inspect_reconciliation(self, claims, organization, request):
+        return None
+
+    async def consume_submission(self, candidate):
+        return candidate
+
+    async def consume_query(self, candidate):
+        return candidate
+
+    async def consume_reconciliation(self, candidate):
+        return candidate
+
+    async def reject_submission(self, candidate):
+        return None
+
+    async def reject_query(self, candidate):
+        return None
+
+    async def reject_reconciliation(self, candidate):
+        return None
+
+
+class PreparationContextProvider:
+    async def provide_submission(self, claims, organization, request):
+        return None
+
+    async def provide_query(self, claims, organization, request):
+        return None
+
+    async def provide_reconciliation(self, claims, organization, request):
         return None
 
 
@@ -873,17 +914,25 @@ class PreparedApplicationEntry:
 
 
 class PreparationIssuer:
-    async def issue_submission(self, provenance, facts, domain_callback):
+    async def issue_submission(self, provenance, preflight, facts, domain_callback):
         return RuntimeApiPreparedSubmission(
-            provenance=provenance, facts=facts, domain_callback=domain_callback
+            provenance=provenance,
+            preflight=preflight,
+            facts=facts,
+            domain_callback=domain_callback,
         )
 
-    async def issue_query(self, provenance, facts):
-        return RuntimeApiPreparedInvocationQuery(provenance=provenance, facts=facts)
+    async def issue_query(self, provenance, preflight, facts):
+        return RuntimeApiPreparedInvocationQuery(
+            provenance=provenance, preflight=preflight, facts=facts
+        )
 
-    async def issue_reconciliation(self, provenance, facts, domain_callback):
+    async def issue_reconciliation(self, provenance, preflight, facts, domain_callback):
         return RuntimeApiPreparedReconciliation(
-            provenance=provenance, facts=facts, domain_callback=domain_callback
+            provenance=provenance,
+            preflight=preflight,
+            facts=facts,
+            domain_callback=domain_callback,
         )
 
 
@@ -969,6 +1018,78 @@ def preparation_provenance(
     )
 
 
+def operational_preflight(
+    provenance: RuntimeApiPreparationProvenance,
+) -> RuntimeApiOperationalPreflight:
+    clock = RuntimeApiClockReading(
+        clock_reference=provenance.clock_reference,
+        observed_at=provenance.evaluated_at,
+    )
+    policy = RuntimeRatePolicyRevision(
+        locator=RuntimeRatePolicyLocator(
+            tenant_id=provenance.tenant_id,
+            organization_id=provenance.organization_id,
+            principal_id=provenance.principal_id,
+            operation=RuntimeRateOperation(provenance.operation.value),
+            classification=provenance.classification,
+            policy_id=uid(150),
+            policy_revision=1,
+            policy_reference="rate.policy.reference",
+        ),
+        admission_limit=10,
+        window_seconds=60,
+        effective_from=NOW - timedelta(minutes=1),
+        valid_until=NOW + timedelta(minutes=1),
+        provisioning_request_id=uid(151),
+        provisioning_receipt_id=uid(152),
+        actor_principal_id=provenance.principal_id,
+        actor_user_id=uid(153),
+        actor_membership_id=uid(154),
+        reason_reference="rate.reason.reference",
+        provenance_reference="rate.provenance.reference",
+        request_digest=provenance.canonical_request_digest,
+        command_version="rate-policy-v1",
+        requested_at=NOW,
+        committed_at=NOW,
+    )
+    rate_request = RuntimeApiRateAdmissionRequest(
+        provenance=provenance,
+        policy=RuntimeApiRatePolicySelection(revision=policy),
+        clock=clock,
+        decision=RuntimeRateAdmissionDecisionRequest(
+            preparation_id=provenance.preparation_id,
+            request_id=provenance.request_identity,
+            request_digest=provenance.canonical_request_digest,
+            policy=policy,
+            clock_reference=clock.clock_reference,
+            observed_at=clock.observed_at,
+            window=RuntimeRateWindowIdentity(
+                window_start=NOW,
+                window_end=NOW + timedelta(minutes=1),
+            ),
+            decision_id=uid(155),
+            decision_reference="rate.decision.reference",
+            decision_digest="rate.decision.digest",
+            evaluated_at=NOW,
+            committed_at=NOW,
+            provenance_reference="rate.counter.provenance",
+        ),
+    )
+    return RuntimeApiOperationalPreflight(
+        rate_admission=rate_request,
+        deadline_budget=RuntimeApiDeadlineBudgetRequest(
+            provenance=provenance,
+            clock=clock,
+            deadline_at=provenance.valid_until,
+        ),
+        disconnect_observation=RuntimeApiDisconnectObservationRequest(
+            provenance=provenance,
+            observation_reference="disconnect.observation",
+            clock=clock,
+        ),
+    )
+
+
 class ExactExecutionStateRevisionReader:
     async def read_exact_state_revision(self, context, locator):
         return RuntimeApiExecutionStateRevisionReadResult(
@@ -1038,12 +1159,18 @@ def test_prepared_operation_packages_are_closed_frozen_and_operation_specific() 
     )
     submission = RuntimeApiPreparedSubmission(
         provenance=submission_provenance,
+        preflight=operational_preflight(submission_provenance),
         facts=submission_item,
         domain_callback=callback,
     )
-    query = RuntimeApiPreparedInvocationQuery(provenance=query_provenance, facts=query_item)
+    query = RuntimeApiPreparedInvocationQuery(
+        provenance=query_provenance,
+        preflight=operational_preflight(query_provenance),
+        facts=query_item,
+    )
     reconciliation = RuntimeApiPreparedReconciliation(
         provenance=reconciliation_provenance,
+        preflight=operational_preflight(reconciliation_provenance),
         facts=reconciliation_item,
         domain_callback=callback,
     )
@@ -1056,31 +1183,40 @@ def test_prepared_operation_packages_are_closed_frozen_and_operation_specific() 
     with pytest.raises(TypeError, match="submission facts differ"):
         RuntimeApiPreparedSubmission(
             provenance=submission_provenance,
+            preflight=operational_preflight(submission_provenance),
             facts=query_facts(),  # type: ignore[arg-type]
             domain_callback=callback,
         )
     with pytest.raises(TypeError, match="query facts differ"):
         RuntimeApiPreparedInvocationQuery(
             provenance=query_provenance,
+            preflight=operational_preflight(query_provenance),
             facts=reconciliation_facts(),  # type: ignore[arg-type]
         )
     with pytest.raises(TypeError, match="reconciliation facts differ"):
         RuntimeApiPreparedReconciliation(
             provenance=reconciliation_provenance,
+            preflight=operational_preflight(reconciliation_provenance),
             facts=submission_facts(),  # type: ignore[arg-type]
             domain_callback=callback,
         )
     with pytest.raises(TypeError):
-        RuntimeApiPreparedInvocationQuery(query_provenance, query_facts())
+        RuntimeApiPreparedInvocationQuery(
+            query_provenance,
+            operational_preflight(query_provenance),
+            query_facts(),
+        )
     with pytest.raises(ValueError, match="submission provenance binding"):
         RuntimeApiPreparedSubmission(
             provenance=query_provenance,
+            preflight=operational_preflight(query_provenance),
             facts=submission_item,
             domain_callback=callback,
         )
     assert isinstance(TrustedPreparationSource(), RuntimeApiTrustedPreparationSource)
     assert isinstance(PreparedApplicationEntry(), RuntimeApiPreparedApplicationEntry)
     assert isinstance(PreparationIssuer(), RuntimeApiPreparationIssuer)
+    assert isinstance(PreparationContextProvider(), RuntimeApiPreparationContextProvider)
     assert isinstance(RateAdmissionCapability(), RuntimeApiRateAdmissionCapability)
     assert tuple(signature(RuntimeRateAdmissionPersistencePort.admit).parameters) == (
         "self",
@@ -1092,11 +1228,19 @@ def test_prepared_operation_packages_are_closed_frozen_and_operation_specific() 
     )
     assert isinstance(DeadlineBudgetCapability(), RuntimeApiDeadlineBudgetCapability)
     assert isinstance(DisconnectObservationCapability(), RuntimeApiDisconnectObservationCapability)
-    assert tuple(signature(RuntimeApiTrustedPreparationSource.prepare_submission).parameters) == (
+    assert tuple(signature(RuntimeApiTrustedPreparationSource.inspect_submission).parameters) == (
         "self",
         "claims",
         "organization",
         "request",
+    )
+    assert tuple(signature(RuntimeApiTrustedPreparationSource.consume_submission).parameters) == (
+        "self",
+        "candidate",
+    )
+    assert tuple(signature(RuntimeApiTrustedPreparationSource.reject_submission).parameters) == (
+        "self",
+        "candidate",
     )
     assert tuple(signature(RuntimeApiPreparedApplicationEntry.submit_invocation).parameters) == (
         "self",

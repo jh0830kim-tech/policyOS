@@ -1799,3 +1799,59 @@ def test_cp9_runtime_preparation_provenance_capability_governance_is_bounded() -
         assert phrase in combined
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
+
+
+def test_cp9_operational_preflight_public_contracts_are_bounded() -> None:
+    contracts = (ROOT / "app/services/runtime_api_contracts.py").read_text(encoding="utf-8")
+    protocols = (ROOT / "app/services/runtime_api_protocols.py").read_text(encoding="utf-8")
+    validation = (ROOT / "app/services/runtime_api_validation.py").read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    assert "class RuntimeApiOperationalPreflight(RuntimeApiModel)" in contracts
+    assert "validate_runtime_api_operational_preflight" in validation
+    for name in (
+        "RuntimeApiPreparedSubmission",
+        "RuntimeApiPreparedInvocationQuery",
+        "RuntimeApiPreparedReconciliation",
+        "RuntimeApiSubmissionPreparationContext",
+        "RuntimeApiInvocationQueryPreparationContext",
+        "RuntimeApiReconciliationPreparationContext",
+    ):
+        assert f"class {name}" in protocols
+    assert protocols.count("preflight: RuntimeApiOperationalPreflight") == 9
+    assert "class RuntimeApiPreparationContextProvider(Protocol)" in protocols
+    for method in (
+        "inspect_submission",
+        "consume_submission",
+        "reject_submission",
+        "inspect_query",
+        "consume_query",
+        "reject_query",
+        "inspect_reconciliation",
+        "consume_reconciliation",
+        "reject_reconciliation",
+    ):
+        assert f"def {method}" in protocols
+    query_body = protocols.split("class RuntimeApiPreparedInvocationQuery", 1)[1].split(
+        "class RuntimeApiPreparedReconciliation", 1
+    )[0]
+    for forbidden in ("domain_callback", "write_set", "receipt", "stage"):
+        assert forbidden not in query_body
+    for phrase in (
+        "public-contract correction",
+        "server-owned context-provider Protocol",
+        "distinct inspect, consume, and reject",
+        "migration `20260808_0025` remains prohibited",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
