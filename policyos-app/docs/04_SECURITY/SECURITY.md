@@ -670,3 +670,20 @@ It grants no authority and performs no backfill. Policy management revalidates e
 authority in the caller-owned transaction. Immutable triggers reject policy, revocation, and
 decision mutation; a counter trigger requires the exact admitted decision in the same transaction.
 Replay, denial, collision, stale scope, and rollback leave counter mutation residue at zero.
+
+## Runtime operational-preflight consumption boundary
+
+ADR-105 requires one closed operation candidate from a request-scoped server-owned
+preparation-context provider. Exact rate-admission, deadline, and disconnect requests bind to the
+same preparation identity, request identity, tenant, organization, principal, operation,
+classification, canonical digest, trusted clock, and evaluated time. Routes, sources, issuers,
+facades, Persistence, configuration, and dependency injection cannot generate, infer, repair, or
+select these facts.
+
+Inspection changes `AVAILABLE` to `INSPECTED` without consumption. Denial, expiry, disconnect,
+missing capability, malformed result, mismatch, substitution, cross-scope access, or reuse changes
+the candidate to terminal `REJECTED`; package consumption and facade work remain zero. Only exact
+success from rate admission, deadline, and disconnect permits one `CONSUMED` transition and one
+facade entry. An admitted rate decision may remain durable after a later preflight rejection but
+creates no Runtime approval, permit, execution, cancellation, state, result, or audit authority.
+Preparation state remains request-local and no migration `20260808_0025` is permitted.

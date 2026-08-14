@@ -688,3 +688,21 @@ Existing authority is revalidated in the caller-owned transaction. Replay and de
 counter; each admitted decision permits exactly one counter mutation. Populated downgrade and
 permission collisions fail closed before destructive DDL. Production composition, facade/routes,
 and CP10 remain blocked.
+
+### CP9 operational preflight and preparation consumption ordering
+
+ADR-105 separates request-local candidate inspection from package consumption. One server-owned
+preparation-context provider supplies a closed operation candidate carrying exact rate-admission,
+deadline, and disconnect requests bound to the same provenance and trusted clock. The source moves
+`AVAILABLE` to `INSPECTED`, then to `CONSUMED` exactly once only after rate admission, deadline,
+and disconnect all succeed. Every denied, expired, disconnected, missing, malformed, substituted,
+cross-scope, mismatched, or failed path becomes terminal `REJECTED` with consumption and facade
+work both zero.
+
+Rate admission commits independently before later preflight checks, so an admitted decision and
+its single counter mutation remain durable if deadline or disconnect subsequently rejects the
+request; no facade, receipt, local stage, or Runtime mutation follows. Preparation remains
+request-local, the facade retains its five-parameter methods and transaction ownership, and no
+migration `20260808_0025` is required. Public-contract correction, production composition/routes,
+combined PostgreSQL/HTTP acceptance, and closeout remain separate gates. CP9 remains Planned /
+Blocked and CP10 remains Planned.

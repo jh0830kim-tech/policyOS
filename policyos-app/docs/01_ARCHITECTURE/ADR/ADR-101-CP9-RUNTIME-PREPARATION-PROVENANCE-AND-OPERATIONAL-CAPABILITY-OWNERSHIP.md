@@ -192,3 +192,12 @@ ADR-102 closes production ownership with an explicit application preparation pro
 clock provenance. PostgreSQL owns exact multi-process rate policy/window admission, requiring
 migration `20260808_0024` for that backend only. No preparation or callback is persisted, and no
 policy is inferred or backfilled; unprovisioned scope fails closed.
+
+## ADR-105 clarification
+
+Operational preflight uses a closed operation-specific candidate carrying exact rate-admission,
+deadline, and disconnect requests. Candidate inspection is distinct from one-shot consumption.
+Denied, expired, disconnected, malformed, missing, or failed preflight paths terminate as
+`REJECTED` with package consumption and facade work both zero. Only three exact successful
+capability results permit `INSPECTED` to become `CONSUMED` once. Preparation lifecycle remains
+request-local and requires no migration `20260808_0025`.

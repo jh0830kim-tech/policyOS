@@ -935,3 +935,14 @@ Status: Implemented / Validated, Pending Review. Migration `20260808_0024` creat
 permission definition with zero grants and exactly four governed persistence tables. Exact replay
 and denial mutate no counter; an admitted decision permits one counter mutation in the same caller
 transaction. Production backend composition, facade/routes, and CP10 remain blocked.
+
+## CP9 operational preflight and preparation consumption governance
+
+Status: Governed / Validated, Pending Review. ADR-105 assigns exact operational inputs to one
+request-scoped server-owned preparation-context provider and requires closed operation candidates.
+Candidate inspection is non-consuming. Rate admission, deadline, and disconnect run in fixed order;
+all three successes permit one consumption, while denial, expiry, disconnect, mismatch, absence,
+or failure terminally rejects the candidate with consumption and facade work zero. Independent
+admitted rate evidence remains durable if a later check rejects the request. Public contracts,
+production routes, combined PostgreSQL/HTTP acceptance, and CP9 closeout remain separate. No
+preparation schema or migration `20260808_0025` is approved. CP10 remains Planned.
