@@ -1718,6 +1718,11 @@ def test_cp9_managed_request_capability_lifetime_governance_is_closed() -> None:
         assert phrase in combined
     for forbidden in ("def close", "def aclose"):
         assert forbidden not in protocols
+    assert 'CapabilityT_co = TypeVar("CapabilityT_co", covariant=True)' in protocols
+    assert "class RuntimeApiManagedRequestCapability(Protocol[CapabilityT_co])" in protocols
+    assert "async def __aenter__(self) -> CapabilityT_co" in protocols
+    assert ") -> Literal[False]" in protocols
+    assert protocols.count("RuntimeApiManagedRequestCapability[") == 6
     assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 

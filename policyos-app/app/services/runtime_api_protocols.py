@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from types import TracebackType
-from typing import Literal, Protocol, runtime_checkable
+from typing import Literal, Protocol, TypeVar, runtime_checkable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -596,31 +596,54 @@ class RuntimeApiPreparationContextUpstream(Protocol):
     ) -> RuntimeApiReconciliationPreparationContext: ...
 
 
+CapabilityT_co = TypeVar("CapabilityT_co", covariant=True)
+
+
+@runtime_checkable
+class RuntimeApiManagedRequestCapability(Protocol[CapabilityT_co]):
+    """Manage one fresh request-scoped capability without suppressing errors."""
+
+    async def __aenter__(self) -> CapabilityT_co: ...
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> Literal[False]: ...
+
+
 @runtime_checkable
 class RuntimeApiDomainOperationCapabilityFactory(Protocol):
-    def __call__(self) -> RuntimeApiDomainOperationCapability: ...
+    def __call__(
+        self,
+    ) -> RuntimeApiManagedRequestCapability[RuntimeApiDomainOperationCapability]: ...
 
 
 @runtime_checkable
 class RuntimeClockFactory(Protocol):
-    def __call__(self) -> RuntimeClockPort: ...
+    def __call__(self) -> RuntimeApiManagedRequestCapability[RuntimeClockPort]: ...
 
 
 @runtime_checkable
 class RuntimeApiRateAdmissionCapabilityFactory(Protocol):
-    def __call__(self) -> RuntimeApiRateAdmissionCapability: ...
+    def __call__(
+        self,
+    ) -> RuntimeApiManagedRequestCapability[RuntimeApiRateAdmissionCapability]: ...
 
 
 @runtime_checkable
 class RuntimeApiDeadlineBudgetCapabilityFactory(Protocol):
-    def __call__(self) -> RuntimeApiDeadlineBudgetCapability: ...
+    def __call__(
+        self,
+    ) -> RuntimeApiManagedRequestCapability[RuntimeApiDeadlineBudgetCapability]: ...
 
 
 @runtime_checkable
 class RuntimeApiDisconnectObservationCapabilityFactory(Protocol):
     def __call__(
         self, signal: RuntimeApiDisconnectSignal
-    ) -> RuntimeApiDisconnectObservationCapability: ...
+    ) -> RuntimeApiManagedRequestCapability[RuntimeApiDisconnectObservationCapability]: ...
 
 
 @runtime_checkable
@@ -629,7 +652,7 @@ class RuntimeApiPreparationContextUpstreamFactory(Protocol):
         self,
         domain_operation: RuntimeApiDomainOperationCapability,
         clock: RuntimeClockPort,
-    ) -> RuntimeApiPreparationContextUpstream: ...
+    ) -> RuntimeApiManagedRequestCapability[RuntimeApiPreparationContextUpstream]: ...
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -758,6 +781,7 @@ __all__ = (
     "RuntimeApiInvocationQueryPreparationContext",
     "RuntimeApiLocalMutation",
     "RuntimeApiLocalOperationPort",
+    "RuntimeApiManagedRequestCapability",
     "RuntimeApiOrchestrationFactBinder",
     "RuntimeApiPermissionFactResolver",
     "RuntimeApiPreparedApplicationEntry",

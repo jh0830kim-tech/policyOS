@@ -171,6 +171,7 @@ grants permission or causes automatic execution.
 | CP9-Gate-Operational-Preflight-and-Preparation-Consumption-Governance | Merged, PR #109 | Preflight ordering governance | ADR-105 fixes closed operational inputs, non-consuming inspection, terminal rejection, and consume-after-success ordering | Governance only; public contracts and production remain separate |
 | CP9 Operational Preflight and Preparation Consumption Public Contracts | Implemented, validated, pending review | Application public contracts | Adds one closed exact preflight, operation-specific candidate carriage, server-owned context provision, and distinct inspect/consume/reject Protocols | No production lifecycle, capabilities, composition, route, or migration `20260808_0025` |
 | CP9-Gate-Production-Dependency-Bundle-Factory-Graph-and-Transport-Neutral-Observer-Ownership | Governed, validated, correction pending review | Production composition governance | ADR-107 fixes one bundle scope-factory field, six privately captured leaf factories, exact signatures, non-suppressing async disposal, upstream binding, transport-neutral disconnect signal, and production-only unavailable composition | Governance only; no public contract, production route, persistence, or migration `20260808_0025` |
+| CP9 Managed Request-Capability Public Contracts | Implemented, validated, pending review | Application public contracts | Adds the covariant managed-resource Protocol and exact managed return annotations for all six private leaf factories | No production lifecycle, routes, persistence, or migration `20260808_0025` |
 | CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires production facade implementation and routes |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
@@ -759,3 +760,8 @@ session ownership, and scope cleanup cannot control the facade transaction. This
 changes no public Python or production implementation and creates no schema or migration
 `20260808_0025`. Public-contract correction, production composition/routes, PostgreSQL/HTTP
 acceptance, and closeout remain separate. CP9 remains Planned / Blocked and CP10 remains Planned.
+
+The public-contract gate now exposes the covariant structural managed-resource Protocol and changes
+only the six leaf-factory return annotations. Factory inputs, capability methods, dependency fields,
+request-scope signatures, and facade signatures remain unchanged. Concrete lifecycle enforcement
+and production composition remain blocked.
