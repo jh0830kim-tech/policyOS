@@ -773,3 +773,7 @@ transaction control. Rate admission closes its independent per-call session befo
 scope cleanup cannot touch the facade transaction. Lifecycle state is request-local and carries no
 authority, facts, credentials, or sensitive payload. No persistence or migration `20260808_0025`
 is permitted. CP9 remains Planned / Blocked and CP10 remains Planned.
+
+The public-contract gate exposes only the covariant managed-resource boundary and the six exact
+factory return annotations. It adds no public cleanup method, lifecycle implementation, session or
+transaction authority, mutable registry, credential path, persistence, or transport behavior.

@@ -103,6 +103,7 @@ The baseline is `main` after merged grant-provisioning closeout PR #68.
 | CP9 Authoritative Domain-Operation Result Contracts | Implemented, validated, pending review | Adds one strict sibling-output contract, request-scoped callback Protocol, and trusted expected submission invocation-reference carriage with pure exact command/stage/result binding; implementation remains blocked. |
 | CP9 Application Integration | Merged, PR #98 | Composes the existing facade with a one-shot facts provider, pure binder, exact persistence reads, domain callback, local stage, and transport receipt in one caller-owned transaction; routes remain deferred. |
 | CP9 Runtime Route Trusted Preparation and Production Composition Governance | Governed, pending review | ADR-100 fixes header-only mutation idempotency, one exact server-owned prepared-operation package, composition ownership, thin route placement, bounded errors, and the PostgreSQL/HTTP acceptance boundary; contracts and routes remain separate. |
+| CP9 Managed Request-Capability Public Contracts | Implemented, validated, pending review | Adds one covariant structural managed-resource Protocol and exact managed return annotations for the six private request leaf factories; production lifecycle and routes remain blocked. |
 | CP9 Runtime API | Planned / Blocked | The production facade and production routes remain ordered blockers. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
@@ -1020,3 +1021,7 @@ independent per-call session ownership and facade transaction ownership is uncha
 contracts, production composition/routes, combined PostgreSQL/HTTP acceptance, and closeout remain
 separate. No migration `20260808_0025` is approved; CP9 remains Planned / Blocked and CP10 remains
 Planned.
+
+The follow-up public-contract gate adds only the governed managed-resource Protocol and six exact
+factory return annotations. It does not implement acquisition, guarded views, disposal, production
+composition, routes, persistence, or transaction control.

@@ -4,6 +4,7 @@ import asyncio
 from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime, timedelta
 from inspect import signature
+from typing import get_args, get_origin
 from uuid import UUID
 
 import pytest
@@ -116,6 +117,7 @@ from app.services.runtime_api_protocols import (
     RuntimeApiDomainOperationCapability,
     RuntimeApiDomainOperationCapabilityFactory,
     RuntimeApiIntegrationFactsProvider,
+    RuntimeApiManagedRequestCapability,
     RuntimeApiPersistedOrchestrationFactBinder,
     RuntimeApiPreparationContextProvider,
     RuntimeApiPreparationContextUpstream,
@@ -1023,6 +1025,17 @@ class PreparationContextUpstreamFactory:
         return PreparationContextUpstream()
 
 
+class ManagedCapability:
+    def __init__(self, capability):
+        self.capability = capability
+
+    async def __aenter__(self):
+        return self.capability
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        return False
+
+
 class RequestCapabilityScope:
     def __init__(self, dependencies):
         self.dependencies = dependencies
@@ -1092,6 +1105,48 @@ def test_dependency_factory_graph_protocols_and_request_scope_are_exact() -> Non
         "domain_operation",
         "clock",
     )
+
+
+def test_managed_request_capability_and_leaf_factory_returns_are_exact() -> None:
+    clock = Clock()
+    managed = ManagedCapability(clock)
+    assert isinstance(managed, RuntimeApiManagedRequestCapability)
+    assert asyncio.run(managed.__aenter__()) is clock
+    assert asyncio.run(managed.__aexit__(None, None, None)) is False
+    assert tuple(signature(RuntimeApiManagedRequestCapability.__aenter__).parameters) == ("self",)
+    assert tuple(signature(RuntimeApiManagedRequestCapability.__aexit__).parameters) == (
+        "self",
+        "exc_type",
+        "exc",
+        "traceback",
+    )
+
+    expected = (
+        (RuntimeApiDomainOperationCapabilityFactory, RuntimeApiDomainOperationCapability),
+        (RuntimeClockFactory, RuntimeClockPort),
+        (RuntimeApiRateAdmissionCapabilityFactory, RuntimeApiRateAdmissionCapability),
+        (RuntimeApiDeadlineBudgetCapabilityFactory, RuntimeApiDeadlineBudgetCapability),
+        (
+            RuntimeApiDisconnectObservationCapabilityFactory,
+            RuntimeApiDisconnectObservationCapability,
+        ),
+        (RuntimeApiPreparationContextUpstreamFactory, RuntimeApiPreparationContextUpstream),
+    )
+    for factory, capability in expected:
+        annotation = signature(factory.__call__).return_annotation
+        assert get_origin(annotation) is RuntimeApiManagedRequestCapability
+        assert get_args(annotation) == (capability,)
+
+    for capability in (
+        RuntimeApiDomainOperationCapability,
+        RuntimeClockPort,
+        RuntimeApiRateAdmissionCapability,
+        RuntimeApiDeadlineBudgetCapability,
+        RuntimeApiDisconnectObservationCapability,
+        RuntimeApiPreparationContextUpstream,
+    ):
+        assert not hasattr(capability, "close")
+        assert not hasattr(capability, "aclose")
 
 
 def trusted_context_facts() -> RuntimeApiTrustedContextFacts:

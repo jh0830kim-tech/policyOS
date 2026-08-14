@@ -1466,6 +1466,7 @@ def test_explicit_immutable_exports() -> None:
     assert "RuntimeApiResultCardinality" in contracts.__all__
     assert "validate_runtime_api_result_count" in validation.__all__
     assert "RuntimeApiLocalMutation" in protocols.__all__
+    assert "RuntimeApiManagedRequestCapability" in protocols.__all__
 
 
 def test_trusted_context_protocol_remains_transport_tenant_free() -> None:
