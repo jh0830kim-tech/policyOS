@@ -166,3 +166,11 @@ This governance gate changes no production Python, public contract, route, model
 schema, migration, PostgreSQL data, external effect, Worker, queue, retry, scheduler, tag, or
 release. CP9 remains Planned / Blocked until the separate contract, production, acceptance, and
 closeout gates merge. CP10 remains Planned.
+
+## ADR-106 clarification
+
+One immutable production dependency bundle creates fresh request-scoped capabilities. The exact
+context comes only from the injected upstream preparation capability. Missing composition rejects
+before inspection and all request objects are disposed without reuse. Rate admission owns an
+independent PostgreSQL transaction, while the facade remains sole owner of its application
+transaction. Preparation remains non-durable and migration `20260808_0025` is prohibited.

@@ -956,3 +956,15 @@ server-owned context-provider Protocol supplies complete inputs, and the request
 separates non-consuming inspection from exact consumption and terminal rejection. Production
 source state, capabilities, composition, routes, PostgreSQL/HTTP acceptance, and CP9 closeout
 remain separate; migration `20260808_0025` remains prohibited and CP10 remains Planned.
+
+## CP9 production preparation-context injection and composition governance
+
+Status: Governed / Validated, Pending Review. ADR-106 requires one immutable dependency bundle at
+application construction and fresh request-scoped preparation and operational capabilities.
+Missing composition returns bounded `503` before inspection. Mutable `app.state`, service
+locators, environment-selected objects, dynamic imports, callback names, production dependency
+overrides, and default fakes are prohibited. Rate admission owns an independent PostgreSQL session
+and transaction; the facade remains sole owner of its application transaction. No preparation
+persistence or migration `20260808_0025` is introduced. Public contracts, production routes,
+combined acceptance, and closeout remain separate; CP9 remains Planned / Blocked and CP10 remains
+Planned.

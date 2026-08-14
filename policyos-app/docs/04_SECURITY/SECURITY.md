@@ -696,3 +696,19 @@ those Protocols do not implement state, generate facts, persist callbacks, or au
 entry. Query candidates remain callback-, stage-, receipt-, and mutation-free. Production lifecycle
 enforcement and bounded HTTP translation remain separate, and no migration `20260808_0025` is
 introduced.
+
+## Runtime production preparation injection boundary
+
+ADR-106 requires an immutable production dependency bundle supplied explicitly to the application
+factory. Each factory creates fresh request-scoped preparation upstream, provider, producer,
+issuer, source, clock, rate, deadline, and disconnect capabilities. Mutable `app.state`, global
+registries, service locators, environment-selected Python objects, callback names, dynamic imports,
+production dependency overrides, and default fakes are prohibited. Missing composition fails
+closed with a non-disclosing `503` before inspection.
+
+The upstream capability is the sole owner of exact preparation facts and the one-shot callback.
+The disconnect adapter observes only the current request and cannot generate its reference or
+trusted time. Rate admission owns a fresh independent PostgreSQL session and root transaction; the
+facade session remains separate and exclusively facade-owned. No error exposes package, policy,
+provider, callback, database, session, transaction, bearer, body, or cross-scope facts.
+Preparation remains non-durable and migration `20260808_0025` is prohibited.
