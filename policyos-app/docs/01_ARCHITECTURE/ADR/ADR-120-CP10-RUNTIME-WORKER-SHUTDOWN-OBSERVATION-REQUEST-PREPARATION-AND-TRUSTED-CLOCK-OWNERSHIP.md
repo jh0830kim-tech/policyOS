@@ -70,6 +70,14 @@ The following public-contract correction may add only the preparation capability
 the additive bundle field, pure validation, focused tests, and the three tracking documents.
 Production Worker implementation and PostgreSQL acceptance remain later gates.
 
+## ADR-121 drain clarification
+
+The exact shutdown result remains the sole source of `observed_clock_reading` and
+`drain_deadline`. The production service may convert their nonnegative difference into a monotonic
+scheduling timeout without creating a new clock fact. At expiry it cancels only its admitted
+application tasks and awaits cleanup to residue zero; it does not resample time, extend the
+deadline, or create cancellation or lifecycle authority.
+
 ## Validation
 
 - Architecture guards require the exact preparation signature, zero-argument managed factory,

@@ -1302,3 +1302,12 @@ Status: **Implemented / Validated, Pending Review**.
 
 Strict managed Protocols, exact preparation validation, and the sixteenth immutable dependency
 factory implement ADR-120 without schema or migration `20260808_0025`.
+### CP10 Worker operational-failure and bounded-drain governance
+
+Status: Governed / Validated, Pending Review. ADR-121 reserves operational failure conversion for
+one closed non-disclosing marker, preserves programmer defects and host cancellation, and assigns
+deadline cleanup only to the application-owned admitted task set. The trusted shutdown result
+supplies the exact bounded scheduling duration; deadline cleanup leaves task residue zero and
+writes no invented outcome. Public marker contracts, production implementation, PostgreSQL
+acceptance, combined regression, and closeout remain separately reviewed gates. Migration
+`20260808_0025` remains absent.

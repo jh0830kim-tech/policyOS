@@ -248,3 +248,12 @@ Before each existing shutdown observation, the Worker enters one fresh managed s
 preparation capability, obtains one exact request, exits once, and then observes once. Preparation
 failure leaves observation count zero. The process bundle gains the additive sixteenth
 `shutdown_observation_request_preparation_factory`; no stale cycle clock may be reused.
+
+## ADR-121 operational-failure and drain clarification
+
+Only the closed `RuntimeWorkerOperationalCapabilityFailure` marker may become an operational
+failure result, with its stage selected from the exact Worker call site and its opaque reference
+owned by the result producer. Contract failures, programmer defects, and host cancellation
+propagate. At the exact sticky shutdown deadline, the service cancels only candidate tasks it
+admitted, awaits reverse-order cleanup to task residue zero, and writes no invented Runtime
+outcome. This process cleanup is not effect cancellation or lifecycle authority.

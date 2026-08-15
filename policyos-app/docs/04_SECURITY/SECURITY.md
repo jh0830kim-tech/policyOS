@@ -1060,3 +1060,12 @@ cross-request, or post-exit use fails closed without an observation or Runtime m
 The merged public-contract implementation exposes only explicit configuration and binding inputs,
 one strict shutdown request output, and managed one-shot lifetime. It adds no clock callback,
 session, transaction, mutable request context, schema, or migration `20260808_0025`.
+### CP10 Worker operational-failure and bounded-drain security boundary
+
+ADR-121 prohibits broad exception translation and disclosure through operational results. Only
+the closed `RuntimeWorkerOperationalCapabilityFailure` marker may be translated, its call-site
+stage is bounded, and its failure reference remains producer-owned. Contract errors, programmer
+defects, host cancellation, exception text, causes, tracebacks, SQL, provider responses,
+credentials, payloads, and cross-scope facts are never copied. Deadline cleanup cancels only
+application-admitted tasks, reaches residue zero, and creates no Runtime cancellation, retry,
+reconciliation, or lifecycle authority. No migration `20260808_0025` is approved.
