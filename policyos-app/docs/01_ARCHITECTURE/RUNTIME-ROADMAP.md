@@ -1017,3 +1017,12 @@ Completion time and failure references remain producer-owned. Loose parameters, 
 mutable bundles, transaction controls, extra service lifecycle methods, and reverse dependencies
 remain prohibited. Public implementation and production composition are separate gates; no schema
 or migration `20260808_0025` is approved.
+
+### CP10 Worker operational-result public contracts
+
+Status: **Implemented / Validated, Pending Review**.
+
+The additive public-contract gate implements ADR-118's strict result-production requests, closed
+failure-stage validation, managed producer factories, immutable fourteen-field dependency bundle,
+and single-method application-service Protocol. Production composition, PostgreSQL acceptance,
+combined regression, and closeout remain separate.

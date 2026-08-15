@@ -18,12 +18,15 @@ from app.services.runtime_worker_contracts import (
     RuntimeWorkerConfiguration,
     RuntimeWorkerConfigurationBinding,
     RuntimeWorkerInterruptibleWaitRequest,
+    RuntimeWorkerOperationalFailureStage,
     RuntimeWorkerPollCycleDisposition,
     RuntimeWorkerPollCycleRequest,
     RuntimeWorkerPollCycleResult,
+    RuntimeWorkerPollCycleResultProductionRequest,
     RuntimeWorkerPollIterationDisposition,
     RuntimeWorkerPollIterationRequest,
     RuntimeWorkerPollIterationResult,
+    RuntimeWorkerPollIterationResultProductionRequest,
     RuntimeWorkerPreparedDeliveryRequest,
     RuntimeWorkerShutdownDisposition,
     RuntimeWorkerShutdownObservationRequest,
@@ -34,6 +37,44 @@ from app.services.runtime_worker_protocols import RuntimeWorkerPreparedDelivery
 
 class RuntimeWorkerContractConflict(ValueError):
     """Raised when caller-supplied Worker facts do not bind exactly."""
+
+
+def _validate_failure_stage(disposition, failure_stage) -> None:
+    failed = disposition.value == "operational_failure"
+    if failed != (failure_stage is not None):
+        raise RuntimeWorkerContractConflict("worker operational failure stage differs")
+    if failure_stage is not None and not isinstance(
+        failure_stage, RuntimeWorkerOperationalFailureStage
+    ):
+        raise RuntimeWorkerContractConflict("worker operational failure stage is invalid")
+
+
+def validate_runtime_worker_poll_iteration_result_production_request(
+    request: RuntimeWorkerPollIterationResultProductionRequest,
+) -> RuntimeWorkerPollIterationResultProductionRequest:
+    iteration = validate_runtime_worker_poll_iteration_request(request.iteration_request)
+    _validate_failure_stage(request.disposition, request.failure_stage)
+    count = request.selected_candidate_count
+    if request.disposition is RuntimeWorkerPollIterationDisposition.SELECTED:
+        valid = 1 <= count <= iteration.configuration.maximum_candidate_count
+    else:
+        valid = count == 0
+    if not valid:
+        raise RuntimeWorkerContractConflict("worker iteration production count differs")
+    return request
+
+
+def validate_runtime_worker_poll_cycle_result_production_request(
+    request: RuntimeWorkerPollCycleResultProductionRequest,
+) -> RuntimeWorkerPollCycleResultProductionRequest:
+    cycle = validate_runtime_worker_poll_cycle_request(request.cycle_request)
+    _validate_failure_stage(request.disposition, request.failure_stage)
+    if request.visited_assignment_count > len(cycle.configuration.assignments):
+        raise RuntimeWorkerContractConflict("worker cycle visit count differs")
+    maximum = request.visited_assignment_count * cycle.configuration.maximum_candidate_count
+    if request.selected_candidate_count > maximum:
+        raise RuntimeWorkerContractConflict("worker cycle production count differs")
+    return request
 
 
 def _assignment_key(assignment) -> tuple[str, str, str]:
@@ -349,8 +390,10 @@ __all__ = (
     "validate_runtime_worker_configuration_binding",
     "validate_runtime_worker_interruptible_wait_request",
     "validate_runtime_worker_poll_cycle_request",
+    "validate_runtime_worker_poll_cycle_result_production_request",
     "validate_runtime_worker_poll_cycle_result",
     "validate_runtime_worker_poll_iteration_request",
+    "validate_runtime_worker_poll_iteration_result_production_request",
     "validate_runtime_worker_poll_iteration_result",
     "validate_runtime_worker_prepared_delivery",
     "validate_runtime_worker_prepared_delivery_request",

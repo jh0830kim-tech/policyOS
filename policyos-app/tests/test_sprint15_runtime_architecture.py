@@ -2401,6 +2401,27 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_cp10_worker_result_production_public_contracts_are_exact():
+    contracts = (ROOT / "app/services/runtime_worker_contracts.py").read_text(encoding="utf-8")
+    protocols = (ROOT / "app/services/runtime_worker_protocols.py").read_text(encoding="utf-8")
+    validation = (ROOT / "app/services/runtime_worker_validation.py").read_text(encoding="utf-8")
+    for name in (
+        "RuntimeWorkerOperationalFailureStage",
+        "RuntimeWorkerPollIterationResultProductionRequest",
+        "RuntimeWorkerPollCycleResultProductionRequest",
+    ):
+        assert name in contracts
+    for name in (
+        "RuntimeWorkerPollIterationResultProductionCapability",
+        "RuntimeWorkerPollCycleResultProductionCapability",
+        "RuntimeWorkerProductionDependencyBundle",
+        "RuntimeWorkerApplicationService",
+    ):
+        assert name in protocols
+    assert "validate_runtime_worker_poll_iteration_result_production_request" in validation
+    assert "validate_runtime_worker_poll_cycle_result_production_request" in validation
+
+
 def test_cp10_worker_request_preparation_public_contract_gate_is_bounded() -> None:
     protocols = (ROOT / "app/services/runtime_worker_protocols.py").read_text(encoding="utf-8")
     related = "\n".join(

@@ -1262,3 +1262,11 @@ unchanged.
 The governance gate adds no production/public Python, persistence, model, schema, or migration
 `20260808_0025`. Public contracts, production Worker composition, PostgreSQL acceptance, combined
 regression, and Sprint closeout remain separate checkpoints.
+
+### CP10 Worker operational-result public contracts
+
+Status: **Implemented / Validated, Pending Review**.
+
+The gate adds only the ADR-118 strict production requests, pure validation, exact managed producer
+factories, immutable production dependency bundle, and application-service Protocol. It adds no
+Worker loop, persistence, schema, migration `20260808_0025`, deployment, tag, or release.

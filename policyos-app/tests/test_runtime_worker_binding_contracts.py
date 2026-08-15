@@ -17,12 +17,17 @@ from app.services.runtime_worker_contracts import (
     RuntimeWorkerConfigurationBinding,
     RuntimeWorkerInterruptibleWaitRequest,
     RuntimeWorkerPollCycleRequest,
+    RuntimeWorkerPollCycleResult,
+    RuntimeWorkerPollCycleResultProductionRequest,
     RuntimeWorkerPollIterationRequest,
+    RuntimeWorkerPollIterationResult,
+    RuntimeWorkerPollIterationResultProductionRequest,
     RuntimeWorkerPreparedDeliveryRequest,
     RuntimeWorkerShutdownObservationRequest,
     RuntimeWorkerShutdownObservationResult,
 )
 from app.services.runtime_worker_protocols import (
+    RuntimeWorkerApplicationService,
     RuntimeWorkerCancellationCapabilityFactory,
     RuntimeWorkerClaimCapability,
     RuntimeWorkerClaimCapabilityFactory,
@@ -37,13 +42,18 @@ from app.services.runtime_worker_protocols import (
     RuntimeWorkerManagedRequestCapability,
     RuntimeWorkerPollCycleRequestPreparationCapability,
     RuntimeWorkerPollCycleRequestPreparationCapabilityFactory,
+    RuntimeWorkerPollCycleResultProductionCapability,
+    RuntimeWorkerPollCycleResultProductionCapabilityFactory,
     RuntimeWorkerPollIterationRequestPreparationCapability,
     RuntimeWorkerPollIterationRequestPreparationCapabilityFactory,
+    RuntimeWorkerPollIterationResultProductionCapability,
+    RuntimeWorkerPollIterationResultProductionCapabilityFactory,
     RuntimeWorkerPreparedDelivery,
     RuntimeWorkerPreparedDeliveryCapability,
     RuntimeWorkerPreparedDeliveryCapabilityFactory,
     RuntimeWorkerPreparedDeliveryRequestPreparationCapability,
     RuntimeWorkerPreparedDeliveryRequestPreparationCapabilityFactory,
+    RuntimeWorkerProductionDependencyBundle,
     RuntimeWorkerResultCompletionCapability,
     RuntimeWorkerShutdownObservationCapability,
     RuntimeWorkerShutdownObservationCapabilityFactory,
@@ -268,3 +278,38 @@ def test_request_preparation_capability_signatures_and_factories_are_exact():
         factory_return = get_type_hints(factory.__call__)["return"]
         assert get_origin(factory_return) is RuntimeWorkerManagedRequestCapability
         assert get_args(factory_return) == (capability,)
+
+
+def test_result_producer_and_application_service_signatures_are_exact():
+    expected = (
+        (
+            RuntimeWorkerPollIterationResultProductionCapability,
+            RuntimeWorkerPollIterationResultProductionRequest,
+            RuntimeWorkerPollIterationResult,
+            RuntimeWorkerPollIterationResultProductionCapabilityFactory,
+        ),
+        (
+            RuntimeWorkerPollCycleResultProductionCapability,
+            RuntimeWorkerPollCycleResultProductionRequest,
+            RuntimeWorkerPollCycleResult,
+            RuntimeWorkerPollCycleResultProductionCapabilityFactory,
+        ),
+    )
+    for capability, request, result, factory in expected:
+        assert inspect.iscoroutinefunction(capability.produce)
+        assert tuple(inspect.signature(capability.produce).parameters) == ("self", "request")
+        assert get_type_hints(capability.produce) == {"request": request, "return": result}
+        factory_return = get_type_hints(factory.__call__)["return"]
+        assert get_origin(factory_return) is RuntimeWorkerManagedRequestCapability
+        assert get_args(factory_return) == (capability,)
+    assert tuple(inspect.signature(RuntimeWorkerApplicationService.run).parameters) == (
+        "self",
+        "configuration",
+        "configuration_binding",
+    )
+    assert get_type_hints(RuntimeWorkerApplicationService.run)["return"] is type(None)
+
+
+def test_production_dependency_bundle_has_exact_frozen_fields():
+    assert RuntimeWorkerProductionDependencyBundle.__dataclass_params__.frozen
+    assert len(RuntimeWorkerProductionDependencyBundle.__dataclass_fields__) == 14

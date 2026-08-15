@@ -23,7 +23,11 @@ from app.services.runtime_worker_contracts import (
     RuntimeWorkerConfigurationBinding,
     RuntimeWorkerInterruptibleWaitRequest,
     RuntimeWorkerPollCycleRequest,
+    RuntimeWorkerPollCycleResult,
+    RuntimeWorkerPollCycleResultProductionRequest,
     RuntimeWorkerPollIterationRequest,
+    RuntimeWorkerPollIterationResult,
+    RuntimeWorkerPollIterationResultProductionRequest,
     RuntimeWorkerPreparedDeliveryRequest,
     RuntimeWorkerShutdownObservationRequest,
     RuntimeWorkerShutdownObservationResult,
@@ -243,8 +247,113 @@ class RuntimeWorkerInterruptibleWaitCapabilityFactory(Protocol):
     def __call__(self) -> RuntimeWorkerInterruptibleWaitCapability: ...
 
 
+@runtime_checkable
+class RuntimeWorkerPollIterationResultProductionCapability(Protocol):
+    async def produce(
+        self,
+        request: RuntimeWorkerPollIterationResultProductionRequest,
+    ) -> RuntimeWorkerPollIterationResult: ...
+
+
+@runtime_checkable
+class RuntimeWorkerPollCycleResultProductionCapability(Protocol):
+    async def produce(
+        self,
+        request: RuntimeWorkerPollCycleResultProductionRequest,
+    ) -> RuntimeWorkerPollCycleResult: ...
+
+
+@runtime_checkable
+class RuntimeWorkerPollIterationResultProductionCapabilityFactory(Protocol):
+    def __call__(
+        self,
+    ) -> RuntimeWorkerManagedRequestCapability[
+        RuntimeWorkerPollIterationResultProductionCapability
+    ]: ...
+
+
+@runtime_checkable
+class RuntimeWorkerPollCycleResultProductionCapabilityFactory(Protocol):
+    def __call__(
+        self,
+    ) -> RuntimeWorkerManagedRequestCapability[
+        RuntimeWorkerPollCycleResultProductionCapability
+    ]: ...
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RuntimeWorkerProductionDependencyBundle:
+    poll_cycle_request_preparation_factory: (
+        RuntimeWorkerPollCycleRequestPreparationCapabilityFactory
+    )
+    poll_iteration_request_preparation_factory: (
+        RuntimeWorkerPollIterationRequestPreparationCapabilityFactory
+    )
+    prepared_delivery_request_preparation_factory: (
+        RuntimeWorkerPreparedDeliveryRequestPreparationCapabilityFactory
+    )
+    due_selection_factory: RuntimeWorkerDueSelectionCapabilityFactory
+    prepared_delivery_factory: RuntimeWorkerPreparedDeliveryCapabilityFactory
+    claim_factory: RuntimeWorkerClaimCapabilityFactory
+    lifecycle_append_factory: RuntimeWorkerLifecycleAppendCapabilityFactory
+    delivery_factory: RuntimeWorkerDeliveryCapabilityFactory
+    cancellation_factory: RuntimeWorkerCancellationCapabilityFactory
+    credential_factory: RuntimeWorkerCredentialCapabilityFactory
+    shutdown_observation_factory: RuntimeWorkerShutdownObservationCapabilityFactory
+    interruptible_wait_factory: RuntimeWorkerInterruptibleWaitCapabilityFactory
+    poll_iteration_result_production_factory: (
+        RuntimeWorkerPollIterationResultProductionCapabilityFactory
+    )
+    poll_cycle_result_production_factory: RuntimeWorkerPollCycleResultProductionCapabilityFactory
+
+    def __post_init__(self) -> None:
+        expected = (
+            (
+                self.poll_cycle_request_preparation_factory,
+                RuntimeWorkerPollCycleRequestPreparationCapabilityFactory,
+            ),
+            (
+                self.poll_iteration_request_preparation_factory,
+                RuntimeWorkerPollIterationRequestPreparationCapabilityFactory,
+            ),
+            (
+                self.prepared_delivery_request_preparation_factory,
+                RuntimeWorkerPreparedDeliveryRequestPreparationCapabilityFactory,
+            ),
+            (self.due_selection_factory, RuntimeWorkerDueSelectionCapabilityFactory),
+            (self.prepared_delivery_factory, RuntimeWorkerPreparedDeliveryCapabilityFactory),
+            (self.claim_factory, RuntimeWorkerClaimCapabilityFactory),
+            (self.lifecycle_append_factory, RuntimeWorkerLifecycleAppendCapabilityFactory),
+            (self.delivery_factory, RuntimeWorkerDeliveryCapabilityFactory),
+            (self.cancellation_factory, RuntimeWorkerCancellationCapabilityFactory),
+            (self.credential_factory, RuntimeWorkerCredentialCapabilityFactory),
+            (self.shutdown_observation_factory, RuntimeWorkerShutdownObservationCapabilityFactory),
+            (self.interruptible_wait_factory, RuntimeWorkerInterruptibleWaitCapabilityFactory),
+            (
+                self.poll_iteration_result_production_factory,
+                RuntimeWorkerPollIterationResultProductionCapabilityFactory,
+            ),
+            (
+                self.poll_cycle_result_production_factory,
+                RuntimeWorkerPollCycleResultProductionCapabilityFactory,
+            ),
+        )
+        if any(not isinstance(value, contract) for value, contract in expected):
+            raise TypeError("worker production dependency factory differs")
+
+
+@runtime_checkable
+class RuntimeWorkerApplicationService(Protocol):
+    async def run(
+        self,
+        configuration: RuntimeWorkerConfiguration,
+        configuration_binding: RuntimeWorkerConfigurationBinding,
+    ) -> None: ...
+
+
 __all__ = (
     "RuntimeWorkerCancellationCapabilityFactory",
+    "RuntimeWorkerApplicationService",
     "RuntimeWorkerClaimCapability",
     "RuntimeWorkerClaimCapabilityFactory",
     "RuntimeWorkerCredentialCapabilityFactory",
@@ -258,8 +367,13 @@ __all__ = (
     "RuntimeWorkerManagedRequestCapability",
     "RuntimeWorkerPollCycleRequestPreparationCapability",
     "RuntimeWorkerPollCycleRequestPreparationCapabilityFactory",
+    "RuntimeWorkerPollCycleResultProductionCapability",
+    "RuntimeWorkerPollCycleResultProductionCapabilityFactory",
     "RuntimeWorkerPollIterationRequestPreparationCapability",
     "RuntimeWorkerPollIterationRequestPreparationCapabilityFactory",
+    "RuntimeWorkerPollIterationResultProductionCapability",
+    "RuntimeWorkerPollIterationResultProductionCapabilityFactory",
+    "RuntimeWorkerProductionDependencyBundle",
     "RuntimeWorkerPreparedDelivery",
     "RuntimeWorkerPreparedDeliveryCapability",
     "RuntimeWorkerPreparedDeliveryCapabilityFactory",
