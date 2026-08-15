@@ -10,10 +10,10 @@ from app.api.routes.connectors import router as connectors_router
 from app.api.routes.health import router as health_router
 from app.api.routes.policy_candidates import router as policy_candidates_router
 from app.api.routes.providers import router as providers_router
+from app.api.routes.runtime import create_runtime_router
 from app.core.config import get_settings
+from app.services.runtime_api_protocols import RuntimeApiProductionDependencyBundle
 from app.version import get_version
-
-settings = get_settings()
 
 
 @asynccontextmanager
@@ -22,16 +22,38 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-app = FastAPI(
-    title=settings.app_name,
-    version=get_version(),
-    description="PolicyOS MVP API",
-    lifespan=lifespan,
-)
-app.include_router(health_router)
-app.include_router(auth_router, prefix="/api/v1")
-app.include_router(connectors_router, prefix="/api/v1")
-app.include_router(artifacts_router, prefix="/api/v1")
-app.include_router(ai_tasks_router, prefix="/api/v1")
-app.include_router(policy_candidates_router, prefix="/api/v1")
-app.include_router(providers_router, prefix="/api/v1")
+def create_app(
+    runtime_dependencies: RuntimeApiProductionDependencyBundle | None = None,
+) -> FastAPI:
+    if runtime_dependencies is not None and not isinstance(
+        runtime_dependencies, RuntimeApiProductionDependencyBundle
+    ):
+        raise TypeError("Runtime production dependency bundle differs")
+    settings = get_settings()
+    application = FastAPI(
+        title=settings.app_name,
+        version=get_version(),
+        description="PolicyOS MVP API",
+        lifespan=lifespan,
+    )
+    application.include_router(health_router)
+    application.include_router(auth_router, prefix="/api/v1")
+    application.include_router(connectors_router, prefix="/api/v1")
+    application.include_router(artifacts_router, prefix="/api/v1")
+    application.include_router(ai_tasks_router, prefix="/api/v1")
+    application.include_router(policy_candidates_router, prefix="/api/v1")
+    application.include_router(providers_router, prefix="/api/v1")
+    application.include_router(
+        create_runtime_router(
+            runtime_dependencies,
+            required_audience=settings.runtime_api_required_audience,
+        ),
+        prefix="/api/v1",
+    )
+    return application
+
+
+app = create_app()
+
+
+__all__ = ("app", "create_app", "lifespan")

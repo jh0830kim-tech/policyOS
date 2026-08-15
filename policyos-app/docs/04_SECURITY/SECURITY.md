@@ -822,3 +822,15 @@ JWT allowlist verification, the one-field production dependency bundle, Runtime 
 facade signatures, and tenant, organization, classification, lineage, permission, idempotency, and
 transaction boundaries remain unchanged. No audience persistence, schema, or migration
 `20260808_0025` is permitted. CP9 remains Planned / Blocked and CP10 remains Planned.
+### CP9 production Runtime composition and thin-route security boundary
+
+Runtime endpoints use a dedicated verified-claims dependency and a canonical required
+`organization_id` query selector; mutation idempotency is accepted only from `Idempotency-Key`.
+The transport adapter cannot supply prepared facts, clocks, rate decisions, callbacks, or the
+configured required audience. One immutable injected bundle creates six fresh request-local
+capabilities, cleans partial construction in reverse order, preserves primary failures, and rejects
+reuse. Preparation is inspected before rate, deadline, and disconnect evaluation and is consumed
+exactly once only on admission. Missing dependencies, expired deadlines, and disconnects disclose
+only the same bounded 503; denial alone returns bounded 429 plus exact `Retry-After`. No default
+fake, mutable `app.state`, environment-selected dependency object, preparation persistence, or
+migration `20260808_0025` is permitted.

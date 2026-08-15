@@ -799,3 +799,12 @@ The JWT verifier, one-field production dependency bundle, Runtime public contrac
 five-parameter signatures remain unchanged. Production composition/routes and HTTP acceptance
 remain separate. No schema or migration `20260808_0025` is introduced; CP9 remains Planned /
 Blocked and CP10 remains Planned.
+### CP9 production Runtime composition and thin routes
+
+The production composition gate implements ADR-100 through ADR-110 with one immutable injected
+dependency bundle, six managed request-local capabilities, exact preparation inspection and
+consumption ordering, an independent durable rate-admission transaction, the mandatory configured
+Runtime audience, and exactly three thin `/api/v1/runtime` endpoints. Missing production
+dependencies fail closed with a bounded 503; no default fake, service locator, mutable `app.state`,
+preparation persistence, schema change, or migration `20260808_0025` is introduced. PostgreSQL and
+HTTP acceptance plus the combined CP9 closeout regression remain separate completion evidence.
