@@ -1051,3 +1051,16 @@ The production dependency bundle retains exactly one request-scope-factory field
 signatures remain unchanged, and no schema or migration `20260808_0025` is approved. A separate
 config-contract correction, production composition/routes, PostgreSQL/HTTP acceptance, regression,
 and closeout remain blocked. CP9 remains Planned / Blocked and CP10 remains Planned.
+
+### CP9 Runtime required-audience config-contract correction
+
+Status: Implemented / Validated, Pending Review. `runtime_api_required_audience` is now one
+required, strict, frozen scalar configuration field. It is bounded to 200 characters, rejects
+surrounding whitespace and non-string input, and must be an exact member of `jwt_audiences`.
+Deployment examples and tests provide the value explicitly; missing or invalid configuration
+fails settings and application construction.
+
+This correction changes no JWT verification semantics, Runtime public Protocol, dependency bundle,
+facade signature, model, repository, schema, or migration. Production composition/routes,
+PostgreSQL/HTTP acceptance, regression, and closeout remain separate; migration
+`20260808_0025` remains prohibited, CP9 remains Planned / Blocked, and CP10 remains Planned.

@@ -99,6 +99,55 @@ def test_valid_jwt_trust_settings_use_an_immutable_audience_tuple() -> None:
     assert isinstance(settings.jwt_audiences, tuple)
 
 
+def test_runtime_api_required_audience_is_required_and_frozen(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert Settings.model_fields["runtime_api_required_audience"].is_required()
+    assert Settings.model_fields["runtime_api_required_audience"].frozen is True
+    monkeypatch.delenv("RUNTIME_API_REQUIRED_AUDIENCE", raising=False)
+
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            jwt_issuer="https://issuer.policyos.test",
+            jwt_audiences=("policyos-api-test",),
+        )
+
+    settings = Settings(
+        _env_file=None,
+        jwt_issuer="https://issuer.policyos.test",
+        jwt_audiences=("policyos-api-test", "policyos-admin-test"),
+        runtime_api_required_audience="policyos-admin-test",
+    )
+    assert settings.runtime_api_required_audience == "policyos-admin-test"
+
+    with pytest.raises(ValidationError, match="Field is frozen"):
+        settings.runtime_api_required_audience = "policyos-api-test"
+
+
+@pytest.mark.parametrize(
+    "required_audience",
+    [
+        "",
+        " policyos-api-test",
+        "policyos-api-test ",
+        "x" * 201,
+        "policyos-unconfigured-test",
+        1,
+    ],
+)
+def test_runtime_api_required_audience_rejects_invalid_values(
+    required_audience: object,
+) -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            jwt_issuer="https://issuer.policyos.test",
+            jwt_audiences=("policyos-api-test", "policyos-admin-test"),
+            runtime_api_required_audience=required_audience,
+        )
+
+
 @pytest.mark.parametrize(
     "issuer",
     ["", " https://issuer.policyos.test", "https://issuer.policyos.test ", "x" * 201],

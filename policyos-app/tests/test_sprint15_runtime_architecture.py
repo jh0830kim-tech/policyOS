@@ -1732,6 +1732,47 @@ def test_cp9_required_audience_configuration_ownership_is_governed() -> None:
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
+def test_cp9_required_audience_config_contract_is_implemented() -> None:
+    config = (ROOT / "app" / "core" / "config.py").read_text(encoding="utf-8")
+    env = (ROOT / ".env.example").read_text(encoding="utf-8")
+    conftest = (ROOT / "tests" / "conftest.py").read_text(encoding="utf-8")
+    protocols = (ROOT / "app" / "services" / "runtime_api_protocols.py").read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "runtime_api_required_audience: str = Field(",
+        "frozen=True",
+        "strict=True",
+        "min_length=1",
+        "max_length=200",
+        "RUNTIME_API_REQUIRED_AUDIENCE must have no surrounding whitespace",
+        "RUNTIME_API_REQUIRED_AUDIENCE must be an exact JWT_AUDIENCES member",
+    ):
+        assert phrase in config
+    assert "RUNTIME_API_REQUIRED_AUDIENCE=policyos-api" in env
+    assert 'os.environ.setdefault("RUNTIME_API_REQUIRED_AUDIENCE", "policyos-api-test")' in conftest
+    assert "runtime_api_required_audience" not in protocols
+    for phrase in (
+        "required-audience config-contract correction",
+        "required, strict, frozen scalar",
+        "exact `jwt_audiences` membership",
+        "migration `20260808_0025` remains prohibited",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
+
+
 def test_cp9_runtime_http_semantics_are_governed_before_production_routes() -> None:
     adr_name = (
         "ADR-109-CP9-RUNTIME-ORGANIZATION-SELECTOR-TRANSPORT-AND-"

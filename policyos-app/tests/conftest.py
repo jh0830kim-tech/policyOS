@@ -5,6 +5,7 @@ from fastapi import Depends
 
 os.environ.setdefault("JWT_ISSUER", "https://issuer.policyos.test")
 os.environ.setdefault("JWT_AUDIENCES", '["policyos-api-test"]')
+os.environ.setdefault("RUNTIME_API_REQUIRED_AUDIENCE", "policyos-api-test")
 
 from app.api.deps import OrganizationContext, require_permission  # noqa: E402
 from app.core.config import get_settings  # noqa: E402

@@ -809,3 +809,16 @@ the exact configured member. The one-field production dependency bundle, facade 
 all tenant, organization, classification, lineage, permission, idempotency, and transaction
 boundaries remain unchanged. No audience persistence, schema, or migration `20260808_0025` is
 permitted.
+
+### CP9 Runtime required-audience config-contract security boundary
+
+The required-audience config-contract correction implements ADR-110 as one required, strict,
+frozen scalar setting. Empty, whitespace-padded, oversized, non-string, and non-member values fail
+closed, while exact `jwt_audiences` membership is mandatory. The example deployment and test
+process specify the value explicitly; no tuple-order, bearer, request, prepared-fact, dependency,
+or persistence selection is introduced.
+
+JWT allowlist verification, the one-field production dependency bundle, Runtime public contracts,
+facade signatures, and tenant, organization, classification, lineage, permission, idempotency, and
+transaction boundaries remain unchanged. No audience persistence, schema, or migration
+`20260808_0025` is permitted. CP9 remains Planned / Blocked and CP10 remains Planned.
