@@ -1070,3 +1070,11 @@ owns cancellation of only its admitted tasks at the exact sticky shutdown deadli
 residue zero, and creates no Runtime cancellation or lifecycle outcome. No migration
 `20260808_0025` is required. The marker public-contract correction and Production Worker remain
 separate gates.
+### CP10 Worker operational failure marker public contract
+
+The additive `RuntimeWorkerOperationalCapabilityFailure` is implemented as the sole zero-argument,
+non-disclosing `RuntimeError` marker that a governed injected capability may raise for bounded
+operational inability. It carries no public field, message input, failure reference, payload, or
+authority fact and is explicitly exported from `runtime_worker_protocols`. Existing Worker
+factory, bundle, and service signatures remain unchanged. Production translation and bounded drain
+implementation remain separate, and migration `20260808_0025` remains absent.

@@ -3170,3 +3170,20 @@ def test_cp10_worker_operational_failure_and_drain_governance() -> None:
     assert "RuntimeWorkerOperationalCapabilityFailure" in roadmap
     assert "Status: Governed / Validated, Pending Review" in program
     assert "prohibits broad exception translation" in security
+
+
+def test_cp10_worker_operational_failure_marker_public_contract_gate() -> None:
+    protocols = (ROOT / "app/services/runtime_worker_protocols.py").read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+
+    assert "class RuntimeWorkerOperationalCapabilityFailure(RuntimeError)" in protocols
+    assert "def __init__(self) -> None" in protocols
+    assert '"RuntimeWorkerOperationalCapabilityFailure"' in protocols
+    assert "operational failure marker public contract" in roadmap.lower()
+    assert "Status: Implemented / Validated, Pending Review" in program
+    assert "non-disclosing marker contract" in security
+    assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not (ROOT / "app/services/runtime_worker_production.py").exists()
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
