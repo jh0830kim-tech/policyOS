@@ -236,3 +236,19 @@ transport-neutral.
 The model favors process restart over mutable configuration, fixed delay over scheduler behavior,
 and fail-closed shutdown over invented cleanup. Trusted preparation, production composition,
 PostgreSQL acceptance, and Sprint 15 closeout remain independent later gates.
+
+## ADR-113 public-contract precision clarification
+
+ADR-113 selects the synchronous `app.runtime.ports.RuntimeClockPort` as the sole Worker clock and
+fixes the exact configuration binding, cycle, iteration, shutdown, wait, and operational-result
+fields. Cycle and iteration identity is process-local and contains no UUID or durable sequence.
+The exact due-selection request is embedded and must match the canonical assignment, clock, and
+candidate limit without normalization or inference.
+
+Shutdown observation and fixed wait are separate asynchronous single-use capabilities created by
+process-lifetime factories over one private sticky source. Observation returns the closed shutdown
+fact; wait returns only `None` and must be followed by a fresh observation. Closed iteration and
+cycle dispositions use bounded counts and optional opaque failure references and do not create
+delivery, cancellation, retry, reconciliation, or audit authority. The following public-contract
+gate is limited to the exact nine paths listed in ADR-113 and still requires no schema or migration
+`20260808_0025`.

@@ -2401,6 +2401,69 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_cp10_worker_public_contract_precision_is_governed_before_contracts() -> None:
+    adr113 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-113-CP10-RUNTIME-WORKER-PUBLIC-CONTRACT-IDENTITY-SIGNATURE-"
+            "LIFETIME-AND-RESULT-SEMANTICS.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr112 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-112-CP10-RUNTIME-WORKER-CONTRACT-TIMING-SHUTDOWN-"
+            "OBSERVATION-AND-RECONCILIATION-DISCOVERY.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr111 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / "ADR-111-CP10-RUNTIME-WORKER-OWNERSHIP-CLAIM-LEASE-AND-OPERATING-MODEL.md"
+    ).read_text(encoding="utf-8")
+    combined = "\n".join(
+        (
+            (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8"),
+        )
+    )
+
+    for phrase in (
+        "app.runtime.ports.RuntimeClockPort",
+        "RuntimeWorkerOperation",
+        'DELIVER_EFFECT = "deliver_effect"',
+        "A poll cycle has no UUID",
+        "one strict one-based `assignment_position`",
+        "RuntimeWorkerPollIterationDisposition",
+        "RuntimeWorkerPollCycleDisposition",
+        "RuntimeWorkerShutdownObservationCapability.observe",
+        "RuntimeWorkerInterruptibleWaitCapability.wait",
+        "wait returns `None`",
+        "private process-lifetime sticky shutdown source",
+        "exactly nine files",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in adr113
+    assert "ADR-113 public-contract precision clarification" in adr111
+    assert "ADR-113 public-contract precision clarification" in adr112
+    for phrase in (
+        "CP10 Worker public-contract precision governance",
+        "Governed / Validated, Pending Review",
+        "synchronous Runtime Ports clock",
+        "wait returns no fact",
+        "No schema or migration `20260808_0025`",
+        "production CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app/services/runtime_worker_contracts.py").exists()
+    assert not (ROOT / "app/services/runtime_worker_protocols.py").exists()
+    assert not (ROOT / "app/services/runtime_worker_validation.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_cp10_worker_contract_semantics_are_governed_before_public_contracts() -> None:
     adr112 = (
         ROOT

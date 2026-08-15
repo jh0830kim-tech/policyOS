@@ -902,3 +902,20 @@ letter, or compensation. The contracts expose no OS signal object, event-loop ha
 thread, session, transaction, credential, payload, provider response, or traceback. No Worker or
 reconciliation queue, registry, heartbeat, scheduler, shutdown table, schema, or migration
 `20260808_0025` is permitted.
+
+### CP10 Worker public-contract precision security boundary
+
+ADR-113 prevents the public-contract implementation from selecting a hidden clock, generating
+cycle identity, exposing mutable shutdown state, or turning infrastructure failures into Runtime
+authority. The sole Worker clock is the synchronous public Runtime Ports clock. Every time,
+configuration value, assignment, scope, classification, position, count, digest, and failure
+reference is caller-supplied and checked exactly.
+
+Shutdown observation and fixed wait are distinct asynchronous single-use capabilities. Their
+process-lifetime factories share one private sticky source without exposing reset, close, task,
+signal, thread, session, or transaction controls. Observation returns the bounded shutdown fact;
+wait returns no fact. Closed operational results cannot authorize claim, delivery outcome, retry,
+dead letter, cancellation, reconciliation, compensation, or audit mutation.
+
+The public-contract correction adds no production service, prepared delivery authority,
+credential, provider, route, repository, schema, backfill, or migration `20260808_0025`.

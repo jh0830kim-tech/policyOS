@@ -889,3 +889,20 @@ The next gate may add only strict Worker configuration, polling, timing, shutdow
 operational contracts and Protocols. Prepared delivery binding, production service/composition,
 PostgreSQL acceptance, and closeout remain separate. No schema or migration `20260808_0025` is
 approved; CP10 production remains Planned.
+
+### CP10 Worker public-contract precision governance
+
+ADR-113 closes the remaining identity, signature, clock, lifetime, and result choices before
+Worker public Python. The Worker uses the existing synchronous Runtime Ports clock. Poll cycles
+and iterations carry no generated UUID or durable sequence; exact process binding, caller-supplied
+aware clock time, canonical assignment position, and due-selection request are sufficient.
+
+Shutdown observation and interruptible wait are distinct asynchronous request-local single-use
+capabilities created by process-lifetime factories over one private sticky source. Observation
+owns the closed shutdown fact; wait returns no fact and must be followed by a fresh observation.
+Closed iteration and cycle results expose only bounded operational counts and opaque failure
+references and grant no Runtime outcome authority.
+
+The next public-contract gate has an exact nine-file scope. Trusted preparation, production
+service/composition, PostgreSQL acceptance, and closeout remain separate. No schema or migration
+`20260808_0025` is approved, and CP10 production remains Planned.
