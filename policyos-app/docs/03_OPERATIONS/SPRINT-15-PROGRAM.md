@@ -1200,3 +1200,12 @@ All persistence-facing capabilities remain narrow and request-scoped, and no con
 session, transaction, retry, reset, or pooling controls. Production composition, PostgreSQL
 acceptance, combined regression, and closeout remain separate checkpoints. Migration
 `20260808_0025` remains absent.
+
+### CP10 Worker request-preparation ownership governance
+
+Status: **Governed / Validated, Pending Review**.
+
+The Worker receives authoritative cycle, iteration/due-selection, and candidate delivery requests
+from fresh managed one-shot preparation capabilities. Failure before request production causes zero
+downstream discovery or delivery calls; successful production is consumed once and disposed once.
+No production Worker, schema, or migration `20260808_0025` is included in this governance gate.

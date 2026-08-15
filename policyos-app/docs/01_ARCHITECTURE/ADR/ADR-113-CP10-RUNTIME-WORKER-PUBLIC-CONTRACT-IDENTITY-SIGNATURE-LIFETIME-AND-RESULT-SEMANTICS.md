@@ -360,3 +360,11 @@ Public Worker configuration, clock, shutdown, wait, cycle, iteration, and result
 unchanged. Preparation and completion expose no transaction control, mutable shutdown source,
 hidden time, generated identity, arbitrary payload, or outcome authority. No migration
 `20260808_0025` is introduced.
+
+## ADR-115 request-preparation contract handoff
+
+The next additive public-contract gate defines three request-scoped managed one-shot capabilities
+and their zero-argument factories: cycle request preparation, iteration request preparation, and
+selected-candidate delivery-request preparation. Existing Worker request and result types remain
+strict, frozen, extra-forbidden, and caller supplied; existing Worker public signatures remain
+unchanged.

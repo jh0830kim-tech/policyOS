@@ -256,3 +256,11 @@ CP8 schema. Candidate binding and replay behavior become explicit, post-result c
 caller-supplied and one-shot, and shutdown after `DELIVERING` preserves honest durable ambiguity.
 
 The production Worker remains deferred until the public-contract gate proves these boundaries.
+
+## ADR-115 upstream request-preparation clarification
+
+Before the existing prepared-delivery capability is invoked, a trusted candidate request source owns
+the complete `RuntimeWorkerPreparedDeliveryRequest`, including its preparation reference and digest.
+The Worker validates exact tenant, organization, classification, lineage, effect, attempt, claim,
+and envelope binding but does not reconstruct them from audit events, Adapter results, opaque
+references, or latest rows.

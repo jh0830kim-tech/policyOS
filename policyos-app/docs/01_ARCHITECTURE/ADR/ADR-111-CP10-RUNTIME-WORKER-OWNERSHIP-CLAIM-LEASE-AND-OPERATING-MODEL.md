@@ -299,3 +299,10 @@ result-specific append without changing that result. Shutdown observed after dur
 `DELIVERING` does not substitute cancellation or lease-expiry evidence: the Adapter is not called,
 no invented lifecycle row is appended, and the durable state remains available for governed
 recovery. Preparation stays request-local and adds no migration `20260808_0025`.
+
+## ADR-115 request-preparation ownership clarification
+
+The Worker consumes authoritative cycle, iteration, and selected-candidate requests supplied by
+three fresh managed one-shot capabilities. It does not generate identity, version, time, digest,
+reference, scope, or lineage. Preparation failure precedes discovery, claim, or delivery mutation,
+and this request-local ownership adds no schema or migration `20260808_0025`.
