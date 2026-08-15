@@ -4,9 +4,12 @@ from dataclasses import dataclass
 from types import TracebackType
 from typing import Literal, Protocol, TypeVar, runtime_checkable
 
+from pydantic import ConfigDict
+
 from app.runtime.orchestration import RuntimeOrchestrationDeliveryRequest
 from app.runtime.ports import (
     RuntimeCancellationPort,
+    RuntimeClockReading,
     RuntimeCredentialBrokerPort,
     RuntimeEffectClaimRequest,
     RuntimeEffectDeliveryInvocation,
@@ -22,12 +25,14 @@ from app.services.runtime_worker_contracts import (
     RuntimeWorkerConfiguration,
     RuntimeWorkerConfigurationBinding,
     RuntimeWorkerInterruptibleWaitRequest,
+    RuntimeWorkerModel,
     RuntimeWorkerPollCycleRequest,
     RuntimeWorkerPollCycleResult,
     RuntimeWorkerPollCycleResultProductionRequest,
     RuntimeWorkerPollIterationRequest,
     RuntimeWorkerPollIterationResult,
     RuntimeWorkerPollIterationResultProductionRequest,
+    RuntimeWorkerPreInvocationDisposition,
     RuntimeWorkerPreparedDeliveryRequest,
     RuntimeWorkerShutdownObservationRequest,
     RuntimeWorkerShutdownObservationResult,
@@ -120,6 +125,26 @@ class RuntimeWorkerPreparedDelivery:
         optional = self.definitely_not_invoked_append_request
         if optional is not None and not isinstance(optional, RuntimeEffectLifecycleAppendRequest):
             raise TypeError("prepared not-invoked append contract differs")
+
+
+class RuntimeWorkerPreInvocationRevalidationRequest(RuntimeWorkerModel):
+    model_config = ConfigDict(
+        extra="forbid", frozen=True, strict=True, arbitrary_types_allowed=True
+    )
+
+    prepared_delivery: RuntimeWorkerPreparedDelivery
+    delivering_result: RuntimeEffectLifecycleCommitResult
+
+
+class RuntimeWorkerPreInvocationRevalidationResult(RuntimeWorkerModel):
+    model_config = ConfigDict(
+        extra="forbid", frozen=True, strict=True, arbitrary_types_allowed=True
+    )
+
+    request: RuntimeWorkerPreInvocationRevalidationRequest
+    disposition: RuntimeWorkerPreInvocationDisposition
+    clock_reading: RuntimeClockReading
+    append_request: RuntimeEffectLifecycleAppendRequest | None = None
 
 
 @runtime_checkable
@@ -281,6 +306,23 @@ class RuntimeWorkerPollCycleResultProductionCapabilityFactory(Protocol):
     ]: ...
 
 
+@runtime_checkable
+class RuntimeWorkerPreInvocationRevalidationCapability(Protocol):
+    async def revalidate(
+        self,
+        request: RuntimeWorkerPreInvocationRevalidationRequest,
+    ) -> RuntimeWorkerPreInvocationRevalidationResult: ...
+
+
+@runtime_checkable
+class RuntimeWorkerPreInvocationRevalidationCapabilityFactory(Protocol):
+    def __call__(
+        self,
+    ) -> RuntimeWorkerManagedRequestCapability[
+        RuntimeWorkerPreInvocationRevalidationCapability
+    ]: ...
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RuntimeWorkerProductionDependencyBundle:
     poll_cycle_request_preparation_factory: (
@@ -305,6 +347,7 @@ class RuntimeWorkerProductionDependencyBundle:
         RuntimeWorkerPollIterationResultProductionCapabilityFactory
     )
     poll_cycle_result_production_factory: RuntimeWorkerPollCycleResultProductionCapabilityFactory
+    pre_invocation_revalidation_factory: RuntimeWorkerPreInvocationRevalidationCapabilityFactory
 
     def __post_init__(self) -> None:
         expected = (
@@ -336,6 +379,10 @@ class RuntimeWorkerProductionDependencyBundle:
             (
                 self.poll_cycle_result_production_factory,
                 RuntimeWorkerPollCycleResultProductionCapabilityFactory,
+            ),
+            (
+                self.pre_invocation_revalidation_factory,
+                RuntimeWorkerPreInvocationRevalidationCapabilityFactory,
             ),
         )
         if any(not isinstance(value, contract) for value, contract in expected):
@@ -379,6 +426,10 @@ __all__ = (
     "RuntimeWorkerPreparedDeliveryCapabilityFactory",
     "RuntimeWorkerPreparedDeliveryRequestPreparationCapability",
     "RuntimeWorkerPreparedDeliveryRequestPreparationCapabilityFactory",
+    "RuntimeWorkerPreInvocationRevalidationCapability",
+    "RuntimeWorkerPreInvocationRevalidationCapabilityFactory",
+    "RuntimeWorkerPreInvocationRevalidationRequest",
+    "RuntimeWorkerPreInvocationRevalidationResult",
     "RuntimeWorkerResultCompletionCapability",
     "RuntimeWorkerShutdownObservationCapability",
     "RuntimeWorkerShutdownObservationCapabilityFactory",

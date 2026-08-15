@@ -9,10 +9,12 @@ from app.runtime.orchestration.delivery_validation import (
 from app.runtime.ports import (
     RuntimeEffectDeliveryResult,
     RuntimeEffectLifecycleAppendRequest,
+    RuntimeEffectLifecycleCommitDisposition,
     RuntimeEffectLifecycleStatus,
     validate_runtime_effect_delivery_result,
     validate_runtime_effect_due_candidates,
     validate_runtime_effect_lifecycle_append_request,
+    validate_runtime_effect_lifecycle_commit_result,
 )
 from app.services.runtime_worker_contracts import (
     RuntimeWorkerConfiguration,
@@ -27,12 +29,17 @@ from app.services.runtime_worker_contracts import (
     RuntimeWorkerPollIterationRequest,
     RuntimeWorkerPollIterationResult,
     RuntimeWorkerPollIterationResultProductionRequest,
+    RuntimeWorkerPreInvocationDisposition,
     RuntimeWorkerPreparedDeliveryRequest,
     RuntimeWorkerShutdownDisposition,
     RuntimeWorkerShutdownObservationRequest,
     RuntimeWorkerShutdownObservationResult,
 )
-from app.services.runtime_worker_protocols import RuntimeWorkerPreparedDelivery
+from app.services.runtime_worker_protocols import (
+    RuntimeWorkerPreInvocationRevalidationRequest,
+    RuntimeWorkerPreInvocationRevalidationResult,
+    RuntimeWorkerPreparedDelivery,
+)
 
 
 class RuntimeWorkerContractConflict(ValueError):
@@ -300,6 +307,48 @@ def validate_runtime_worker_result_completion(
     return append_request
 
 
+def validate_runtime_worker_pre_invocation_revalidation_request(
+    request: RuntimeWorkerPreInvocationRevalidationRequest,
+) -> RuntimeWorkerPreInvocationRevalidationRequest:
+    prepared = request.prepared_delivery
+    validate_runtime_worker_prepared_delivery(prepared.request, prepared)
+    try:
+        validate_runtime_effect_lifecycle_commit_result(
+            prepared.delivering_append_request,
+            request.delivering_result,
+        )
+    except ValueError:
+        raise RuntimeWorkerContractConflict("delivering result differs") from None
+    if (
+        request.delivering_result.disposition
+        is not RuntimeEffectLifecycleCommitDisposition.APPENDED
+    ):
+        raise RuntimeWorkerContractConflict("delivering result is not newly appended")
+    return request
+
+
+def validate_runtime_worker_pre_invocation_revalidation_result(
+    request: RuntimeWorkerPreInvocationRevalidationRequest,
+    result: RuntimeWorkerPreInvocationRevalidationResult,
+) -> RuntimeWorkerPreInvocationRevalidationResult:
+    validate_runtime_worker_pre_invocation_revalidation_request(request)
+    if result.request != request:
+        raise RuntimeWorkerContractConflict("pre-invocation result request differs")
+    if result.clock_reading.clock_reference != (
+        request.prepared_delivery.request.iteration_request.configuration_binding.clock_reference
+    ):
+        raise RuntimeWorkerContractConflict("pre-invocation clock differs")
+    append = result.append_request
+    if result.disposition is RuntimeWorkerPreInvocationDisposition.DEFINITELY_NOT_INVOKED:
+        valid = append == request.prepared_delivery.definitely_not_invoked_append_request
+        valid = valid and append is not None
+    else:
+        valid = append is None
+    if not valid:
+        raise RuntimeWorkerContractConflict("pre-invocation disposition differs")
+    return result
+
+
 def validate_runtime_worker_poll_cycle_result(
     request: RuntimeWorkerPollCycleRequest,
     result: RuntimeWorkerPollCycleResult,
@@ -397,6 +446,8 @@ __all__ = (
     "validate_runtime_worker_poll_iteration_result",
     "validate_runtime_worker_prepared_delivery",
     "validate_runtime_worker_prepared_delivery_request",
+    "validate_runtime_worker_pre_invocation_revalidation_request",
+    "validate_runtime_worker_pre_invocation_revalidation_result",
     "validate_runtime_worker_result_completion",
     "validate_runtime_worker_shutdown_observation_request",
     "validate_runtime_worker_shutdown_observation_result",
