@@ -906,3 +906,18 @@ references and grant no Runtime outcome authority.
 The next public-contract gate has an exact nine-file scope. Trusted preparation, production
 service/composition, PostgreSQL acceptance, and closeout remain separate. No schema or migration
 `20260808_0025` is approved, and CP10 production remains Planned.
+
+### CP10 Worker public-contract gate
+
+The ADR-113 public-contract gate is Implemented / Validated, Pending Review. Three new
+`app.services.runtime_worker_*` modules expose strict immutable configuration, binding, cycle,
+iteration, shutdown-observation, interruptible-wait, closed-result, capability, factory, and pure
+validation contracts. The Worker imports the exact synchronous Runtime Ports clock reading and
+the existing CP8 due-selection request without changing either Port.
+
+Canonical assignments and every process, scope, classification, clock, tuple-position, time,
+count, disposition, deadline, and failure-reference invariant fail closed. The contracts create
+no cycle UUID, durable sequence, Runtime outcome, reconciliation discovery, production service,
+or persistence behavior. Trusted preparation, production composition, PostgreSQL acceptance, and
+closeout remain separate; migration `20260808_0025` remains prohibited and production CP10
+remains Planned.

@@ -2458,9 +2458,9 @@ def test_cp10_worker_public_contract_precision_is_governed_before_contracts() ->
         "production CP10 remains Planned",
     ):
         assert phrase in combined
-    assert not (ROOT / "app/services/runtime_worker_contracts.py").exists()
-    assert not (ROOT / "app/services/runtime_worker_protocols.py").exists()
-    assert not (ROOT / "app/services/runtime_worker_validation.py").exists()
+    assert (ROOT / "app/services/runtime_worker_contracts.py").is_file()
+    assert (ROOT / "app/services/runtime_worker_protocols.py").is_file()
+    assert (ROOT / "app/services/runtime_worker_validation.py").is_file()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -2526,7 +2526,61 @@ def test_cp10_worker_contract_semantics_are_governed_before_public_contracts() -
         "production CP10 remains Planned",
     ):
         assert phrase in combined
-    assert not (ROOT / "app/services/runtime_worker_contracts.py").exists()
-    assert not (ROOT / "app/services/runtime_worker_protocols.py").exists()
+    assert (ROOT / "app/services/runtime_worker_contracts.py").is_file()
+    assert (ROOT / "app/services/runtime_worker_protocols.py").is_file()
+    assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_worker_public_contract_gate_is_exact_and_dependency_safe() -> None:
+    contracts = ROOT / "app/services/runtime_worker_contracts.py"
+    protocols = ROOT / "app/services/runtime_worker_protocols.py"
+    validation = ROOT / "app/services/runtime_worker_validation.py"
+    combined = "\n".join(
+        (
+            contracts.read_text(encoding="utf-8"),
+            protocols.read_text(encoding="utf-8"),
+            validation.read_text(encoding="utf-8"),
+        )
+    )
+    documents = "\n".join(
+        (
+            (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8"),
+        )
+    )
+
+    for phrase in (
+        "RuntimeWorkerConfiguration",
+        "RuntimeWorkerPollCycleRequest",
+        "RuntimeWorkerPollIterationRequest",
+        "RuntimeWorkerPollIterationResult",
+        "RuntimeWorkerPollCycleResult",
+        "RuntimeWorkerShutdownObservationCapability",
+        "RuntimeWorkerInterruptibleWaitCapability",
+        "RuntimeClockReading",
+        "RuntimeEffectDueSelectionRequest",
+        "__all__ = (",
+    ):
+        assert phrase in combined
+    for forbidden in (
+        "fastapi",
+        "sqlalchemy",
+        "redis",
+        "app.runtime.persistence",
+        "app.runtime.orchestration",
+        "app.runtime.adapters",
+        "RuntimeApiReconciliation",
+    ):
+        assert forbidden.lower() not in combined.lower()
+    for phrase in (
+        "CP10 Worker public-contract gate",
+        "Implemented / Validated, Pending Review",
+        "exact synchronous Runtime Ports clock",
+        "migration `20260808_0025` remains prohibited",
+        "production CP10 remains Planned",
+    ):
+        assert phrase in documents
     assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))

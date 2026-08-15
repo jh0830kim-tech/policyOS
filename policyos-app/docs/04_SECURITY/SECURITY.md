@@ -919,3 +919,16 @@ dead letter, cancellation, reconciliation, compensation, or audit mutation.
 
 The public-contract correction adds no production service, prepared delivery authority,
 credential, provider, route, repository, schema, backfill, or migration `20260808_0025`.
+
+### CP10 Worker public-contract gate security boundary
+
+The ADR-113 gate is Implemented / Validated, Pending Review. Worker contracts use the exact
+synchronous Runtime Ports clock and preserve caller-supplied tenant, organization,
+classification, configuration, position, time, request, digest, and bounded opaque-reference
+facts without normalization or inference. Cross-scope, stale binding, substituted clock,
+non-canonical assignment, invalid count, disposition, and deadline combinations fail closed.
+
+Closed operational results grant no claim, delivery outcome, retry, reconciliation, audit, or
+Runtime status authority. Public capability Protocols expose no mutable sticky state, reset,
+credential, session, transaction, framework, signal, or environment API. Production CP10 remains
+Planned, and migration `20260808_0025` remains prohibited.
