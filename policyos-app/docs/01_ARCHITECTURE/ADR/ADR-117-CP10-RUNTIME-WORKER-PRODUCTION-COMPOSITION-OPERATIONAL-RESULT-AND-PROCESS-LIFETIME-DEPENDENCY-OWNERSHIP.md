@@ -234,3 +234,10 @@ ADR-118 selects strict operation-specific production requests and exact asynchro
 Producer factories are zero-argument managed factories; existing shutdown and wait factory
 signatures remain unchanged. No concrete constructor, mutable bundle, loose result parameters,
 schema, or migration `20260808_0025` is approved.
+
+## ADR-119 production sequencing clarification
+
+The process bundle gains one additive fifteenth managed pre-invocation revalidation factory. The
+Worker calls it exactly once after durable `DELIVERING` and before any Adapter call. It does not
+read current clock, authority, Registry, admission, state, audit, cancellation, credential, lease,
+deadline, destination, or shutdown facts directly.

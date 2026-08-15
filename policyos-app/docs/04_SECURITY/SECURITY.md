@@ -1034,3 +1034,11 @@ and a closed failure stage. Managed producers remain the sole owners of completi
 failure references. The immutable dependency bundle exposes factories only and contains no engine,
 session, transaction, credential, framework object, environment selector, or mutable service
 locator. No schema or migration `20260808_0025` is introduced.
+
+### CP10 Worker pre-invocation revalidation security boundary
+
+ADR-119 makes one managed capability the sole owner of final trusted time and authoritative
+revalidation. The Worker receives only a closed invokable, definitely-not-invoked, or
+shutdown-blocked result and cannot read persistence, select a clock, expose authority facts, or
+invent lifecycle evidence. Shutdown after `DELIVERING` remains durable ambiguity. No schema or
+migration `20260808_0025` is introduced.

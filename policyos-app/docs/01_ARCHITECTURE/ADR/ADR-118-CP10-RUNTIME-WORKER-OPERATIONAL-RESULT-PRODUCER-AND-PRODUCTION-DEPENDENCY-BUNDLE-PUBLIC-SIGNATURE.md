@@ -208,3 +208,9 @@ The public-contract gate now has one deterministic signature surface. It can add
 requests, one closed enum, four producer Protocols, one frozen fourteen-field bundle, one
 application-service Protocol, pure validators, exact tests, and documentation without choosing
 production behavior or persistence ownership.
+
+## ADR-119 additive bundle correction
+
+The exact production bundle is superseded additively to fifteen fields by
+`pre_invocation_revalidation_factory`. Its managed capability owns the final trusted clock and
+authoritative revalidation. All original fourteen fields and annotations remain unchanged.

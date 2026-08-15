@@ -2401,6 +2401,44 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_cp10_worker_pre_invocation_revalidation_governance_is_explicit():
+    adr = (
+        ROOT / "docs/01_ARCHITECTURE/ADR/ADR-119-CP10-RUNTIME-WORKER-"
+        "PRE-INVOCATION-AUTHORITATIVE-REVALIDATION-OWNERSHIP.md"
+    ).read_text(encoding="utf-8")
+    related = "\n".join(
+        (ROOT / path).read_text(encoding="utf-8")
+        for path in (
+            "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+    for phrase in (
+        "RuntimeWorkerPreInvocationRevalidationCapability",
+        "RuntimeWorkerPreInvocationRevalidationCapabilityFactory",
+        "RuntimeWorkerPreInvocationRevalidationRequest",
+        "RuntimeWorkerPreInvocationRevalidationResult",
+        "RuntimeWorkerPreInvocationDisposition",
+        "INVOKABLE",
+        "DEFINITELY_NOT_INVOKED",
+        "SHUTDOWN_BLOCKED",
+        "pre_invocation_revalidation_factory",
+        "fifteenth exact field",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in adr
+    for phrase in (
+        "pre-invocation authoritative revalidation governance",
+        "Governed / Validated, Pending Review",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in related
+    assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not (ROOT / "app/services/runtime_worker_production.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_cp10_worker_result_production_public_contracts_are_exact():
     contracts = (ROOT / "app/services/runtime_worker_contracts.py").read_text(encoding="utf-8")
     protocols = (ROOT / "app/services/runtime_worker_protocols.py").read_text(encoding="utf-8")
