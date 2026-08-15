@@ -106,8 +106,10 @@ The baseline is `main` after merged CP9 PostgreSQL/HTTP acceptance PR #121.
 | CP9 Production Runtime Composition and Thin Routes | Merged, PR #120 | Immutable dependency injection and exactly three thin Runtime endpoints without Worker or external-effect execution. |
 | CP9 Combined PostgreSQL and HTTP Acceptance | Merged, PR #121 | Real managed preparation, independent rate transaction, facade transaction, replay, rollback, and HTTP evidence. |
 | CP9 Runtime API | Merged | Governed CP9 Runtime API boundary complete; migration head `20260808_0024`. |
-| CP10 Worker Operating Model Governance | Governed / Validated, Pending Review | ADR-111 selects configured Worker identity, scoped PostgreSQL polling, claim/lease, concurrency, and shutdown without migration `0025`. |
-| CP10 Worker Contract Semantics Governance | Governed / Validated, Pending Review | ADR-112 fixes delivery-only discovery, exact operational bounds, fixed-delay cycles, configuration lifetime, and sticky shutdown observation. |
+| CP10 Worker Operating Model Governance | Merged, PR #123 | ADR-111 selects configured Worker identity, scoped PostgreSQL polling, claim/lease, concurrency, and shutdown without migration `0025`. |
+| CP10 Worker Contract Semantics and Precision Governance | Merged, PR #124 and PR #125 | ADR-112 and ADR-113 fix delivery-only discovery, operational bounds, timing, identity, signatures, and sticky shutdown observation. |
+| CP10 Worker Public Contracts | Merged, PR #126 | Strict Worker configuration, cycle, iteration, shutdown, wait, closed-result, capability, and validation contracts. |
+| CP10 Prepared Delivery Governance | Governed / Validated, Pending Review | ADR-114 fixes request-scoped preparation, exact candidate binding, post-result completion, replay ordering, and shutdown-after-delivering behavior. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
@@ -1169,3 +1171,20 @@ position/scope/classification/clock/limit substitution, aware times, closed coun
 shapes, exact drain arithmetic, Protocol annotations, and immutable exports. Production Worker
 composition, preparation, persistence and PostgreSQL acceptance remain deferred. No schema or
 migration `20260808_0025` is introduced; production CP10 remains Planned.
+
+### CP10 prepared-delivery ownership and sequencing governance
+
+Status: Governed / Validated, Pending Review. ADR-114 assigns one request-scoped single-use
+producer to one exact selected due candidate and Worker iteration. The producer supplies the exact
+claim, delivery request, `DELIVERING` append, invocation, and a one-shot post-result completion
+capability from trusted caller-owned facts. It generates or infers no identity, time, revision,
+digest, authority, permit, retry, or outcome.
+
+Claim and `DELIVERING` replay or conflict stop before Adapter invocation and completion. Only an
+exact returned Adapter result may be passed once to completion, which supplies the exact
+result-specific lifecycle append. Shutdown after durable `DELIVERING` leaves that state unchanged
+and calls the Adapter zero times because shutdown is neither cancellation nor lease expiry.
+
+The following public-contract, production composition, PostgreSQL acceptance, combined regression,
+and closeout gates remain separate. Existing CP8 delivery tables remain authoritative and no
+schema or migration `20260808_0025` is approved.

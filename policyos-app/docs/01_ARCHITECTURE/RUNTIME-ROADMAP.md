@@ -921,3 +921,22 @@ no cycle UUID, durable sequence, Runtime outcome, reconciliation discovery, prod
 or persistence behavior. Trusted preparation, production composition, PostgreSQL acceptance, and
 closeout remain separate; migration `20260808_0025` remains prohibited and production CP10
 remains Planned.
+
+### CP10 prepared-delivery ownership and sequencing governance
+
+ADR-114 governs the trusted boundary between one exact selected due candidate and the existing CP8
+claim, `DELIVERING`, Adapter invocation, and result append operations. One request-scoped
+single-use producer binds the exact Worker configuration, cycle, iteration, due request, candidate,
+scope, classification, lineage, lifecycle, claimant, clock, authority, admission, permit, Registry,
+state, audit, deadline, cancellation, credential, revision, and digest facts without inference.
+
+The pre-invocation package contains no guessed Adapter result. A separate one-shot completion
+capability accepts one exact Adapter result and returns the exact caller-supplied result-specific
+lifecycle append. Claim or `DELIVERING` replay/conflict performs no Adapter or completion call.
+Shutdown after durable `DELIVERING` calls the Adapter zero times and preserves `DELIVERING`; it is
+not rewritten as cancellation or lease expiry.
+
+Prepared packages remain request-local, every persistence operation retains a short independent
+transaction, and no database transaction spans Adapter invocation. The next gate is the separate
+prepared-delivery public-contract gate. Production Worker composition, PostgreSQL acceptance, and
+closeout remain deferred. No schema or migration `20260808_0025` is approved.
