@@ -258,6 +258,24 @@ class RuntimeWorkerShutdownObservationCapability(Protocol):
 
 
 @runtime_checkable
+class RuntimeWorkerShutdownObservationRequestPreparationCapability(Protocol):
+    async def prepare(
+        self,
+        configuration: RuntimeWorkerConfiguration,
+        configuration_binding: RuntimeWorkerConfigurationBinding,
+    ) -> RuntimeWorkerShutdownObservationRequest: ...
+
+
+@runtime_checkable
+class RuntimeWorkerShutdownObservationRequestPreparationCapabilityFactory(Protocol):
+    def __call__(
+        self,
+    ) -> RuntimeWorkerManagedRequestCapability[
+        RuntimeWorkerShutdownObservationRequestPreparationCapability
+    ]: ...
+
+
+@runtime_checkable
 class RuntimeWorkerShutdownObservationCapabilityFactory(Protocol):
     def __call__(self) -> RuntimeWorkerShutdownObservationCapability: ...
 
@@ -341,6 +359,9 @@ class RuntimeWorkerProductionDependencyBundle:
     delivery_factory: RuntimeWorkerDeliveryCapabilityFactory
     cancellation_factory: RuntimeWorkerCancellationCapabilityFactory
     credential_factory: RuntimeWorkerCredentialCapabilityFactory
+    shutdown_observation_request_preparation_factory: (
+        RuntimeWorkerShutdownObservationRequestPreparationCapabilityFactory
+    )
     shutdown_observation_factory: RuntimeWorkerShutdownObservationCapabilityFactory
     interruptible_wait_factory: RuntimeWorkerInterruptibleWaitCapabilityFactory
     poll_iteration_result_production_factory: (
@@ -370,6 +391,10 @@ class RuntimeWorkerProductionDependencyBundle:
             (self.delivery_factory, RuntimeWorkerDeliveryCapabilityFactory),
             (self.cancellation_factory, RuntimeWorkerCancellationCapabilityFactory),
             (self.credential_factory, RuntimeWorkerCredentialCapabilityFactory),
+            (
+                self.shutdown_observation_request_preparation_factory,
+                RuntimeWorkerShutdownObservationRequestPreparationCapabilityFactory,
+            ),
             (self.shutdown_observation_factory, RuntimeWorkerShutdownObservationCapabilityFactory),
             (self.interruptible_wait_factory, RuntimeWorkerInterruptibleWaitCapabilityFactory),
             (
@@ -433,4 +458,6 @@ __all__ = (
     "RuntimeWorkerResultCompletionCapability",
     "RuntimeWorkerShutdownObservationCapability",
     "RuntimeWorkerShutdownObservationCapabilityFactory",
+    "RuntimeWorkerShutdownObservationRequestPreparationCapability",
+    "RuntimeWorkerShutdownObservationRequestPreparationCapabilityFactory",
 )

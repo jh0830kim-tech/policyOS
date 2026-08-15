@@ -3117,3 +3117,26 @@ def test_cp10_worker_shutdown_observation_request_preparation_is_governed():
     assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not (ROOT / "app/services/runtime_worker_production.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_worker_shutdown_observation_request_preparation_contracts_are_exact():
+    protocols = (ROOT / "app/services/runtime_worker_protocols.py").read_text(encoding="utf-8")
+    validation = (ROOT / "app/services/runtime_worker_validation.py").read_text(encoding="utf-8")
+    related = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            ROOT / "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+    for symbol in (
+        "RuntimeWorkerShutdownObservationRequestPreparationCapability",
+        "RuntimeWorkerShutdownObservationRequestPreparationCapabilityFactory",
+        "shutdown_observation_request_preparation_factory",
+    ):
+        assert symbol in protocols
+    assert "validate_runtime_worker_shutdown_observation_request_preparation" in validation
+    assert "shutdown-observation request-preparation public contracts" in related
+    assert "sixteenth" in related
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))

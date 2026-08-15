@@ -1056,3 +1056,7 @@ ADR-120 prohibits the Worker from sampling time or reusing stale cycle and due-s
 One fresh managed preparation capability binds the configured clock, immutable configuration,
 configuration digest, and drain timeout before each observation. Missing, substituted, repeated,
 cross-request, or post-exit use fails closed without an observation or Runtime mutation.
+
+The merged public-contract implementation exposes only explicit configuration and binding inputs,
+one strict shutdown request output, and managed one-shot lifetime. It adds no clock callback,
+session, transaction, mutable request context, schema, or migration `20260808_0025`.

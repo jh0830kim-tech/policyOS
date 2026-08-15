@@ -397,6 +397,17 @@ def validate_runtime_worker_shutdown_observation_request(
     return request
 
 
+def validate_runtime_worker_shutdown_observation_request_preparation(
+    configuration: RuntimeWorkerConfiguration,
+    configuration_binding: RuntimeWorkerConfigurationBinding,
+    request: RuntimeWorkerShutdownObservationRequest,
+) -> RuntimeWorkerShutdownObservationRequest:
+    validate_runtime_worker_configuration_binding(configuration, configuration_binding)
+    if request.configuration_binding != configuration_binding:
+        raise RuntimeWorkerContractConflict("worker shutdown preparation binding differs")
+    return validate_runtime_worker_shutdown_observation_request(configuration, request)
+
+
 def validate_runtime_worker_shutdown_observation_result(
     request: RuntimeWorkerShutdownObservationRequest,
     result: RuntimeWorkerShutdownObservationResult,
@@ -450,5 +461,6 @@ __all__ = (
     "validate_runtime_worker_pre_invocation_revalidation_result",
     "validate_runtime_worker_result_completion",
     "validate_runtime_worker_shutdown_observation_request",
+    "validate_runtime_worker_shutdown_observation_request_preparation",
     "validate_runtime_worker_shutdown_observation_result",
 )
