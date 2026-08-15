@@ -191,6 +191,7 @@ grants permission or causes automatic execution.
 | CP9 Combined PostgreSQL and HTTP Acceptance | Merged, PR #121 | Vertical acceptance | Real managed preparation, rate transaction, facade transaction, replay, rollback, and HTTP evidence | No migration `0025` |
 | CP9 closeout | Merged | Governance closeout | CP9 completion evidence and stale-status rejection | CP10 remains separately governed |
 | CP9 | Merged | API | Governed production Runtime API within the approved CP9 boundary | No Worker, queue, scheduler, or external business effect |
+| CP10 Worker Operating Model Governance | Governed / Validated, Pending Review | Worker governance | ADR-111 configured identity, scoped PostgreSQL polling, claim/lease, concurrency, and shutdown model | No production Worker or migration `0025` |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
 CP9 Governance began in PR #60 and its sequenced governance, contracts, persistence, application,
@@ -849,3 +850,22 @@ contract, permission, schema, migration, credential path, external adapter, Work
 polling loop, scheduler, or external effect. Historical checkpoint-local status statements remain
 records of their gate boundaries; the current-state table and this closeout are authoritative.
 CP10 remains Planned and requires separate governance and explicit approval.
+
+### CP10 Worker operating-model governance
+
+ADR-111 selects the no-`0025` operating model before any Worker contract or implementation. One
+immutable deployment configuration supplies the bounded Worker and claimant references, explicit
+tenant, organization, and classification assignments, trusted-clock reference, and bounded
+polling, concurrency, and shutdown-drain limits. The Worker lives outside `app.runtime`, invokes
+one CP10 application service through Orchestration and public Ports, and gains no authority from
+its process identity.
+
+Existing CP8 lifecycle heads and append-only revisions remain authoritative. Bounded,
+caller-scoped PostgreSQL polling discovers due work; a queue or notification may later be approved
+only as a non-authoritative wake-up hint. Claims, delivery transitions, attempts, outcomes, retry,
+dead-letter, and reconciliation evidence use short independent transactions, never a transaction
+held across waiting, credential acquisition, cancellation observation, or adapter invocation.
+There is no Worker registry, assignment, heartbeat, scheduler, or process-session table and no
+migration `20260808_0025`, backfill, normalization, deduplication, or rewrite. Public contracts,
+preparation/binding, production service/composition, PostgreSQL acceptance, and closeout remain
+separate CP10 gates; CP10 production remains Planned.

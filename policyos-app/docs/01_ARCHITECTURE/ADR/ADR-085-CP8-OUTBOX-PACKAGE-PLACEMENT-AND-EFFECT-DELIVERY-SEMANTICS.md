@@ -380,3 +380,22 @@ This ADR creates no production package, SQLAlchemy model, migration, dispatcher,
 Worker, API route, credential resolver, external adapter call, retry execution, project version,
 release, or Git tag. CP8 implementation begins only after `CP8-Gate-Delivery-Contracts` merges with
 green CI.
+
+## CP10 worker operating-model clarification
+
+ADR-111 preserves this delivery authority boundary for CP10. A Worker is an external
+application/infrastructure entry point that calls Orchestration and cannot own delivery policy,
+retry, dead letter, reconciliation, authority, permit, credential resolution, or Adapter
+selection.
+
+CP10 selects bounded PostgreSQL due polling as authoritative work discovery. One immutable trusted
+deployment configuration supplies the Worker instance reference, exact claim
+`claimant_reference`, explicit tenant/organization/classification assignments, trusted clock
+reference, and bounded operational limits. Queue or notification data cannot identify work or
+authorize a claim. Every claim, attempt, lifecycle, receipt, timestamp, revision, digest, and
+reference remains caller supplied through a separately governed prepared-operation boundary.
+
+The four existing CP8 tables remain sufficient for the initial Worker operating model.
+`claimant_reference` is preserved in immutable claim payload evidence, while service-principal
+and Runtime authority are revalidated before delivery. No Worker registry, heartbeat, schedule,
+assignment table, backfill, or migration `20260808_0025` is approved.

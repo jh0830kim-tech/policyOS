@@ -106,6 +106,7 @@ The baseline is `main` after merged CP9 PostgreSQL/HTTP acceptance PR #121.
 | CP9 Production Runtime Composition and Thin Routes | Merged, PR #120 | Immutable dependency injection and exactly three thin Runtime endpoints without Worker or external-effect execution. |
 | CP9 Combined PostgreSQL and HTTP Acceptance | Merged, PR #121 | Real managed preparation, independent rate transaction, facade transaction, replay, rollback, and HTTP evidence. |
 | CP9 Runtime API | Merged | Governed CP9 Runtime API boundary complete; migration head `20260808_0024`. |
+| CP10 Worker Operating Model Governance | Governed / Validated, Pending Review | ADR-111 selects configured Worker identity, scoped PostgreSQL polling, claim/lease, concurrency, and shutdown without migration `0025`. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
@@ -562,7 +563,7 @@ grant/revoke authority, provenance, audit, idempotency, and bootstrap policy.
 | R15-03 | Resolved by ADR-076 and CP4 | CP2 records opaque registry references before the registry implementation exists. | Field-level compatibility tests preserve CP2 semantics. |
 | R15-04 | Resolved for CP7 by ADR-083 | Physical partitioning and retention schedules were unspecified. | Use logical tenant partitioning and preservation-only retention; require a later approved operational schedule before any purge. |
 | R15-05 | Deferred | Real adapter families, credential broker, destination redirect policy, and provider enablement are not selected. | Separate CP6 adapter approvals and threat reviews. |
-| R15-06 | Deferred | Worker identity, queue or polling, scheduling, shutdown, and incident model are unspecified. | Decide before CP10 implementation; ADR-085 effect claims do not select a Worker model. |
+| R15-06 | Resolved by ADR-111 | Worker identity, queue or polling, scheduling, shutdown, and incident model required an explicit operating model. | Use immutable deployment identity and assignments, authoritative bounded PostgreSQL polling, existing CP8 claim/lease evidence, and bounded graceful shutdown; keep production gates separate. |
 | R15-07 | Resolved by ADR-085 | CP8 package placement and ownership were unspecified. | Extend Ports, Persistence, and Orchestration in their existing directions; do not create `app.runtime.outbox`. |
 | R15-08 | Resolved by ADR-083 | Repository and transaction outputs required receipt IDs, digest, and time that were absent from their inputs. | Carry exact caller-supplied receipt and digest facts in the Ports contracts and bind commit time to an injected clock reference. |
 | R15-09 | Resolved by ADR-084 | Sampling the injected clock only after commit could not persist the same timestamp atomically and could report failure after durable storage. | Validate and persist one injected-clock reading at the commit boundary; publish the receipt only after the database commit succeeds. |
@@ -1097,3 +1098,22 @@ path, tag, or release is part of this closeout.
 Earlier checkpoint-local status paragraphs are retained as historical gate records. The current
 baseline table and this closeout section are authoritative for current program state: CP9 Runtime
 API is Merged, and CP10 remains Planned pending separate governance and explicit approval.
+
+### CP10 Worker operating-model governance
+
+Status: Governed / Validated, Pending Review. ADR-111 assigns operational identity and explicit
+tenant, organization, and classification assignments to immutable deployment configuration.
+Worker identity is provenance only; every attempt revalidates the existing service principal and
+Runtime authority facts. One Worker entry point outside `app.runtime` calls one CP10 application
+service, which uses Orchestration and public Ports and cannot import concrete persistence,
+repositories, adapters, credentials, or HTTP transports.
+
+Bounded PostgreSQL polling through the existing due-work Port is authoritative. Any later queue or
+notification is only a non-authoritative wake-up hint. Existing CP8 heads and append-only revisions
+own claim, lease, attempt, delivery, retry, dead-letter, and reconciliation evidence. Transactions
+are short and independent; none spans waiting, credential acquisition, cancellation observation,
+or adapter invocation. Concurrency and graceful shutdown are bounded, and shutdown grants no new
+outcome authority. No Worker registry, assignment, heartbeat, schedule, or process-session schema,
+migration `20260808_0025`, backfill, normalization, deduplication, or rewrite is approved. CP10
+contracts, preparation/binding, production composition, PostgreSQL acceptance, and closeout remain
+separate gates; production CP10 remains Planned.
