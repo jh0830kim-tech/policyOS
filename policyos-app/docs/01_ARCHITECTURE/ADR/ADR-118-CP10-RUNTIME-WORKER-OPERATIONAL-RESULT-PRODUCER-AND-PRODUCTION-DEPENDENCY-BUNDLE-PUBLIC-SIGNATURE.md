@@ -58,6 +58,11 @@ The public-contract gate adds two strict, frozen, extra-forbidden models.
 `failure_stage=None`. The models contain no completion time, failure reference, exception, free
 text, arbitrary metadata, callback, clock, session, transaction, or generated identity.
 
+ADR-121 adds one separate marker-only correction: only
+`RuntimeWorkerOperationalCapabilityFailure` may cause the Worker to submit one of these requests
+with `OPERATIONAL_FAILURE`. The marker contributes no request field or failure reference; the
+Worker supplies the closed call-site stage and the producer retains reference ownership.
+
 Pure validators check the existing result cardinality and binding limits before any producer call.
 They reject invalid counts, failure-stage substitution, scope mismatch, noncanonical assignment,
 and a cycle visit count beyond the exact configuration assignments.

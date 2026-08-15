@@ -1060,3 +1060,13 @@ Status: **Implemented / Validated, Pending Review**.
 The gate implements ADR-120's managed preparation capability and zero-argument factory, exact
 configuration/binding validation, and the additive sixteenth production-bundle field. Production
 Worker composition and PostgreSQL acceptance remain separate.
+### CP10 Worker operational-failure and bounded-drain governance
+
+ADR-121 closes the production implementation boundary: only the non-disclosing
+`RuntimeWorkerOperationalCapabilityFailure` marker may become an operational failure result, and
+the Worker selects its closed stage from the exact call site while the producer owns the opaque
+reference. Programmer defects, contract failures, and host cancellation propagate. The service
+owns cancellation of only its admitted tasks at the exact sticky shutdown deadline, awaits task
+residue zero, and creates no Runtime cancellation or lifecycle outcome. No migration
+`20260808_0025` is required. The marker public-contract correction and Production Worker remain
+separate gates.

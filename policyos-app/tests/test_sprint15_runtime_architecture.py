@@ -3140,3 +3140,33 @@ def test_cp10_worker_shutdown_observation_request_preparation_contracts_are_exac
     assert "shutdown-observation request-preparation public contracts" in related
     assert "sixteenth" in related
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_worker_operational_failure_and_drain_governance() -> None:
+    adr = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / ("ADR-121-CP10-RUNTIME-WORKER-OPERATIONAL-FAILURE-AND-DRAIN-CANCELLATION-OWNERSHIP.md")
+    ).read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+
+    for required in (
+        "RuntimeWorkerOperationalCapabilityFailure",
+        "only exception",
+        "call site",
+        "failure_reference",
+        "asyncio.CancelledError",
+        "drain_deadline",
+        "monotonic event-loop timeout",
+        "only its still-pending admitted tasks",
+        "task residue reaches zero",
+        "migration `20260808_0025`",
+    ):
+        assert required in adr
+    assert "broad `except Exception`" in adr
+    assert "process scheduling cleanup, not Runtime" in adr
+    assert "RuntimeWorkerOperationalCapabilityFailure" in roadmap
+    assert "Status: Governed / Validated, Pending Review" in program
+    assert "prohibits broad exception translation" in security
