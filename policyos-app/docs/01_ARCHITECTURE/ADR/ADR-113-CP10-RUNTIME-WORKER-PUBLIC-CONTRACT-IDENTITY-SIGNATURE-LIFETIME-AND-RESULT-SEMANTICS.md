@@ -368,3 +368,13 @@ and their zero-argument factories: cycle request preparation, iteration request 
 selected-candidate delivery-request preparation. Existing Worker request and result types remain
 strict, frozen, extra-forbidden, and caller supplied; existing Worker public signatures remain
 unchanged.
+
+## ADR-116 explicit preparation-input clarification
+
+The three factories remain zero-argument, but the preparation methods are not. Cycle preparation
+receives exact configuration and configuration binding; iteration preparation receives the exact
+cycle request, strict assignment position, and matching assignment; candidate preparation receives
+the exact iteration request and selected due candidate. Each managed capability permits one
+successful output, validates exact binding before downstream work, and is disposed exactly once.
+No hidden clock, mutable context, service locator, generated request value, or migration
+`20260808_0025` is introduced.

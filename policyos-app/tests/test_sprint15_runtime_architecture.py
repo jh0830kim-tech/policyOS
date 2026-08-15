@@ -2401,6 +2401,80 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_cp10_worker_request_preparation_signatures_are_governed() -> None:
+    adr_root = ROOT / "docs/01_ARCHITECTURE/ADR"
+    adr116 = (
+        adr_root
+        / (
+            "ADR-116-CP10-RUNTIME-WORKER-REQUEST-PREPARATION-CAPABILITY-"
+            "INPUT-AND-SIGNATURE-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    related = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            adr_root
+            / (
+                "ADR-112-CP10-RUNTIME-WORKER-CONTRACT-TIMING-SHUTDOWN-"
+                "OBSERVATION-AND-RECONCILIATION-DISCOVERY.md"
+            ),
+            adr_root
+            / (
+                "ADR-113-CP10-RUNTIME-WORKER-PUBLIC-CONTRACT-IDENTITY-"
+                "SIGNATURE-LIFETIME-AND-RESULT-SEMANTICS.md"
+            ),
+            adr_root
+            / (
+                "ADR-114-CP10-RUNTIME-WORKER-PREPARED-DELIVERY-OWNERSHIP-"
+                "EXACT-BINDING-AND-OUTCOME-SEQUENCING.md"
+            ),
+            adr_root
+            / (
+                "ADR-115-CP10-RUNTIME-WORKER-CYCLE-ITERATION-AND-CANDIDATE-"
+                "REQUEST-PREPARATION-OWNERSHIP.md"
+            ),
+            ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            ROOT / "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+
+    for phrase in (
+        "exactly three zero-argument factories",
+        "prepare(\n    configuration: RuntimeWorkerConfiguration",
+        "configuration_binding: RuntimeWorkerConfigurationBinding",
+        "prepare(\n    cycle_request: RuntimeWorkerPollCycleRequest",
+        "assignment_position: int",
+        "assignment: RuntimeWorkerAssignment",
+        "prepare(\n    iteration_request: RuntimeWorkerPollIterationRequest",
+        "candidate: RuntimeEffectDueCandidate",
+        "Exactly one successful",
+        "downstream-call zero on preparation failure",
+        "`20260808_0025` is required or approved",
+    ):
+        assert phrase in adr116
+    for phrase in (
+        "ADR-116 preparation-signature clarification",
+        "ADR-116 explicit preparation-input clarification",
+        "ADR-116 candidate preparation-signature clarification",
+        "ADR-116 capability-input and signature clarification",
+        "CP10 Worker request-preparation signature governance",
+        "CP10 Worker request-preparation signature security boundary",
+        "Governed / Validated, Pending Review",
+    ):
+        assert phrase in related
+    lowered = adr116.lower()
+    for forbidden in (
+        "worker generates the request",
+        "select the latest row",
+        "migration `20260808_0025` is approved",
+        "factory receives the candidate",
+    ):
+        assert forbidden not in lowered
+    assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_cp10_worker_request_preparation_ownership_is_governed() -> None:
     adr_path = ROOT / "docs/01_ARCHITECTURE/ADR"
     adr_path /= (
