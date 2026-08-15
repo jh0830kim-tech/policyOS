@@ -269,3 +269,18 @@ Shutdown observation is transport-neutral, caller-timed, single-use, and sticky 
 It stops new cycles, selections, claims, preparation, and invocations and creates no Runtime
 outcome authority. These public semantics add no Worker persistence or migration
 `20260808_0025`; prepared delivery facts and production composition remain separate gates.
+
+## ADR-113 public-contract precision clarification
+
+ADR-113 fixes the remaining public Worker field, identity, signature, clock, result, and lifecycle
+choices. Cycles and iterations have no generated or durable UUID. They are identified only by the
+exact process configuration binding, caller-supplied aware clock time, canonical one-based
+assignment position, and exact assignment. The authoritative Worker clock is the existing
+synchronous `app.runtime.ports.RuntimeClockPort`; the CP9 application clock is not substituted.
+
+Shutdown observation and fixed wait use distinct asynchronous request-local single-use
+capabilities created by process-lifetime factories. Both bind the same private sticky shutdown
+source, but wait returns no shutdown fact and the source exposes no public mutation or reset API.
+Closed iteration and cycle results carry only bounded counts and optional opaque failure
+references and create no Runtime outcome authority. The next public-contract gate has an exact
+nine-file scope and adds no persistence or migration `20260808_0025`.

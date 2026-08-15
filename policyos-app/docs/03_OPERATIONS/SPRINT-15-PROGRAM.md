@@ -1138,3 +1138,20 @@ the exact deadline, and grants no cancellation, retry, reconciliation, success, 
 dead-letter authority. Public contracts, trusted preparation, production Worker composition,
 PostgreSQL acceptance, and closeout remain independent gates. No migration `20260808_0025` is
 approved and production CP10 remains Planned.
+
+### CP10 Worker public-contract precision governance
+
+Status: Governed / Validated, Pending Review. ADR-113 selects the existing synchronous Runtime
+Ports clock and defines every configuration-binding, cycle, iteration, shutdown, wait, and closed
+operational-result field required by the next contract gate. No cycle or iteration UUID, durable
+sequence, scheduler token, hidden clock, or generated reference is introduced.
+
+Cycle identity is exact process configuration plus caller-supplied aware start time. Iteration
+identity adds canonical one-based assignment position and the exact assignment, while its embedded
+due-selection request must match tenant, organization, classification, clock, and candidate bound.
+Shutdown observation and fixed wait are separate single-use capabilities created by
+process-lifetime factories over one private sticky source; wait returns no shutdown fact.
+
+The next public-contract gate is limited to nine named files. Prepared delivery binding,
+production service/composition, PostgreSQL acceptance, and Sprint closeout remain later gates.
+Migration `20260808_0025` remains prohibited and production CP10 remains Planned.
