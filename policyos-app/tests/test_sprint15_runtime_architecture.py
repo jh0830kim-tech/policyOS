@@ -2344,3 +2344,58 @@ def test_cp9_runtime_api_closeout_is_complete_and_cp10_remains_planned() -> None
     assert "| CP9 Runtime API | Planned / Blocked |" not in program
     assert "Status: Implemented / Validated, Pending Review. The acceptance harness" not in program
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
+
+
+def test_cp10_worker_operating_model_governance_precedes_implementation() -> None:
+    adr111_path = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / "ADR-111-CP10-RUNTIME-WORKER-OWNERSHIP-CLAIM-LEASE-AND-OPERATING-MODEL.md"
+    )
+    adr111 = adr111_path.read_text(encoding="utf-8")
+    adr085 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / "ADR-085-CP8-OUTBOX-PACKAGE-PLACEMENT-AND-EFFECT-DELIVERY-SEMANTICS.md"
+    ).read_text(encoding="utf-8")
+    adr086 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / "ADR-086-CP8-POSTGRESQL-EFFECT-DELIVERY-IMPLEMENTATION.md"
+    ).read_text(encoding="utf-8")
+    combined = "\n".join(
+        (
+            (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8"),
+        )
+    )
+
+    for phrase in (
+        "immutable deployment-supplied Worker configuration",
+        "worker_instance_reference",
+        "claimant_reference",
+        "explicit tenant, organization, and classification assignments",
+        "PostgreSQL bounded polling",
+        "non-authoritative wake-up hint",
+        "one CP10 application service",
+        "at most once",
+        "Graceful shutdown is two phase",
+        "Migration `20260808_0025`",
+        "no Worker registry",
+        "backfill",
+    ):
+        assert phrase in adr111
+    assert "CP10 worker operating-model clarification" in adr085
+    assert "CP10 worker operating-model clarification" in adr086
+    for phrase in (
+        "CP10 Worker Operating Model Governance",
+        "Governed / Validated, Pending Review",
+        "CP10 Worker operating-model governance",
+        "production CP10 remains Planned",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app/runtime/workers").exists()
+    assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))

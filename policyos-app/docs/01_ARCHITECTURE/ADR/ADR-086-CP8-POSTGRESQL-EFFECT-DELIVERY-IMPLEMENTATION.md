@@ -269,3 +269,22 @@ Worker, scheduler, queue, API, real provider integration, automatic retry, or ex
 
 Production implementation begins only after this ADR and the separate
 `CP8-Gate-Delivery-Persistence-Contracts` PR both merge with green CI.
+
+## CP10 worker operating-model clarification
+
+ADR-111 reuses the CP8 physical design without a fifth delivery table or migration
+`20260808_0025`. The lifecycle head remains the bounded due and active-lease projection.
+Immutable lifecycle revisions remain the evidence history and already store the complete exact
+claim payload, including `claimant_reference`, plus scoped claim, lease, attempt, result, retry,
+dead-letter, and reconciliation identities.
+
+The initial CP10 Worker uses explicit tenant/organization/classification assignments from an
+immutable trusted deployment configuration and calls the existing due-selection and lifecycle
+Ports. It cannot scan unassigned scope, read a latest row to manufacture prepared facts, or access
+the concrete repository directly. Due selection and each claim or lifecycle transition retain
+their existing short transaction ownership; no transaction crosses waiting, cancellation,
+credential acquisition, or Adapter invocation.
+
+Durable Worker registration, assignment lookup, heartbeat, scheduling, or process-session state
+would be a new schema owner and must stop for a separate ADR and migration gate. CP10 performs no
+backfill, normalization, deduplication, inferred assignment, or rewrite of existing CP8 rows.

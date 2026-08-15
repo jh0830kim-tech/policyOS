@@ -862,3 +862,22 @@ schema, backfill, or migration `20260808_0025`. The single migration head remain
 `20260808_0024`. Historical checkpoint status paragraphs remain evidence of their individual
 gates; this closeout is authoritative for current security posture. CP10 Workers remain Planned
 and require separate governance and explicit approval.
+
+### CP10 Worker operating-model security boundary
+
+ADR-111 makes Worker identity and assignment explicit immutable deployment provenance, never an
+authority source. The Worker must use the configured service principal and revalidate tenant,
+organization, classification, lineage, permission, admission, permit, claim, lease, and attempt
+facts for every operation. It cannot scan unassigned scopes, select current/latest authority, infer
+facts from hostnames, environment order, process identity, randomness, or wall-clock time, or
+manufacture retry, dead-letter, reconciliation, success, or failure meaning.
+
+The Worker remains outside `app.runtime` and calls one CP10 application service through
+Orchestration and public Ports. Direct persistence, repository, adapter, credential, and HTTP
+access is prohibited. PostgreSQL bounded polling is authoritative; a future queue or notification
+can only wake the poller and cannot identify or authorize work. Short independent transactions
+protect claim and lifecycle evidence and never span external work. Bounded graceful shutdown stops
+new polling and claims before draining; it cannot declare an outcome without exact caller-supplied
+evidence. Deployment configuration contains no credential, session, client, callback, or sensitive
+payload. No Worker registry, heartbeat, assignment, schedule, process-session schema, migration
+`20260808_0025`, backfill, normalization, deduplication, or rewrite is permitted by this gate.
