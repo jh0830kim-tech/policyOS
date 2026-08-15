@@ -8,10 +8,16 @@ from app.runtime.ports import (
     RuntimeCredentialBrokerPort,
     RuntimeEffectDeliveryPort,
     RuntimeEffectDeliveryResult,
+    RuntimeEffectDueCandidate,
     RuntimeEffectLifecycleAppendRequest,
 )
 from app.services.runtime_worker_contracts import (
+    RuntimeWorkerAssignment,
+    RuntimeWorkerConfiguration,
+    RuntimeWorkerConfigurationBinding,
     RuntimeWorkerInterruptibleWaitRequest,
+    RuntimeWorkerPollCycleRequest,
+    RuntimeWorkerPollIterationRequest,
     RuntimeWorkerPreparedDeliveryRequest,
     RuntimeWorkerShutdownObservationRequest,
     RuntimeWorkerShutdownObservationResult,
@@ -29,9 +35,15 @@ from app.services.runtime_worker_protocols import (
     RuntimeWorkerLifecycleAppendCapability,
     RuntimeWorkerLifecycleAppendCapabilityFactory,
     RuntimeWorkerManagedRequestCapability,
+    RuntimeWorkerPollCycleRequestPreparationCapability,
+    RuntimeWorkerPollCycleRequestPreparationCapabilityFactory,
+    RuntimeWorkerPollIterationRequestPreparationCapability,
+    RuntimeWorkerPollIterationRequestPreparationCapabilityFactory,
     RuntimeWorkerPreparedDelivery,
     RuntimeWorkerPreparedDeliveryCapability,
     RuntimeWorkerPreparedDeliveryCapabilityFactory,
+    RuntimeWorkerPreparedDeliveryRequestPreparationCapability,
+    RuntimeWorkerPreparedDeliveryRequestPreparationCapabilityFactory,
     RuntimeWorkerResultCompletionCapability,
     RuntimeWorkerShutdownObservationCapability,
     RuntimeWorkerShutdownObservationCapabilityFactory,
@@ -67,11 +79,51 @@ class PreparationCapabilityDouble:
         raise NotImplementedError
 
 
+class CycleRequestPreparationCapabilityDouble:
+    async def prepare(
+        self,
+        configuration: RuntimeWorkerConfiguration,
+        configuration_binding: RuntimeWorkerConfigurationBinding,
+    ) -> RuntimeWorkerPollCycleRequest:
+        raise NotImplementedError
+
+
+class IterationRequestPreparationCapabilityDouble:
+    async def prepare(
+        self,
+        cycle_request: RuntimeWorkerPollCycleRequest,
+        assignment_position: int,
+        assignment: RuntimeWorkerAssignment,
+    ) -> RuntimeWorkerPollIterationRequest:
+        raise NotImplementedError
+
+
+class CandidateRequestPreparationCapabilityDouble:
+    async def prepare(
+        self,
+        iteration_request: RuntimeWorkerPollIterationRequest,
+        candidate: RuntimeEffectDueCandidate,
+    ) -> RuntimeWorkerPreparedDeliveryRequest:
+        raise NotImplementedError
+
+
 def test_worker_capabilities_are_runtime_checkable_and_transport_neutral():
     assert isinstance(ShutdownCapabilityDouble(), RuntimeWorkerShutdownObservationCapability)
     assert isinstance(WaitCapabilityDouble(), RuntimeWorkerInterruptibleWaitCapability)
     assert isinstance(CompletionCapabilityDouble(), RuntimeWorkerResultCompletionCapability)
     assert isinstance(PreparationCapabilityDouble(), RuntimeWorkerPreparedDeliveryCapability)
+    assert isinstance(
+        CycleRequestPreparationCapabilityDouble(),
+        RuntimeWorkerPollCycleRequestPreparationCapability,
+    )
+    assert isinstance(
+        IterationRequestPreparationCapabilityDouble(),
+        RuntimeWorkerPollIterationRequestPreparationCapability,
+    )
+    assert isinstance(
+        CandidateRequestPreparationCapabilityDouble(),
+        RuntimeWorkerPreparedDeliveryRequestPreparationCapability,
+    )
     assert inspect.iscoroutinefunction(RuntimeWorkerShutdownObservationCapability.observe)
     assert inspect.iscoroutinefunction(RuntimeWorkerInterruptibleWaitCapability.wait)
     assert inspect.iscoroutinefunction(RuntimeWorkerResultCompletionCapability.complete)
@@ -169,6 +221,50 @@ def test_persistence_and_adapter_factories_return_exact_managed_capabilities():
     for factory, capability in expected:
         signature = inspect.signature(factory.__call__)
         assert tuple(signature.parameters) == ("self",)
+        factory_return = get_type_hints(factory.__call__)["return"]
+        assert get_origin(factory_return) is RuntimeWorkerManagedRequestCapability
+        assert get_args(factory_return) == (capability,)
+
+
+def test_request_preparation_capability_signatures_and_factories_are_exact():
+    expected = (
+        (
+            RuntimeWorkerPollCycleRequestPreparationCapability,
+            ("self", "configuration", "configuration_binding"),
+            {
+                "configuration": RuntimeWorkerConfiguration,
+                "configuration_binding": RuntimeWorkerConfigurationBinding,
+                "return": RuntimeWorkerPollCycleRequest,
+            },
+            RuntimeWorkerPollCycleRequestPreparationCapabilityFactory,
+        ),
+        (
+            RuntimeWorkerPollIterationRequestPreparationCapability,
+            ("self", "cycle_request", "assignment_position", "assignment"),
+            {
+                "cycle_request": RuntimeWorkerPollCycleRequest,
+                "assignment_position": int,
+                "assignment": RuntimeWorkerAssignment,
+                "return": RuntimeWorkerPollIterationRequest,
+            },
+            RuntimeWorkerPollIterationRequestPreparationCapabilityFactory,
+        ),
+        (
+            RuntimeWorkerPreparedDeliveryRequestPreparationCapability,
+            ("self", "iteration_request", "candidate"),
+            {
+                "iteration_request": RuntimeWorkerPollIterationRequest,
+                "candidate": RuntimeEffectDueCandidate,
+                "return": RuntimeWorkerPreparedDeliveryRequest,
+            },
+            RuntimeWorkerPreparedDeliveryRequestPreparationCapabilityFactory,
+        ),
+    )
+    for capability, parameters, hints, factory in expected:
+        assert inspect.iscoroutinefunction(capability.prepare)
+        assert tuple(inspect.signature(capability.prepare).parameters) == parameters
+        assert get_type_hints(capability.prepare) == hints
+        assert tuple(inspect.signature(factory.__call__).parameters) == ("self",)
         factory_return = get_type_hints(factory.__call__)["return"]
         assert get_origin(factory_return) is RuntimeWorkerManagedRequestCapability
         assert get_args(factory_return) == (capability,)
