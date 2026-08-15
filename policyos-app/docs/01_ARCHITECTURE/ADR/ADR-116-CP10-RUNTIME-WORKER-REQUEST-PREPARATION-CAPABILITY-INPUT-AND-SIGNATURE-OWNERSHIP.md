@@ -178,3 +178,12 @@ The next public-contract gate can add three unambiguous preparation capability a
 Protocols without inventing request state. Each request is produced from visible exact inputs,
 validated before downstream work, consumed once, and disposed once. Production Worker composition,
 PostgreSQL acceptance, combined regression, and closeout remain separate checkpoints.
+
+## ADR-117 dependency-bundle handoff
+
+The frozen process-lifetime bundle includes the three preparation factories unchanged and adds no
+request inputs to them. It also carries the existing due, prepared-delivery, claim, append,
+delivery, cancellation, credential, shutdown, and wait factories plus separate iteration and cycle
+result-producer factories. The bundle exposes no session, transaction, repository implementation,
+clock callback, service locator, or mutable context. Production composition remains deferred until
+the additive bundle and result-producer public-contract gate merges.

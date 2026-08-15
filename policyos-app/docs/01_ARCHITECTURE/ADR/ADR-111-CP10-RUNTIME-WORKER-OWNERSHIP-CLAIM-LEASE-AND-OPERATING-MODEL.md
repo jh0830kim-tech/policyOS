@@ -306,3 +306,13 @@ The Worker consumes authoritative cycle, iteration, and selected-candidate reque
 three fresh managed one-shot capabilities. It does not generate identity, version, time, digest,
 reference, scope, or lineage. Preparation failure precedes discovery, claim, or delivery mutation,
 and this request-local ownership adds no schema or migration `20260808_0025`.
+
+## ADR-117 production composition and operational-result clarification
+
+ADR-117 assigns the non-overlapping loop and bounded in-process task group to one application
+service outside `app.runtime`. A frozen process bundle supplies every zero-argument capability
+factory. Separate managed one-shot iteration and cycle result producers own the trusted completion
+clock and bounded failure reference; the Worker supplies only exact requests, closed dispositions,
+counts, and a closed failure stage. Shutdown stops new admission and drains only already-admitted
+tasks to the unchanged caller-supplied deadline. No transaction spans external invocation and no
+Worker, task, result, or shutdown schema or migration `20260808_0025` is introduced.

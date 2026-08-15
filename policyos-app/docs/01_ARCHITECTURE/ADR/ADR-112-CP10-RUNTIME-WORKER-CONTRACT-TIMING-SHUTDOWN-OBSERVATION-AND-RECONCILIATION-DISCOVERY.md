@@ -281,3 +281,12 @@ configuration and binding, cycle and assignment, or iteration and candidate inpu
 preparation method, mutable request context, latest-value lookup, or factory-captured request fact is
 not an approved Worker input path. Preparation failure occurs before the corresponding discovery or
 delivery operation and creates no schema or migration `20260808_0025`.
+
+## ADR-117 completion timing and drain clarification
+
+The production Worker never calls a hidden clock to complete a cycle. A fresh managed cycle-result
+producer owns one exact `RuntimeClockPort.read()`, validates its clock reference, and returns the
+existing closed cycle result. Iteration completion time remains the exact due-selection observation
+already embedded in the iteration request. Sticky shutdown supplies the sole drain deadline; the
+application service cannot extend or recompute it and writes no invented result when the host
+cancels remaining tasks at that boundary.

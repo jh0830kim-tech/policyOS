@@ -134,3 +134,11 @@ explicit input exactly. No-argument preparation methods, request facts captured 
 mutable request contexts, service locators, latest-row selection, and opaque-reference inference are
 prohibited. Each fresh managed capability allows one successful call and one exit; failure occurs
 before the corresponding downstream operation and requires no migration `20260808_0025`.
+
+## ADR-117 application-loop ownership clarification
+
+The application service consumes the three preparation capabilities in cycle, canonical
+assignment, and selected-candidate order. It constructs none of their values. Exactly one
+iteration result is produced for each successfully prepared iteration and exactly one cycle result
+for each successfully prepared cycle. A preparation failure keeps its downstream call count zero;
+shutdown before preparation consumes no not-yet-entered preparation capability.
