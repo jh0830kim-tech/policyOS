@@ -985,3 +985,16 @@ No-argument preparation methods, closure-captured request values, mutable contex
 locators, latest-row selection, opaque-reference inference, and generated UUID/time/version/digest/
 reference are prohibited. The gate introduces no credential exposure, production Worker, database
 authority, schema, or migration `20260808_0025`.
+
+### CP10 Worker request-preparation public-contract security boundary
+
+The six additive Protocols preserve ADR-116's visible request provenance. Cycle, iteration, and
+candidate preparation accept only their exact typed inputs; their zero-argument factories return
+fresh managed one-shot capabilities and capture no request state. Runtime-checkable structural
+contracts expose no reset, retry, close, pool, session, transaction, repository, framework,
+credential, or environment API.
+
+Existing strict request models and exact-binding validators remain authoritative. Missing,
+substituted, cross-scope, stale, repeated, or post-exit use must fail before downstream work.
+This contract gate creates no production Worker, durable authority, schema, or migration
+`20260808_0025`.

@@ -976,3 +976,14 @@ Every output preserves its inputs exactly and preparation failure causes the mat
 operation zero calls. Hidden request contexts, factory-captured facts, latest-row inference, and
 Worker-generated identities remain prohibited. Public contracts and production composition are
 separate gates, and no schema or migration `20260808_0025` is approved.
+
+### CP10 Worker request-preparation public-contract gate
+
+Status: **Implemented / Validated, Pending Review**.
+
+Six additive runtime-checkable Protocols now expose exact cycle, iteration, and selected-candidate
+request preparation plus their zero-argument managed one-shot factories. Method inputs and outputs
+match ADR-116 exactly; factories carry no request facts and expose no lifecycle, repository,
+transaction, framework, or environment controls. Existing strict request values and validators are
+unchanged. Production Worker composition, PostgreSQL acceptance, combined regression, and closeout
+remain separate, with no schema or migration `20260808_0025`.

@@ -18,7 +18,12 @@ from app.runtime.ports import (
     RuntimeEffectLifecycleCommitResult,
 )
 from app.services.runtime_worker_contracts import (
+    RuntimeWorkerAssignment,
+    RuntimeWorkerConfiguration,
+    RuntimeWorkerConfigurationBinding,
     RuntimeWorkerInterruptibleWaitRequest,
+    RuntimeWorkerPollCycleRequest,
+    RuntimeWorkerPollIterationRequest,
     RuntimeWorkerPreparedDeliveryRequest,
     RuntimeWorkerShutdownObservationRequest,
     RuntimeWorkerShutdownObservationResult,
@@ -49,6 +54,40 @@ class RuntimeWorkerResultCompletionCapability(Protocol):
         self,
         result: RuntimeEffectDeliveryResult,
     ) -> RuntimeEffectLifecycleAppendRequest: ...
+
+
+@runtime_checkable
+class RuntimeWorkerPollCycleRequestPreparationCapability(Protocol):
+    """Prepare one exact cycle request from explicit process facts."""
+
+    async def prepare(
+        self,
+        configuration: RuntimeWorkerConfiguration,
+        configuration_binding: RuntimeWorkerConfigurationBinding,
+    ) -> RuntimeWorkerPollCycleRequest: ...
+
+
+@runtime_checkable
+class RuntimeWorkerPollIterationRequestPreparationCapability(Protocol):
+    """Prepare one exact iteration request from its cycle and assignment."""
+
+    async def prepare(
+        self,
+        cycle_request: RuntimeWorkerPollCycleRequest,
+        assignment_position: int,
+        assignment: RuntimeWorkerAssignment,
+    ) -> RuntimeWorkerPollIterationRequest: ...
+
+
+@runtime_checkable
+class RuntimeWorkerPreparedDeliveryRequestPreparationCapability(Protocol):
+    """Prepare one exact delivery request for one selected due candidate."""
+
+    async def prepare(
+        self,
+        iteration_request: RuntimeWorkerPollIterationRequest,
+        candidate: RuntimeEffectDueCandidate,
+    ) -> RuntimeWorkerPreparedDeliveryRequest: ...
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -116,6 +155,33 @@ class RuntimeWorkerPreparedDeliveryCapabilityFactory(Protocol):
     def __call__(
         self,
     ) -> RuntimeWorkerManagedRequestCapability[RuntimeWorkerPreparedDeliveryCapability]: ...
+
+
+@runtime_checkable
+class RuntimeWorkerPollCycleRequestPreparationCapabilityFactory(Protocol):
+    def __call__(
+        self,
+    ) -> RuntimeWorkerManagedRequestCapability[
+        RuntimeWorkerPollCycleRequestPreparationCapability
+    ]: ...
+
+
+@runtime_checkable
+class RuntimeWorkerPollIterationRequestPreparationCapabilityFactory(Protocol):
+    def __call__(
+        self,
+    ) -> RuntimeWorkerManagedRequestCapability[
+        RuntimeWorkerPollIterationRequestPreparationCapability
+    ]: ...
+
+
+@runtime_checkable
+class RuntimeWorkerPreparedDeliveryRequestPreparationCapabilityFactory(Protocol):
+    def __call__(
+        self,
+    ) -> RuntimeWorkerManagedRequestCapability[
+        RuntimeWorkerPreparedDeliveryRequestPreparationCapability
+    ]: ...
 
 
 @runtime_checkable
@@ -190,9 +256,15 @@ __all__ = (
     "RuntimeWorkerLifecycleAppendCapability",
     "RuntimeWorkerLifecycleAppendCapabilityFactory",
     "RuntimeWorkerManagedRequestCapability",
+    "RuntimeWorkerPollCycleRequestPreparationCapability",
+    "RuntimeWorkerPollCycleRequestPreparationCapabilityFactory",
+    "RuntimeWorkerPollIterationRequestPreparationCapability",
+    "RuntimeWorkerPollIterationRequestPreparationCapabilityFactory",
     "RuntimeWorkerPreparedDelivery",
     "RuntimeWorkerPreparedDeliveryCapability",
     "RuntimeWorkerPreparedDeliveryCapabilityFactory",
+    "RuntimeWorkerPreparedDeliveryRequestPreparationCapability",
+    "RuntimeWorkerPreparedDeliveryRequestPreparationCapabilityFactory",
     "RuntimeWorkerResultCompletionCapability",
     "RuntimeWorkerShutdownObservationCapability",
     "RuntimeWorkerShutdownObservationCapabilityFactory",

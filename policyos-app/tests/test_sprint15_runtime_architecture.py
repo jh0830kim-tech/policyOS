@@ -2401,6 +2401,59 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_cp10_worker_request_preparation_public_contract_gate_is_bounded() -> None:
+    protocols = (ROOT / "app/services/runtime_worker_protocols.py").read_text(encoding="utf-8")
+    related = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            ROOT / "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+    symbols = (
+        "RuntimeWorkerPollCycleRequestPreparationCapability",
+        "RuntimeWorkerPollCycleRequestPreparationCapabilityFactory",
+        "RuntimeWorkerPollIterationRequestPreparationCapability",
+        "RuntimeWorkerPollIterationRequestPreparationCapabilityFactory",
+        "RuntimeWorkerPreparedDeliveryRequestPreparationCapability",
+        "RuntimeWorkerPreparedDeliveryRequestPreparationCapabilityFactory",
+    )
+    for symbol in symbols:
+        assert f"class {symbol}(Protocol)" in protocols
+        assert f'"{symbol}"' in protocols
+    for phrase in (
+        "configuration: RuntimeWorkerConfiguration",
+        "configuration_binding: RuntimeWorkerConfigurationBinding",
+        "cycle_request: RuntimeWorkerPollCycleRequest",
+        "assignment_position: int",
+        "assignment: RuntimeWorkerAssignment",
+        "iteration_request: RuntimeWorkerPollIterationRequest",
+        "candidate: RuntimeEffectDueCandidate",
+        "RuntimeWorkerManagedRequestCapability[",
+    ):
+        assert phrase in protocols
+    for forbidden in (
+        "sqlalchemy",
+        "fastapi",
+        "sessionmaker",
+        "create_async_engine",
+        "datetime.now",
+        "uuid4",
+        "service_locator",
+    ):
+        assert forbidden not in protocols.lower()
+    for phrase in (
+        "CP10 Worker request-preparation public-contract gate",
+        "CP10 Worker request-preparation public contracts",
+        "CP10 Worker request-preparation public-contract security boundary",
+        "Implemented / Validated, Pending Review",
+    ):
+        assert phrase in related
+    assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_cp10_worker_request_preparation_signatures_are_governed() -> None:
     adr_root = ROOT / "docs/01_ARCHITECTURE/ADR"
     adr116 = (

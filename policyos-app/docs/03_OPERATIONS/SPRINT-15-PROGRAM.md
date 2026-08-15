@@ -1189,6 +1189,17 @@ The following public-contract, production composition, PostgreSQL acceptance, co
 and closeout gates remain separate. Existing CP8 delivery tables remain authoritative and no
 schema or migration `20260808_0025` is approved.
 
+### CP10 Worker request-preparation public contracts
+
+Status: **Implemented / Validated, Pending Review**.
+
+The public Worker Protocols now define exact cycle, iteration, and candidate request preparation
+methods and zero-argument factories returning fresh managed one-shot capabilities. Structural and
+signature tests prove the explicit inputs, output types, runtime-checkable behavior, covariance,
+and immutable exports. No existing request contract or validator changed. Production Worker,
+PostgreSQL acceptance, combined regression, and closeout remain separate; migration
+`20260808_0025` remains absent.
+
 ### CP10 prepared-delivery public contracts
 
 Status: Implemented / Validated, Pending Review. Worker preparation and completion are now closed,
