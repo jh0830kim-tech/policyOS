@@ -273,3 +273,12 @@ iteration and candidate are identical to those inputs and whose preparation refe
 remain trusted caller-owned output facts. Failure, substitution, or reuse occurs before claim,
 `DELIVERING`, credential acquisition, Adapter invocation, completion, or later mutation. The
 zero-argument factory does not capture request values or expose persistence controls.
+
+## ADR-117 production sequencing clarification
+
+One bounded application-owned task group admits prepared candidates in exact due-selection order.
+Every admitted task receives fresh managed preparation, due, claim, append, delivery,
+cancellation, credential, and completion capabilities. Concurrency may alter completion order but
+never identity or authority. Shutdown stops new admission; already-admitted tasks drain only until
+the sticky caller-supplied deadline. Existing short transactions and `DELIVERING` crash ambiguity
+remain unchanged, and no task or prepared-package persistence is added.

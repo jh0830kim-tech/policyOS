@@ -987,3 +987,19 @@ match ADR-116 exactly; factories carry no request facts and expose no lifecycle,
 transaction, framework, or environment controls. Existing strict request values and validators are
 unchanged. Production Worker composition, PostgreSQL acceptance, combined regression, and closeout
 remain separate, with no schema or migration `20260808_0025`.
+
+### CP10 Worker production composition and operational-result governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-117 assigns the production loop to one `app.services` application service and fixes one frozen
+process-lifetime dependency bundle containing the existing capability factories plus fresh managed
+iteration- and cycle-result producers. Those producers exclusively own the trusted completion clock
+and bounded opaque failure reference; the Worker supplies only exact requests, closed dispositions,
+counts, and a closed failure stage.
+
+The service owns one bounded in-process task group, preserves canonical selection order, starts no
+new work after sticky shutdown, and drains only already-admitted tasks to the unchanged
+caller-supplied deadline. Short transaction ownership and `DELIVERING` crash ambiguity remain
+unchanged. Public contracts, production implementation, PostgreSQL acceptance, combined regression,
+and closeout remain separate. No schema or migration `20260808_0025` is approved.

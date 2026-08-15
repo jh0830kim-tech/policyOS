@@ -378,3 +378,12 @@ the exact iteration request and selected due candidate. Each managed capability 
 successful output, validates exact binding before downstream work, and is disposed exactly once.
 No hidden clock, mutable context, service locator, generated request value, or migration
 `20260808_0025` is introduced.
+
+## ADR-117 operational-result ownership clarification
+
+Closed cycle and iteration results are produced by two fresh managed one-shot capabilities, not by
+the Worker loop. The Worker passes the exact source request, disposition, strict counts, and an
+optional closed operational-failure stage. The producer owns the trusted completion clock and
+opaque bounded failure reference. Raw exceptions and messages are never result inputs; unexpected
+programmer defects propagate after cleanup. A later additive public-contract gate defines these
+producers without changing the existing result models or adding migration `20260808_0025`.

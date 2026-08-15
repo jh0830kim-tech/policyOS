@@ -1232,3 +1232,19 @@ exact iteration request and selected due candidate. Each managed capability prod
 bound output, rejects concurrent or repeated use, and exits once. The public-contract,
 implementation, PostgreSQL acceptance, combined regression, and closeout gates remain separate. No
 schema or migration `20260808_0025` is approved.
+
+### CP10 Worker production composition and operational-result governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-117 closes the production application-service boundary before executable Worker code. One
+frozen process bundle contains the exact capability factories; two fresh managed result producers
+own cycle completion time and bounded failure references. The application service owns the
+non-overlapping fixed-delay loop, canonical assignment traversal, bounded candidate task group, and
+shutdown drain, but creates no Runtime authority or persistence fact.
+
+Only already-admitted tasks drain after sticky shutdown, and the service cannot extend the supplied
+deadline or invent cleanup outcomes. Due, claim, and append transactions remain independent and
+never span Adapter invocation. The next gates are additive public contracts, production
+composition, PostgreSQL acceptance, combined CP10 regression, and Sprint 15 closeout. Migration
+`20260808_0025` remains absent.

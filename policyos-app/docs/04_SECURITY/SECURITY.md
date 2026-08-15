@@ -998,3 +998,18 @@ Existing strict request models and exact-binding validators remain authoritative
 substituted, cross-scope, stale, repeated, or post-exit use must fail before downstream work.
 This contract gate creates no production Worker, durable authority, schema, or migration
 `20260808_0025`.
+
+### CP10 Worker production composition and operational-result security boundary
+
+ADR-117 prevents the Worker loop from owning time, failure-reference generation, persistence, or
+authority. Fresh managed operational-result producers accept only exact source requests, closed
+dispositions, strict counts, and an allowlisted failure stage. They own the trusted completion clock
+and bounded opaque failure reference. Raw exceptions, messages, tracebacks, payloads, credentials,
+provider responses, SQL, and cross-tenant existence cannot enter results, logs, or metrics.
+
+The frozen process bundle exposes typed factories only and contains no mutable service locator,
+session, transaction, repository implementation, event loop, task, credential, or callback name.
+Every candidate receives isolated managed capabilities. Shutdown stops new admission and drains
+only already-admitted tasks to the exact sticky deadline without invented cancellation, retry, or
+lifecycle evidence. No transaction spans an external effect, and no schema or migration
+`20260808_0025` is introduced.

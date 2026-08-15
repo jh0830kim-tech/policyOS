@@ -2382,7 +2382,7 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
         "at most once",
         "Graceful shutdown is two phase",
         "Migration `20260808_0025`",
-        "no Worker registry",
+        "Worker registry",
         "backfill",
     ):
         assert phrase in adr111
@@ -2862,4 +2862,65 @@ def test_cp10_prepared_delivery_public_contract_gate_is_bounded():
     ):
         assert phrase in related
     assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_worker_production_composition_result_and_dependency_ownership_is_governed():
+    adr = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-117-CP10-RUNTIME-WORKER-PRODUCTION-COMPOSITION-"
+            "OPERATIONAL-RESULT-AND-PROCESS-LIFETIME-DEPENDENCY-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    related = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            ROOT / "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+    for phrase in (
+        "RuntimeWorkerApplicationService.run(configuration,",
+        "poll-iteration operational-result production",
+        "poll-cycle operational-result production",
+        "RuntimeWorkerOperationalFailureStage",
+        "producer, not the Worker, owns the trusted completion clock read",
+        "bounded in-process task group",
+        "already admitted to the bounded task group",
+        "No transaction spans preparation",
+        "migration `20260808_0025` is approved",
+    ):
+        assert phrase in adr
+    for stage in (
+        "REQUEST_PREPARATION",
+        "SHUTDOWN_OBSERVATION",
+        "DUE_SELECTION",
+        "CANDIDATE_PREPARATION",
+        "CLAIM",
+        "DELIVERING_APPEND",
+        "PRE_INVOCATION_REVALIDATION",
+        "ADAPTER_INVOCATION",
+        "RESULT_COMPLETION",
+        "LIFECYCLE_APPEND",
+    ):
+        assert f"`{stage}`" in adr
+    for prohibition in (
+        "must not fill those gaps with `datetime.now`, UUID generation",
+        "mutable `app.state`",
+        "latest-row selection",
+        "Worker registry",
+    ):
+        assert prohibition in adr
+    for phrase in (
+        "CP10 Worker production composition and operational-result governance",
+        "Governed / Validated, Pending Review",
+        "trusted completion clock",
+        "No schema or migration `20260808_0025`",
+    ):
+        assert phrase in related
+    assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not (ROOT / "app/services/runtime_worker_production.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
