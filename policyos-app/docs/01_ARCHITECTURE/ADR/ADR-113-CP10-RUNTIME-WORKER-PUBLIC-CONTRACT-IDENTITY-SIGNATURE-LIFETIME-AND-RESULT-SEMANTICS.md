@@ -395,3 +395,10 @@ only `produce(request)` and returns the matching existing result. `OPERATIONAL_F
 closed failure stage; all other dispositions require none. Completion time and failure reference
 remain producer-owned outputs. Individual loose parameters, a cycle/iteration union reporter, raw
 exceptions, and generated Worker facts are prohibited.
+
+## ADR-120 shutdown preparation signature clarification
+
+The existing `RuntimeWorkerShutdownObservationCapability.observe(request)` signature is preserved.
+A separate zero-argument managed factory creates a fresh one-shot preparation capability whose
+`prepare(configuration, configuration_binding)` method returns the exact existing shutdown
+observation request with one trusted clock reading.
