@@ -3,9 +3,38 @@ from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
+from test_runtime_delivery_contracts import (
+    NOW as DELIVERY_NOW,
+)
+from test_runtime_delivery_contracts import (
+    delivery_result,
+    lifecycle,
+)
+from test_runtime_delivery_contracts import (
+    uid as delivery_uid,
+)
+from test_runtime_delivery_orchestration import (
+    claim_request,
+    delivering_request,
+    delivery_request,
+    receipt,
+)
+from test_runtime_delivery_persistence_contracts import (
+    due_candidate as delivery_due_candidate,
+)
+from test_runtime_delivery_persistence_contracts import (
+    due_request as delivery_due_request,
+)
 
 from app.ai.privacy import DataClassification
-from app.runtime.ports import RuntimeClockReading, RuntimeEffectDueSelectionRequest
+from app.runtime.ports import (
+    RuntimeClockReading,
+    RuntimeEffectDeliveryInvocation,
+    RuntimeEffectDueSelectionRequest,
+    RuntimeEffectLifecycleAppend,
+    RuntimeEffectLifecycleAppendRequest,
+    RuntimeEffectLifecycleStatus,
+)
 from app.runtime.ports.domain import RuntimePortContractVersion
 from app.services.runtime_worker_contracts import (
     RuntimeWorkerAssignment,
@@ -19,10 +48,12 @@ from app.services.runtime_worker_contracts import (
     RuntimeWorkerPollIterationDisposition,
     RuntimeWorkerPollIterationRequest,
     RuntimeWorkerPollIterationResult,
+    RuntimeWorkerPreparedDeliveryRequest,
     RuntimeWorkerShutdownDisposition,
     RuntimeWorkerShutdownObservationRequest,
     RuntimeWorkerShutdownObservationResult,
 )
+from app.services.runtime_worker_protocols import RuntimeWorkerPreparedDelivery
 from app.services.runtime_worker_validation import (
     RuntimeWorkerContractConflict,
     validate_runtime_worker_configuration,
@@ -30,6 +61,9 @@ from app.services.runtime_worker_validation import (
     validate_runtime_worker_poll_cycle_result,
     validate_runtime_worker_poll_iteration_request,
     validate_runtime_worker_poll_iteration_result,
+    validate_runtime_worker_prepared_delivery,
+    validate_runtime_worker_prepared_delivery_request,
+    validate_runtime_worker_result_completion,
     validate_runtime_worker_shutdown_observation_request,
     validate_runtime_worker_shutdown_observation_result,
 )
@@ -127,6 +161,120 @@ def iteration_request(**updates) -> RuntimeWorkerPollIterationRequest:
     }
     values.update(updates)
     return RuntimeWorkerPollIterationRequest(**values)
+
+
+class ResultCompletionDouble:
+    def __init__(self, append_request):
+        self.append_request = append_request
+        self.calls = 0
+
+    async def complete(self, result):
+        self.calls += 1
+        return self.append_request
+
+
+def prepared_request(**updates) -> RuntimeWorkerPreparedDeliveryRequest:
+    worker_assignment = RuntimeWorkerAssignment(
+        tenant_id=delivery_uid(2),
+        organization_id=delivery_uid(3),
+        classification=DataClassification.CONFIDENTIAL,
+    )
+    worker_configuration = configuration(
+        claimant_reference="worker.reference",
+        assignments=(worker_assignment,),
+        clock_reference="clock.delivery",
+    )
+    worker_binding = binding(clock_reference="clock.delivery")
+    iteration = RuntimeWorkerPollIterationRequest(
+        operation=RuntimeWorkerOperation.DELIVER_EFFECT,
+        configuration=worker_configuration,
+        configuration_binding=worker_binding,
+        cycle_started_at=DELIVERY_NOW,
+        assignment_position=1,
+        assignment=worker_assignment,
+        due_selection_request=delivery_due_request(),
+    )
+    values = {
+        "iteration_request": iteration,
+        "candidate": delivery_due_candidate(),
+        "preparation_reference": "worker.preparation.1",
+        "preparation_digest_reference": "digest.worker-preparation.1",
+    }
+    values.update(updates)
+    return RuntimeWorkerPreparedDeliveryRequest(**values)
+
+
+def result_append(result=None, prepared=None):
+    value = delivery_result() if result is None else result
+    previous = (
+        delivering_request().append.lifecycle_record
+        if prepared is None
+        else prepared.delivering_append_request.append.lifecycle_record
+    )
+    current = lifecycle(4, RuntimeEffectLifecycleStatus.DELIVERED)
+    effect = (
+        delivery_request().envelope.effect_identity
+        if prepared is None
+        else prepared.request.candidate.effect_identity
+    )
+    delivery_attempt = (
+        delivery_request().attempt if prepared is None else prepared.invocation.attempt
+    )
+    return RuntimeEffectLifecycleAppendRequest(
+        runtime_effect_lifecycle_append_request_id=delivery_uid(130),
+        contract_version=port_version(),
+        append=RuntimeEffectLifecycleAppend(
+            effect_identity=effect,
+            previous_lifecycle_record=previous,
+            lifecycle_record=current,
+            claim=None,
+            attempt=delivery_attempt,
+            result=value,
+            receipt_fact=receipt(current, 131).receipt.receipt_fact,
+        ),
+        clock_reference="clock.delivery",
+        requested_at=value.completed_at,
+    )
+
+
+def prepared_delivery(**updates) -> RuntimeWorkerPreparedDelivery:
+    request = prepared_request()
+    claim_fact = claim_request().model_copy(
+        update={
+            "effect_identity": request.candidate.effect_identity,
+            "previous_lifecycle_record": request.candidate.current_lifecycle_record,
+        }
+    )
+    delivery = delivery_request().model_copy(update={"claim": claim_fact.claim})
+    delivering = delivering_request().model_copy(
+        update={
+            "append": delivering_request().append.model_copy(
+                update={
+                    "effect_identity": request.candidate.effect_identity,
+                    "previous_lifecycle_record": claim_fact.claimed_lifecycle_record,
+                    "claim": claim_fact.claim,
+                    "attempt": delivery.attempt,
+                }
+            )
+        }
+    )
+    invocation = RuntimeEffectDeliveryInvocation(
+        runtime_effect_delivery_invocation_id=delivery_uid(140),
+        envelope=delivery.envelope,
+        claim=delivery.claim,
+        attempt=delivery.attempt,
+    )
+    values = {
+        "request": request,
+        "claim_request": claim_fact,
+        "delivery_request": delivery,
+        "delivering_append_request": delivering,
+        "invocation": invocation,
+        "definitely_not_invoked_append_request": None,
+        "result_completion": ResultCompletionDouble(result_append()),
+    }
+    values.update(updates)
+    return RuntimeWorkerPreparedDelivery(**values)
 
 
 def test_worker_contracts_are_closed_strict_frozen_and_extra_forbidden():
@@ -320,3 +468,57 @@ def test_worker_wait_request_matches_exact_configuration():
             config,
             request.model_copy(update={"poll_interval_milliseconds": 999}),
         )
+
+
+def test_prepared_delivery_request_binds_exact_iteration_and_candidate():
+    request = prepared_request()
+    assert validate_runtime_worker_prepared_delivery_request(request) is request
+    substituted = request.candidate.model_copy(
+        update={
+            "effect_identity": request.candidate.effect_identity.model_copy(
+                update={"organization_id": delivery_uid(999)}
+            )
+        }
+    )
+    with pytest.raises(RuntimeWorkerContractConflict):
+        validate_runtime_worker_prepared_delivery_request(
+            request.model_copy(update={"candidate": substituted})
+        )
+
+
+def test_prepared_delivery_binds_claim_delivering_and_invocation_exactly():
+    prepared = prepared_delivery()
+    assert validate_runtime_worker_prepared_delivery(prepared.request, prepared) is prepared
+    substituted = prepared.invocation.model_copy(
+        update={
+            "claim": prepared.invocation.claim.model_copy(
+                update={"claim_digest_reference": "digest.claim.substituted"}
+            )
+        }
+    )
+    with pytest.raises(RuntimeWorkerContractConflict):
+        validate_runtime_worker_prepared_delivery(
+            prepared.request,
+            RuntimeWorkerPreparedDelivery(
+                request=prepared.request,
+                claim_request=prepared.claim_request,
+                delivery_request=prepared.delivery_request,
+                delivering_append_request=prepared.delivering_append_request,
+                invocation=substituted,
+                definitely_not_invoked_append_request=None,
+                result_completion=prepared.result_completion,
+            ),
+        )
+
+
+def test_result_completion_accepts_only_the_actual_bound_adapter_result():
+    prepared = prepared_delivery()
+    result = delivery_result()
+    append_request = result_append(result, prepared)
+    assert (
+        validate_runtime_worker_result_completion(prepared, result, append_request)
+        is append_request
+    )
+    substituted = result.model_copy(update={"runtime_effect_delivery_result_id": delivery_uid(999)})
+    with pytest.raises(RuntimeWorkerContractConflict):
+        validate_runtime_worker_result_completion(prepared, substituted, append_request)

@@ -940,3 +940,17 @@ Prepared packages remain request-local, every persistence operation retains a sh
 transaction, and no database transaction spans Adapter invocation. The next gate is the separate
 prepared-delivery public-contract gate. Production Worker composition, PostgreSQL acceptance, and
 closeout remain deferred. No schema or migration `20260808_0025` is approved.
+
+### CP10 prepared-delivery public-contract gate
+
+Status: Implemented / Validated, Pending Review. The public Worker contracts now carry one exact
+iteration/candidate preparation request and one immutable prepared-delivery package containing the
+caller-supplied claim, delivery request, `DELIVERING` append, invocation, optional definite
+non-invocation append, and one-shot result-completion capability. Narrow managed factories expose
+request-scoped preparation, due selection, claim, lifecycle append, delivery, cancellation, and
+credential capabilities without transaction or session control.
+
+Pure validation binds scope, lineage, effect, attempt, claim, claimant, envelope, lifecycle,
+invocation, Adapter result, and result append exactly. Substitution and cross-scope reuse fail
+closed. This contract-only gate adds no production Worker, persistence, schema, or migration
+`20260808_0025`.

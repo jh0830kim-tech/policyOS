@@ -2,6 +2,18 @@
 
 from datetime import timedelta
 
+from app.runtime.orchestration import validate_runtime_orchestration_delivery_request
+from app.runtime.orchestration.delivery_validation import (
+    validate_runtime_orchestration_candidate_claim,
+)
+from app.runtime.ports import (
+    RuntimeEffectDeliveryResult,
+    RuntimeEffectLifecycleAppendRequest,
+    RuntimeEffectLifecycleStatus,
+    validate_runtime_effect_delivery_result,
+    validate_runtime_effect_due_candidates,
+    validate_runtime_effect_lifecycle_append_request,
+)
 from app.services.runtime_worker_contracts import (
     RuntimeWorkerConfiguration,
     RuntimeWorkerConfigurationBinding,
@@ -12,10 +24,12 @@ from app.services.runtime_worker_contracts import (
     RuntimeWorkerPollIterationDisposition,
     RuntimeWorkerPollIterationRequest,
     RuntimeWorkerPollIterationResult,
+    RuntimeWorkerPreparedDeliveryRequest,
     RuntimeWorkerShutdownDisposition,
     RuntimeWorkerShutdownObservationRequest,
     RuntimeWorkerShutdownObservationResult,
 )
+from app.services.runtime_worker_protocols import RuntimeWorkerPreparedDelivery
 
 
 class RuntimeWorkerContractConflict(ValueError):
@@ -136,6 +150,115 @@ def validate_runtime_worker_poll_iteration_result(
     return result
 
 
+def validate_runtime_worker_prepared_delivery_request(
+    request: RuntimeWorkerPreparedDeliveryRequest,
+) -> RuntimeWorkerPreparedDeliveryRequest:
+    """Bind one selected candidate to the exact due request and assignment."""
+
+    validate_runtime_worker_poll_iteration_request(request.iteration_request)
+    try:
+        validate_runtime_effect_due_candidates(
+            request.iteration_request.due_selection_request,
+            (request.candidate,),
+        )
+    except ValueError:
+        raise RuntimeWorkerContractConflict("prepared delivery candidate differs") from None
+    return request
+
+
+def validate_runtime_worker_prepared_delivery(
+    request: RuntimeWorkerPreparedDeliveryRequest,
+    prepared: RuntimeWorkerPreparedDelivery,
+) -> RuntimeWorkerPreparedDelivery:
+    """Validate every pre-invocation fact without creating outcome authority."""
+
+    validate_runtime_worker_prepared_delivery_request(request)
+    if prepared.request != request:
+        raise RuntimeWorkerContractConflict("prepared delivery request differs")
+    try:
+        validate_runtime_orchestration_candidate_claim(request.candidate, prepared.claim_request)
+        validate_runtime_orchestration_delivery_request(prepared.delivery_request)
+        validate_runtime_effect_lifecycle_append_request(prepared.delivering_append_request)
+    except ValueError:
+        raise RuntimeWorkerContractConflict("prepared delivery fact is invalid") from None
+    claim = prepared.claim_request.claim
+    delivery = prepared.delivery_request
+    delivering = prepared.delivering_append_request.append
+    invocation = prepared.invocation
+    if (
+        claim.claimant_reference != request.iteration_request.configuration.claimant_reference
+        or delivery.envelope != request.candidate.delivery_envelope
+        or delivery.claim != claim
+        or delivering.effect_identity != request.candidate.effect_identity
+        or delivering.previous_lifecycle_record != prepared.claim_request.claimed_lifecycle_record
+        or delivering.claim != claim
+        or delivering.attempt != delivery.attempt
+        or delivering.lifecycle_record.status is not RuntimeEffectLifecycleStatus.DELIVERING
+        or invocation.envelope != delivery.envelope
+        or invocation.claim != delivery.claim
+        or invocation.attempt != delivery.attempt
+    ):
+        raise RuntimeWorkerContractConflict("prepared delivery binding differs")
+    optional = prepared.definitely_not_invoked_append_request
+    if optional is not None:
+        try:
+            validate_runtime_effect_lifecycle_append_request(optional)
+        except ValueError:
+            raise RuntimeWorkerContractConflict("prepared not-invoked append is invalid") from None
+        append = optional.append
+        fact = append.definitely_not_invoked
+        if (
+            fact is None
+            or append.effect_identity != request.candidate.effect_identity
+            or append.previous_lifecycle_record != delivering.lifecycle_record
+            or append.claim != delivery.claim
+            or append.attempt != delivery.attempt
+            or fact.runtime_effect_id != request.candidate.effect_identity.runtime_effect_id
+            or fact.runtime_effect_claim_id != delivery.claim.runtime_effect_claim_id
+            or fact.runtime_effect_delivery_attempt_id
+            != delivery.attempt.runtime_effect_delivery_attempt_id
+        ):
+            raise RuntimeWorkerContractConflict("prepared not-invoked binding differs")
+    return prepared
+
+
+def validate_runtime_worker_result_completion(
+    prepared: RuntimeWorkerPreparedDelivery,
+    result: RuntimeEffectDeliveryResult,
+    append_request: RuntimeEffectLifecycleAppendRequest,
+) -> RuntimeEffectLifecycleAppendRequest:
+    """Bind one actual Adapter result to one caller-supplied lifecycle append."""
+
+    validate_runtime_worker_prepared_delivery(prepared.request, prepared)
+    try:
+        validate_runtime_effect_delivery_result(
+            prepared.invocation.envelope,
+            prepared.invocation.attempt,
+            result,
+        )
+        validate_runtime_effect_lifecycle_append_request(append_request)
+    except ValueError:
+        raise RuntimeWorkerContractConflict("delivery result completion is invalid") from None
+    append = append_request.append
+    if (
+        result.runtime_effect_id != prepared.request.candidate.effect_identity.runtime_effect_id
+        or result.runtime_effect_delivery_attempt_id
+        != prepared.invocation.attempt.runtime_effect_delivery_attempt_id
+        or append.effect_identity != prepared.request.candidate.effect_identity
+        or append.previous_lifecycle_record
+        != prepared.delivering_append_request.append.lifecycle_record
+        or append.claim is not None
+        or append.attempt != prepared.invocation.attempt
+        or append.result != result
+        or append.definitely_not_invoked is not None
+        or append.retry_decision is not None
+        or append.dead_letter is not None
+        or append.reconciliation_observation is not None
+    ):
+        raise RuntimeWorkerContractConflict("delivery result completion binding differs")
+    return append_request
+
+
 def validate_runtime_worker_poll_cycle_result(
     request: RuntimeWorkerPollCycleRequest,
     result: RuntimeWorkerPollCycleResult,
@@ -229,6 +352,9 @@ __all__ = (
     "validate_runtime_worker_poll_cycle_result",
     "validate_runtime_worker_poll_iteration_request",
     "validate_runtime_worker_poll_iteration_result",
+    "validate_runtime_worker_prepared_delivery",
+    "validate_runtime_worker_prepared_delivery_request",
+    "validate_runtime_worker_result_completion",
     "validate_runtime_worker_shutdown_observation_request",
     "validate_runtime_worker_shutdown_observation_result",
 )
