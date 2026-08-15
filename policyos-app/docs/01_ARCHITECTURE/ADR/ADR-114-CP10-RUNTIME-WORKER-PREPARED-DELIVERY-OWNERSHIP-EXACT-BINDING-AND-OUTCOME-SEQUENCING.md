@@ -264,3 +264,12 @@ the complete `RuntimeWorkerPreparedDeliveryRequest`, including its preparation r
 The Worker validates exact tenant, organization, classification, lineage, effect, attempt, claim,
 and envelope binding but does not reconstruct them from audit events, Adapter results, opaque
 references, or latest rows.
+
+## ADR-116 candidate preparation-signature clarification
+
+The candidate request capability receives the exact prepared iteration request and one exact
+selected `RuntimeEffectDueCandidate`. It returns one `RuntimeWorkerPreparedDeliveryRequest` whose
+iteration and candidate are identical to those inputs and whose preparation reference and digest
+remain trusted caller-owned output facts. Failure, substitution, or reuse occurs before claim,
+`DELIVERING`, credential acquisition, Adapter invocation, completion, or later mutation. The
+zero-argument factory does not capture request values or expose persistence controls.

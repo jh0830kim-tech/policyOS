@@ -272,3 +272,12 @@ The cycle preparation capability binds an exact trusted-clock observation to cal
 identity. A separate iteration source owns the complete `RuntimeEffectDueSelectionRequest`, including
 request identity, contract version, requested and observed times, scope, and bounds. Shutdown before
 preparation produces no request; a produced request is never reusable across an iteration or cycle.
+
+## ADR-116 preparation-signature clarification
+
+ADR-116 makes request provenance visible at the public call boundary. Zero-argument process
+factories create fresh managed one-shot capabilities, while the capability methods receive explicit
+configuration and binding, cycle and assignment, or iteration and candidate inputs. A no-argument
+preparation method, mutable request context, latest-value lookup, or factory-captured request fact is
+not an approved Worker input path. Preparation failure occurs before the corresponding discovery or
+delivery operation and creates no schema or migration `20260808_0025`.

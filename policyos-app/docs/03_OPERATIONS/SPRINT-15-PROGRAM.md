@@ -1209,3 +1209,15 @@ The Worker receives authoritative cycle, iteration/due-selection, and candidate 
 from fresh managed one-shot preparation capabilities. Failure before request production causes zero
 downstream discovery or delivery calls; successful production is consumed once and disposed once.
 No production Worker, schema, or migration `20260808_0025` is included in this governance gate.
+
+### CP10 Worker request-preparation signature governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-116 requires zero-argument process factories and explicit request-local preparation method
+inputs. Cycle preparation receives configuration and binding; iteration preparation receives the
+exact cycle request, strict assignment position, and assignment; candidate preparation receives the
+exact iteration request and selected due candidate. Each managed capability produces one exactly
+bound output, rejects concurrent or repeated use, and exits once. The public-contract,
+implementation, PostgreSQL acceptance, combined regression, and closeout gates remain separate. No
+schema or migration `20260808_0025` is approved.

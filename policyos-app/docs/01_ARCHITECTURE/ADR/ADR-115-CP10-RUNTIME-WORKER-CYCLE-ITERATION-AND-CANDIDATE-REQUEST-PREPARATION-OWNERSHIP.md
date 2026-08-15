@@ -117,3 +117,20 @@ CP11, tags, and releases remain outside scope.
 The next checkpoint is a separate additive public-contract gate for the preparation capabilities and
 factories. Production Worker composition remains deferred until that contract is merged. Exact
 request ownership is explicit without introducing durable preparation state.
+
+## ADR-116 capability-input and signature clarification
+
+The later public-contract gate must use these exact asynchronous preparation methods while keeping
+all three factories zero-argument:
+
+- cycle: `prepare(configuration, configuration_binding) -> RuntimeWorkerPollCycleRequest`;
+- iteration: `prepare(cycle_request, assignment_position, assignment) -> RuntimeWorkerPollIterationRequest`;
+- candidate: `prepare(iteration_request, candidate) -> RuntimeWorkerPreparedDeliveryRequest`.
+
+The cycle capability alone performs the exact synchronous trusted-clock read. The iteration
+capability owns all fields of the embedded `RuntimeEffectDueSelectionRequest`. The candidate
+capability owns the caller-supplied preparation reference and digest. Outputs must preserve every
+explicit input exactly. No-argument preparation methods, request facts captured in factory closures,
+mutable request contexts, service locators, latest-row selection, and opaque-reference inference are
+prohibited. Each fresh managed capability allows one successful call and one exit; failure occurs
+before the corresponding downstream operation and requires no migration `20260808_0025`.

@@ -964,3 +964,15 @@ three trusted request-scoped managed one-shot capabilities. The Worker consumes 
 values and creates no UUID, version, time, digest, reference, scope, or lineage. Preparation is
 process-local, ordered before the corresponding operation, and adds no schema or migration
 `20260808_0025`. Public contracts and production composition remain separate checkpoints.
+
+### CP10 Worker request-preparation signature governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-116 fixes the only approved public input path for cycle, iteration, and candidate preparation.
+Zero-argument factories create fresh managed one-shot capabilities; their methods receive explicit
+configuration/binding, cycle/position/assignment, and iteration/candidate inputs respectively.
+Every output preserves its inputs exactly and preparation failure causes the matching downstream
+operation zero calls. Hidden request contexts, factory-captured facts, latest-row inference, and
+Worker-generated identities remain prohibited. Public contracts and production composition are
+separate gates, and no schema or migration `20260808_0025` is approved.

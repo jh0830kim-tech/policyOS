@@ -971,3 +971,17 @@ capabilities. Missing, stale, consumed, substituted, digest-mismatched, ambiguou
 values fail closed before discovery, claim, Adapter invocation, or persistence mutation. The Worker
 must not generate or infer UUIDs, contract versions, times, digests, references, tenant scope, or
 lineage, and bounded diagnostics must not disclose their values.
+
+### CP10 Worker request-preparation signature security boundary
+
+ADR-116 keeps request provenance visible and immutable. Process-lifetime factories accept no
+request facts. Fresh managed capability methods receive the exact configuration and binding,
+cycle and assignment, or iteration and candidate facts needed for one output. Output substitution,
+concurrent or repeated use, cross-request reuse, clock mismatch, digest mismatch, and cross-scope
+binding fail closed before discovery, claim, lifecycle mutation, credential acquisition, Adapter
+invocation, or completion.
+
+No-argument preparation methods, closure-captured request values, mutable contexts, service
+locators, latest-row selection, opaque-reference inference, and generated UUID/time/version/digest/
+reference are prohibited. The gate introduces no credential exposure, production Worker, database
+authority, schema, or migration `20260808_0025`.
