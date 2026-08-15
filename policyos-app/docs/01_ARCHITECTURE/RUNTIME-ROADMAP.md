@@ -1043,3 +1043,12 @@ Status: **Implemented / Validated, Pending Review**.
 The gate adds ADR-119's strict request/result, three closed dispositions, managed revalidation
 capability and factory, exact validation, and the additive fifteenth production-bundle field.
 Production Worker composition and acceptance remain separate.
+
+### CP10 Worker shutdown-observation request-preparation governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-120 assigns every fresh shutdown-observation request and trusted clock read to a managed
+one-shot preparation capability. It preserves the existing observation signature and adds one
+sixteenth production-bundle factory. Stale cycle-clock reuse, hidden Worker time, schema, and
+migration `20260808_0025` remain prohibited.

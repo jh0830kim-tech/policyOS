@@ -3071,3 +3071,49 @@ def test_cp10_worker_result_producer_and_bundle_public_signatures_are_governed()
     assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not (ROOT / "app/services/runtime_worker_production.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_worker_shutdown_observation_request_preparation_is_governed():
+    adr = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-120-CP10-RUNTIME-WORKER-SHUTDOWN-OBSERVATION-REQUEST-"
+            "PREPARATION-AND-TRUSTED-CLOCK-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    related = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            ROOT / "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+    for phrase in (
+        "RuntimeWorkerShutdownObservationRequestPreparationCapability",
+        "RuntimeWorkerShutdownObservationRequestPreparationCapabilityFactory",
+        "prepare(\n    self,\n    configuration: RuntimeWorkerConfiguration,",
+        "shutdown_observation_request_preparation_factory",
+        "additive sixteenth field",
+        "Preparation failure results in observation call count zero",
+        "existing `observe(request)` signature",
+        "migration `20260808_0025` is needed or approved",
+    ):
+        assert phrase in adr
+    for prohibition in (
+        "reuse a cycle clock",
+        "Worker read the clock",
+        "hidden mutable request context",
+    ):
+        assert prohibition in adr
+    for phrase in (
+        "shutdown-observation request-preparation governance",
+        "Governed / Validated, Pending Review",
+        "sixteenth production-bundle factory",
+        "trusted-time boundary",
+    ):
+        assert phrase in related
+    assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not (ROOT / "app/services/runtime_worker_production.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))

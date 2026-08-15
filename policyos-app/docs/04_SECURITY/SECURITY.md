@@ -1049,3 +1049,10 @@ The strict request binds one prepared package to one newly appended `DELIVERING`
 result exposes only trusted time, disposition, and optional exact caller-supplied append. Managed
 one-shot lifetime, exact clock binding, and fifteen-field immutable composition prevent hidden
 authority, mutable service location, or cross-request reuse.
+
+### CP10 shutdown-observation trusted-time boundary
+
+ADR-120 prohibits the Worker from sampling time or reusing stale cycle and due-selection clocks.
+One fresh managed preparation capability binds the configured clock, immutable configuration,
+configuration digest, and drain timeout before each observation. Missing, substituted, repeated,
+cross-request, or post-exit use fails closed without an observation or Runtime mutation.

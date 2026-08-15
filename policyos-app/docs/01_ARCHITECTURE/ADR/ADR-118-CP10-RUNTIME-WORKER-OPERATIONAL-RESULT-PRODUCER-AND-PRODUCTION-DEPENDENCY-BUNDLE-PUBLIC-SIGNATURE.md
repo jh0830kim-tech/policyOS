@@ -214,3 +214,10 @@ production behavior or persistence ownership.
 The exact production bundle is superseded additively to fifteen fields by
 `pre_invocation_revalidation_factory`. Its managed capability owns the final trusted clock and
 authoritative revalidation. All original fourteen fields and annotations remain unchanged.
+
+## ADR-120 additive bundle correction
+
+The exact production bundle is superseded additively to sixteen fields by
+`shutdown_observation_request_preparation_factory`. Its managed capability owns fresh trusted-time
+request construction for every shutdown observation. All preceding fifteen fields and annotations,
+including the existing observation factory, remain unchanged.

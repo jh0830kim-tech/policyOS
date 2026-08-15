@@ -241,3 +241,10 @@ The process bundle gains one additive fifteenth managed pre-invocation revalidat
 Worker calls it exactly once after durable `DELIVERING` and before any Adapter call. It does not
 read current clock, authority, Registry, admission, state, audit, cancellation, credential, lease,
 deadline, destination, or shutdown facts directly.
+
+## ADR-120 production sequencing clarification
+
+Before each existing shutdown observation, the Worker enters one fresh managed shutdown-request
+preparation capability, obtains one exact request, exits once, and then observes once. Preparation
+failure leaves observation count zero. The process bundle gains the additive sixteenth
+`shutdown_observation_request_preparation_factory`; no stale cycle clock may be reused.

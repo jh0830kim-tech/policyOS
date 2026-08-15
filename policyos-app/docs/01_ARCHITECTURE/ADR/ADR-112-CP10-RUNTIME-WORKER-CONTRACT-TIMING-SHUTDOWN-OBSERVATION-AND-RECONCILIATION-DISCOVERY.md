@@ -290,3 +290,10 @@ existing closed cycle result. Iteration completion time remains the exact due-se
 already embedded in the iteration request. Sticky shutdown supplies the sole drain deadline; the
 application service cannot extend or recompute it and writes no invented result when the host
 cancels remaining tasks at that boundary.
+
+## ADR-120 trusted shutdown-request preparation clarification
+
+Every shutdown observation now requires a fresh managed request-preparation capability that owns
+the exact trusted clock read and constructs the existing strict request from explicit configuration
+and binding inputs. The Worker never reuses cycle time or samples a hidden clock. The existing
+observation capability and sticky shutdown semantics remain unchanged.

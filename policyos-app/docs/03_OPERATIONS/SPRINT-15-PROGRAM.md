@@ -1287,3 +1287,11 @@ Status: **Implemented / Validated, Pending Review**.
 Strict request/result models, three closed dispositions, one managed capability/factory, pure exact
 validation, and the fifteenth dependency-bundle field implement ADR-119 without production code,
 schema, or migration `20260808_0025`.
+
+### CP10 shutdown-observation request preparation governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-120 closes production sequencing by assigning fresh trusted time and exact shutdown-request
+construction to a fourth managed request-preparation capability. The existing observer remains
+sticky and unchanged; production implementation follows only after the public-contract correction.

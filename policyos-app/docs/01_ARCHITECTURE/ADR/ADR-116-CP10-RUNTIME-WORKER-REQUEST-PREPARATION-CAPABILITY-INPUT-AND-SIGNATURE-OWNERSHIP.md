@@ -187,3 +187,10 @@ delivery, cancellation, credential, shutdown, and wait factories plus separate i
 result-producer factories. The bundle exposes no session, transaction, repository implementation,
 clock callback, service locator, or mutable context. Production composition remains deferred until
 the additive bundle and result-producer public-contract gate merges.
+
+## ADR-120 additive shutdown-request preparation clarification
+
+Request preparation gains one fourth operation-specific capability for shutdown observation. Its
+zero-argument factory returns a fresh managed one-shot capability; its method receives exact
+configuration and binding inputs and owns the trusted clock read. It does not alter the three
+existing preparation signatures or permit a hidden factory-captured request.
