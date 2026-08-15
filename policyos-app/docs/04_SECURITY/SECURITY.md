@@ -1042,3 +1042,10 @@ revalidation. The Worker receives only a closed invokable, definitely-not-invoke
 shutdown-blocked result and cannot read persistence, select a clock, expose authority facts, or
 invent lifecycle evidence. Shutdown after `DELIVERING` remains durable ambiguity. No schema or
 migration `20260808_0025` is introduced.
+
+### CP10 Worker pre-invocation revalidation public-contract security boundary
+
+The strict request binds one prepared package to one newly appended `DELIVERING` result. The closed
+result exposes only trusted time, disposition, and optional exact caller-supplied append. Managed
+one-shot lifetime, exact clock binding, and fifteen-field immutable composition prevent hidden
+authority, mutable service location, or cross-request reuse.

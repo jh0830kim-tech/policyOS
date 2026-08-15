@@ -1035,3 +1035,11 @@ ADR-119 assigns final clock and authoritative re-reads to one managed one-shot c
 durable `DELIVERING`. Its three closed results permit one Adapter call, one exact caller-supplied
 definitely-not-invoked append, or shutdown preservation with no mutation. The production bundle
 gains one additive fifteenth factory; migration `20260808_0025` remains absent.
+
+### CP10 Worker pre-invocation revalidation public contracts
+
+Status: **Implemented / Validated, Pending Review**.
+
+The gate adds ADR-119's strict request/result, three closed dispositions, managed revalidation
+capability and factory, exact validation, and the additive fifteenth production-bundle field.
+Production Worker composition and acceptance remain separate.

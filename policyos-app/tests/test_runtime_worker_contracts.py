@@ -33,6 +33,9 @@ from app.runtime.ports import (
     RuntimeEffectDueSelectionRequest,
     RuntimeEffectLifecycleAppend,
     RuntimeEffectLifecycleAppendRequest,
+    RuntimeEffectLifecycleCommitDisposition,
+    RuntimeEffectLifecycleCommitResult,
+    RuntimeEffectLifecycleReceipt,
     RuntimeEffectLifecycleStatus,
 )
 from app.runtime.ports.domain import RuntimePortContractVersion
@@ -51,12 +54,17 @@ from app.services.runtime_worker_contracts import (
     RuntimeWorkerPollIterationRequest,
     RuntimeWorkerPollIterationResult,
     RuntimeWorkerPollIterationResultProductionRequest,
+    RuntimeWorkerPreInvocationDisposition,
     RuntimeWorkerPreparedDeliveryRequest,
     RuntimeWorkerShutdownDisposition,
     RuntimeWorkerShutdownObservationRequest,
     RuntimeWorkerShutdownObservationResult,
 )
-from app.services.runtime_worker_protocols import RuntimeWorkerPreparedDelivery
+from app.services.runtime_worker_protocols import (
+    RuntimeWorkerPreInvocationRevalidationRequest,
+    RuntimeWorkerPreInvocationRevalidationResult,
+    RuntimeWorkerPreparedDelivery,
+)
 from app.services.runtime_worker_validation import (
     RuntimeWorkerContractConflict,
     validate_runtime_worker_configuration,
@@ -66,6 +74,8 @@ from app.services.runtime_worker_validation import (
     validate_runtime_worker_poll_iteration_request,
     validate_runtime_worker_poll_iteration_result,
     validate_runtime_worker_poll_iteration_result_production_request,
+    validate_runtime_worker_pre_invocation_revalidation_request,
+    validate_runtime_worker_pre_invocation_revalidation_result,
     validate_runtime_worker_prepared_delivery,
     validate_runtime_worker_prepared_delivery_request,
     validate_runtime_worker_result_completion,
@@ -407,6 +417,30 @@ def test_worker_result_production_rejects_failure_stage_and_count_substitution()
                 failure_stage=RuntimeWorkerOperationalFailureStage.DUE_SELECTION,
             )
         )
+
+
+def test_pre_invocation_revalidation_contract_is_exact():
+    prepared = prepared_delivery()
+    request = RuntimeWorkerPreInvocationRevalidationRequest(
+        prepared_delivery=prepared,
+        delivering_result=RuntimeEffectLifecycleCommitResult(
+            disposition=RuntimeEffectLifecycleCommitDisposition.APPENDED,
+            receipt=RuntimeEffectLifecycleReceipt(
+                receipt_fact=prepared.delivering_append_request.append.receipt_fact,
+                stored_at=prepared.delivering_append_request.requested_at,
+            ),
+        ),
+    )
+    assert validate_runtime_worker_pre_invocation_revalidation_request(request) is request
+    result = RuntimeWorkerPreInvocationRevalidationResult(
+        request=request,
+        disposition=RuntimeWorkerPreInvocationDisposition.INVOKABLE,
+        clock_reading=RuntimeClockReading(
+            clock_reference="clock.delivery",
+            observed_at=NOW + timedelta(seconds=2),
+        ),
+    )
+    assert validate_runtime_worker_pre_invocation_revalidation_result(request, result) is result
     with pytest.raises(RuntimeWorkerContractConflict):
         validate_runtime_worker_poll_cycle_result_production_request(
             RuntimeWorkerPollCycleResultProductionRequest(

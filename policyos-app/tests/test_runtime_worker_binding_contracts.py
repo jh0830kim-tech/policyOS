@@ -48,6 +48,10 @@ from app.services.runtime_worker_protocols import (
     RuntimeWorkerPollIterationRequestPreparationCapabilityFactory,
     RuntimeWorkerPollIterationResultProductionCapability,
     RuntimeWorkerPollIterationResultProductionCapabilityFactory,
+    RuntimeWorkerPreInvocationRevalidationCapability,
+    RuntimeWorkerPreInvocationRevalidationCapabilityFactory,
+    RuntimeWorkerPreInvocationRevalidationRequest,
+    RuntimeWorkerPreInvocationRevalidationResult,
     RuntimeWorkerPreparedDelivery,
     RuntimeWorkerPreparedDeliveryCapability,
     RuntimeWorkerPreparedDeliveryCapabilityFactory,
@@ -312,4 +316,21 @@ def test_result_producer_and_application_service_signatures_are_exact():
 
 def test_production_dependency_bundle_has_exact_frozen_fields():
     assert RuntimeWorkerProductionDependencyBundle.__dataclass_params__.frozen
-    assert len(RuntimeWorkerProductionDependencyBundle.__dataclass_fields__) == 14
+    assert len(RuntimeWorkerProductionDependencyBundle.__dataclass_fields__) == 15
+    assert "pre_invocation_revalidation_factory" in (
+        RuntimeWorkerProductionDependencyBundle.__dataclass_fields__
+    )
+
+
+def test_pre_invocation_revalidation_signatures_are_exact():
+    method = inspect.signature(RuntimeWorkerPreInvocationRevalidationCapability.revalidate)
+    assert tuple(method.parameters) == ("self", "request")
+    assert get_type_hints(RuntimeWorkerPreInvocationRevalidationCapability.revalidate) == {
+        "request": RuntimeWorkerPreInvocationRevalidationRequest,
+        "return": RuntimeWorkerPreInvocationRevalidationResult,
+    }
+    factory = get_type_hints(RuntimeWorkerPreInvocationRevalidationCapabilityFactory.__call__)[
+        "return"
+    ]
+    assert get_origin(factory) is RuntimeWorkerManagedRequestCapability
+    assert get_args(factory) == (RuntimeWorkerPreInvocationRevalidationCapability,)

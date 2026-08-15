@@ -1279,3 +1279,11 @@ ADR-119 closes the post-`DELIVERING` gap with one request-scoped managed capabil
 trusted clock and exact current authority, Registry, admission, state, audit, cancellation,
 credential, lease, deadline, destination, and shutdown reads. Public-contract correction,
 production composition, PostgreSQL acceptance, regression, and closeout remain separate.
+
+### CP10 Worker pre-invocation revalidation public contracts
+
+Status: **Implemented / Validated, Pending Review**.
+
+Strict request/result models, three closed dispositions, one managed capability/factory, pure exact
+validation, and the fifteenth dependency-bundle field implement ADR-119 without production code,
+schema, or migration `20260808_0025`.

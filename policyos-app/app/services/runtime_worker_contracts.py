@@ -65,6 +65,12 @@ class RuntimeWorkerOperationalFailureStage(StrEnum):
     LIFECYCLE_APPEND = "lifecycle_append"
 
 
+class RuntimeWorkerPreInvocationDisposition(StrEnum):
+    INVOKABLE = "invokable"
+    DEFINITELY_NOT_INVOKED = "definitely_not_invoked"
+    SHUTDOWN_BLOCKED = "shutdown_blocked"
+
+
 class RuntimeWorkerAssignment(RuntimeWorkerModel):
     tenant_id: UUID
     organization_id: UUID
@@ -207,6 +213,7 @@ __all__ = (
     "RuntimeWorkerConfigurationBinding",
     "RuntimeWorkerInterruptibleWaitRequest",
     "RuntimeWorkerOperationalFailureStage",
+    "RuntimeWorkerPreInvocationDisposition",
     "RuntimeWorkerOperation",
     "RuntimeWorkerPollCycleDisposition",
     "RuntimeWorkerPollCycleRequest",

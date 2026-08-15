@@ -2401,6 +2401,23 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_cp10_pre_invocation_revalidation_public_contracts_are_exact():
+    contracts = (ROOT / "app/services/runtime_worker_contracts.py").read_text(encoding="utf-8")
+    protocols = (ROOT / "app/services/runtime_worker_protocols.py").read_text(encoding="utf-8")
+    validation = (ROOT / "app/services/runtime_worker_validation.py").read_text(encoding="utf-8")
+    assert "RuntimeWorkerPreInvocationDisposition" in contracts
+    for name in (
+        "RuntimeWorkerPreInvocationRevalidationRequest",
+        "RuntimeWorkerPreInvocationRevalidationResult",
+        "RuntimeWorkerPreInvocationRevalidationCapability",
+        "RuntimeWorkerPreInvocationRevalidationCapabilityFactory",
+        "pre_invocation_revalidation_factory",
+    ):
+        assert name in protocols
+    assert "validate_runtime_worker_pre_invocation_revalidation_request" in validation
+    assert "validate_runtime_worker_pre_invocation_revalidation_result" in validation
+
+
 def test_cp10_worker_pre_invocation_revalidation_governance_is_explicit():
     adr = (
         ROOT / "docs/01_ARCHITECTURE/ADR/ADR-119-CP10-RUNTIME-WORKER-"
