@@ -1064,3 +1064,11 @@ This correction changes no JWT verification semantics, Runtime public Protocol, 
 facade signature, model, repository, schema, or migration. Production composition/routes,
 PostgreSQL/HTTP acceptance, regression, and closeout remain separate; migration
 `20260808_0025` remains prohibited, CP9 remains Planned / Blocked, and CP10 remains Planned.
+### CP9 production Runtime composition and thin routes
+
+The application factory now accepts the immutable Runtime production dependency bundle explicitly,
+captures the configured required audience, and installs exactly three thin Runtime routes. Each
+request enters six managed capabilities in governed order, performs non-consuming inspection and
+operational preflight, consumes once, then calls the existing five-parameter facade. Rate admission
+uses an independent PostgreSQL transaction. No migration `20260808_0025` is created; combined
+PostgreSQL/HTTP acceptance and CP9 closeout remain the next gates.

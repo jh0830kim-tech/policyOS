@@ -8,6 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth_claims import VerifiedAccessTokenClaims
 from app.core.security import decode_verified_access_token
 from app.db.session import get_db
 from app.models.identity import (
@@ -76,6 +77,19 @@ async def get_current_user(
         raise _authentication_error()
 
     return user
+
+
+async def get_runtime_verified_claims(
+    token: Annotated[str | None, Depends(oauth2_scheme)],
+) -> VerifiedAccessTokenClaims:
+    """Authenticate Runtime callers without loading a legacy ORM user."""
+
+    if token is None:
+        raise _authentication_error()
+    claims = decode_verified_access_token(token)
+    if claims is None:
+        raise _authentication_error()
+    return claims
 
 
 async def get_active_organization_context(

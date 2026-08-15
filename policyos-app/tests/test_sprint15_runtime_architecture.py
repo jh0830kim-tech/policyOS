@@ -167,7 +167,6 @@ def test_cp9_runtime_api_governance_precedes_production_routes() -> None:
     assert "| CP9 | Planned / Blocked |" in roadmap
     assert "| CP10 | Planned |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_api_contract_gate_has_no_production_implementation() -> None:
@@ -235,7 +234,6 @@ def test_cp9_api_contract_gate_has_no_production_implementation() -> None:
     assert "| CP9 | Planned / Blocked |" in roadmap
     assert "| CP10 | Planned |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "workers").exists()
     assert not (ROOT / "app" / "runtime" / "scheduler").exists()
 
@@ -316,7 +314,6 @@ def test_cp9_auth_claims_gate_is_typed_and_documented_without_runtime_routes() -
     assert "| CP10 | Planned |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_tenant_organization_binding_gate_is_implemented_without_runtime_routes() -> None:
@@ -347,7 +344,6 @@ def test_cp9_tenant_organization_binding_gate_is_implemented_without_runtime_rou
     assert (ROOT / "app" / "services" / "runtime_tenant_binding.py").is_file()
     migration_names = {path.name for path in (ROOT / "alembic" / "versions").glob("*.py")}
     assert "20260807_0018_tenant_organization_binding.py" in migration_names
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
 
@@ -386,7 +382,6 @@ def test_cp9_runtime_permission_definitions_are_persisted_without_grants() -> No
     )
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_runtime_grant_revoke_governance_precedes_production_provisioning() -> None:
@@ -428,7 +423,6 @@ def test_cp9_runtime_grant_revoke_governance_precedes_production_provisioning() 
     assert all((ROOT / path).is_file() for path in production_paths)
 
     forbidden_paths = (
-        "app/api/routes/runtime.py",
         "app/runtime/api",
         "app/runtime/outbox",
     )
@@ -496,7 +490,6 @@ def test_cp9_permission_fact_resolver_governance_precedes_production_resolution(
     assert "RuntimePermissionGrantEvent" not in resolver_source
     assert "commit(" not in resolver_source and "rollback(" not in resolver_source
     assert MIGRATION_0022.is_file()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
 
@@ -518,7 +511,6 @@ def test_cp9_permission_fact_resolver_is_additive_and_transport_free() -> None:
     ):
         assert forbidden not in resolver
     assert MIGRATION_0022.is_file()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
 
@@ -565,7 +557,6 @@ def test_cp9_transport_idempotency_governance_is_implemented_by_persistence() ->
     assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "models" / "runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "services" / "runtime_api_idempotency.py").is_file()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
     assert not (ROOT / "app" / "runtime" / "workers").exists()
@@ -586,7 +577,6 @@ def test_cp9_transport_idempotency_contracts_gate_is_additive_only() -> None:
     assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "models" / "runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "services" / "runtime_api_idempotency.py").is_file()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
     assert not (ROOT / "app" / "runtime" / "workers").exists()
@@ -607,7 +597,6 @@ def test_cp9_atomic_commit_contract_correction_is_merged_before_persistence() ->
     assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "models" / "runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "services" / "runtime_api_idempotency.py").is_file()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
     assert not (ROOT / "app" / "runtime" / "workers").exists()
@@ -687,7 +676,6 @@ def test_cp9_trusted_application_facade_governance_precedes_routes() -> None:
     assert facade.is_file()
     source = facade.read_text(encoding="utf-8").lower()
     assert not any(item in source for item in ("fastapi", "provider", "mcp", "queue", "worker"))
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
     assert MIGRATION_0022.is_file()
@@ -733,7 +721,6 @@ def test_cp9_local_fact_binding_governance_precedes_concrete_integration() -> No
     assert (ROOT / "app" / "services" / "runtime_api_facade.py").is_file()
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
     assert MIGRATION_0022.is_file()
@@ -783,7 +770,6 @@ def test_cp9_registry_snapshot_persistence_governance_precedes_implementation() 
     assert not (ROOT / "app" / "runtime" / "persistence" / "registry.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_active_transaction_write_set_governance_precedes_contracts() -> None:
@@ -919,7 +905,6 @@ def test_cp9_registry_and_reconciliation_persistence_implementation_is_bounded()
     assert "session.rollback(" not in persistence
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_explicit_integration_facts_governance_precedes_contracts() -> None:
@@ -957,7 +942,6 @@ def test_cp9_explicit_integration_facts_governance_precedes_contracts() -> None:
     assert "CP10 remains Planned" in combined
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_explicit_integration_facts_contract_gate_is_bounded() -> None:
@@ -984,7 +968,6 @@ def test_cp9_explicit_integration_facts_contract_gate_is_bounded() -> None:
     assert "FastAPI" not in combined
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_local_operation.py").exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_authoritative_result_projection_governance_is_bounded() -> None:
@@ -1013,7 +996,6 @@ def test_cp9_authoritative_result_projection_governance_is_bounded() -> None:
     assert "CP9-Gate-Authoritative-Result-and-Query-Projection-Ownership" in combined
     assert "CP9 remains Planned / Blocked" in combined
     assert "CP10 remains Planned" in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
 
 
@@ -1076,7 +1058,6 @@ def test_cp9_runtime_lifecycle_projection_governance_is_total_and_bounded() -> N
     ):
         assert phrase in normalized
     assert not (ROOT / "alembic" / "versions" / "20260808_0023_runtime_api_results.py").exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_application_integration_gate_is_bounded() -> None:
@@ -1307,7 +1288,6 @@ def test_cp9_preparation_producer_backend_ownership_governance_is_bounded() -> N
     ):
         assert phrase in combined
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_preparation_producer_capability_contracts_are_closed() -> None:
@@ -1385,7 +1365,6 @@ def test_cp9_logical_execution_result_ownership_governance_is_bounded() -> None:
     assert (
         ROOT / "alembic" / "versions" / "20260808_0023_runtime_logical_execution_results.py"
     ).exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_runtime_lifecycle_public_contract_gate_is_bounded() -> None:
@@ -1498,7 +1477,6 @@ def test_cp9_logical_execution_result_contract_gate_is_bounded() -> None:
     assert (
         ROOT / "alembic" / "versions" / "20260808_0023_runtime_logical_execution_results.py"
     ).exists()
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_logical_execution_result_persistence_gate_is_bounded() -> None:
@@ -1551,7 +1529,6 @@ def test_cp9_logical_execution_result_persistence_gate_is_bounded() -> None:
         ".close(",
     ):
         assert forbidden not in repository + active
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
 
 
 def test_cp9_runtime_route_production_composition_governance_is_bounded() -> None:
@@ -1589,7 +1566,6 @@ def test_cp9_runtime_route_production_composition_governance_is_bounded() -> Non
         "no schema or migration `20260808_0024`",
     ):
         assert phrase in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
 
 
@@ -1660,7 +1636,6 @@ def test_cp9_operational_preflight_consumption_ordering_governance_is_bounded() 
         "CP10 remains Planned",
     ):
         assert phrase in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
@@ -1728,7 +1703,6 @@ def test_cp9_required_audience_configuration_ownership_is_governed() -> None:
     assert "runtime_api_required_audience" not in (
         ROOT / "app" / "services" / "runtime_api_protocols.py"
     ).read_text(encoding="utf-8")
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
@@ -1769,7 +1743,6 @@ def test_cp9_required_audience_config_contract_is_implemented() -> None:
         "CP10 remains Planned",
     ):
         assert phrase in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
@@ -1805,7 +1778,6 @@ def test_cp9_runtime_http_semantics_are_governed_before_production_routes() -> N
         assert phrase in combined
     assert "`X-Organization-ID`" in adr
     assert "headers, bodies, path expansion" in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
@@ -1868,7 +1840,6 @@ def test_cp9_managed_request_capability_lifetime_governance_is_closed() -> None:
     assert "async def __aenter__(self) -> CapabilityT_co" in protocols
     assert ") -> Literal[False]" in protocols
     assert protocols.count("RuntimeApiManagedRequestCapability[") == 6
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
@@ -1920,7 +1891,6 @@ def test_cp9_production_preparation_composition_governance_is_bounded() -> None:
         "migration `20260808_0025` is prohibited",
     ):
         assert phrase in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
@@ -1967,7 +1937,6 @@ def test_cp9_dependency_bundle_factory_graph_governance_is_bounded() -> None:
         "migration `20260808_0025` is prohibited",
     ):
         assert phrase in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
@@ -2033,7 +2002,6 @@ def test_cp9_dependency_bundle_factory_signature_correction_is_closed() -> None:
         "CP10 remains Planned",
     ):
         assert phrase in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
@@ -2090,7 +2058,6 @@ def test_cp9_dependency_bundle_upstream_public_contracts_are_closed() -> None:
         "CP10 remains Planned",
     ):
         assert phrase in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
@@ -2168,7 +2135,6 @@ def test_cp9_runtime_route_transport_preparation_contract_gate_is_bounded() -> N
         "CP10 remains Planned",
     ):
         assert phrase in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
 
 
@@ -2227,7 +2193,6 @@ def test_cp9_runtime_preparation_provenance_capability_governance_is_bounded() -
         "CP10 remains Planned",
     ):
         assert phrase in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0024_runtime_api.py").exists()
 
 
@@ -2283,5 +2248,33 @@ def test_cp9_operational_preflight_public_contracts_are_bounded() -> None:
         "CP10 remains Planned",
     ):
         assert phrase in combined
-    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
+
+
+def test_cp9_production_runtime_composition_and_thin_routes_are_bounded() -> None:
+    production = (ROOT / "app/services/runtime_api_production.py").read_text(encoding="utf-8")
+    routes = (ROOT / "app/api/routes/runtime.py").read_text(encoding="utf-8")
+    main = (ROOT / "app/main.py").read_text(encoding="utf-8")
+    combined = "\n".join(
+        (
+            (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8"),
+        )
+    )
+
+    assert "RuntimeApiProductionRequestScopeFactory" in production
+    assert "SQLAlchemyRuntimeApiRateAdmissionCapability" in production
+    assert "RuntimeApiProductionPreparationSource" in production
+    assert "FastApiRuntimeDisconnectSignal" in routes
+    assert routes.count('@router.post("/invocations"') == 1
+    assert routes.count('@router.get("/invocations/{invocation_reference}"') == 1
+    assert routes.count('@router.post("/reconciliations"') == 1
+    assert "get_runtime_verified_claims" in routes
+    assert "Idempotency-Key" in routes
+    assert "organization_id" in routes
+    assert "create_app(" in main
+    assert "runtime_api_required_audience" in main
+    assert "app.state" not in production + routes + main
+    assert "20260808_0025" in combined
+    assert "production Runtime composition and thin routes" in combined
