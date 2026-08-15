@@ -1026,3 +1026,12 @@ The additive public-contract gate implements ADR-118's strict result-production 
 failure-stage validation, managed producer factories, immutable fourteen-field dependency bundle,
 and single-method application-service Protocol. Production composition, PostgreSQL acceptance,
 combined regression, and closeout remain separate.
+
+### CP10 Worker pre-invocation authoritative revalidation governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-119 assigns final clock and authoritative re-reads to one managed one-shot capability after
+durable `DELIVERING`. Its three closed results permit one Adapter call, one exact caller-supplied
+definitely-not-invoked append, or shutdown preservation with no mutation. The production bundle
+gains one additive fifteenth factory; migration `20260808_0025` remains absent.

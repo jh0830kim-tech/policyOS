@@ -282,3 +282,10 @@ cancellation, credential, and completion capabilities. Concurrency may alter com
 never identity or authority. Shutdown stops new admission; already-admitted tasks drain only until
 the sticky caller-supplied deadline. Existing short transactions and `DELIVERING` crash ambiguity
 remain unchanged, and no task or prepared-package persistence is added.
+
+## ADR-119 pre-invocation revalidation clarification
+
+Final authoritative revalidation belongs to one fresh managed capability after durable
+`DELIVERING`. It owns the trusted clock and exact current authority, Registry, admission, state,
+audit, cancellation, credential, lease, deadline, destination, and shutdown reads. The Worker acts
+only on its closed invokable, definitely-not-invoked, or shutdown-blocked result.

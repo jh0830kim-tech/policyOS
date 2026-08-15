@@ -1270,3 +1270,12 @@ Status: **Implemented / Validated, Pending Review**.
 The gate adds only the ADR-118 strict production requests, pure validation, exact managed producer
 factories, immutable production dependency bundle, and application-service Protocol. It adds no
 Worker loop, persistence, schema, migration `20260808_0025`, deployment, tag, or release.
+
+### CP10 Worker pre-invocation authoritative revalidation governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-119 closes the post-`DELIVERING` gap with one request-scoped managed capability that owns the
+trusted clock and exact current authority, Registry, admission, state, audit, cancellation,
+credential, lease, deadline, destination, and shutdown reads. Public-contract correction,
+production composition, PostgreSQL acceptance, regression, and closeout remain separate.
