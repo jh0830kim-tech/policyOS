@@ -284,3 +284,18 @@ source, but wait returns no shutdown fact and the source exposes no public mutat
 Closed iteration and cycle results carry only bounded counts and optional opaque failure
 references and create no Runtime outcome authority. The next public-contract gate has an exact
 nine-file scope and adds no persistence or migration `20260808_0025`.
+
+## ADR-114 prepared-delivery ownership clarification
+
+ADR-114 makes the trusted preparation boundary request-scoped and one-shot. One producer accepts
+the exact selected due candidate and Worker iteration binding and supplies the caller-owned claim,
+delivery request, `DELIVERING` append, invocation, and a separate one-shot post-result completion
+capability. The Worker cannot manufacture or repair any UUID, time, revision, digest, reference,
+authority, permit, retry decision, or lifecycle outcome.
+
+Claim and `DELIVERING` exact replay or conflict stop before Adapter invocation and result
+completion. After a real Adapter result, the completion capability supplies the exact
+result-specific append without changing that result. Shutdown observed after durable
+`DELIVERING` does not substitute cancellation or lease-expiry evidence: the Adapter is not called,
+no invented lifecycle row is appended, and the durable state remains available for governed
+recovery. Preparation stays request-local and adds no migration `20260808_0025`.

@@ -932,3 +932,22 @@ Closed operational results grant no claim, delivery outcome, retry, reconciliati
 Runtime status authority. Public capability Protocols expose no mutable sticky state, reset,
 credential, session, transaction, framework, signal, or environment API. Production CP10 remains
 Planned, and migration `20260808_0025` remains prohibited.
+
+### CP10 prepared-delivery ownership and sequencing security boundary
+
+ADR-114 prevents a production Worker from deriving prepared facts from an opaque effect reference,
+selecting a latest row, generating UUIDs or timestamps, or acquiring lifecycle authority. One
+request-scoped single-use preparation capability is bound to the exact Worker configuration,
+assignment, iteration, due request, selected candidate, scope, classification, lineage, current
+lifecycle, authority, admission, permits, Registry, state, audit, clock, deadline, cancellation,
+credential, revision, and digest facts.
+
+The prepared package contains no guessed result. A distinct one-shot completion capability accepts
+only the exact Adapter result for the prepared effect and attempt and returns the exact
+caller-supplied lifecycle append. Claim and `DELIVERING` replay/conflict invoke neither Adapter nor
+completion. Substituted or cross-scope packages and results fail before mutation.
+
+Sticky shutdown after durable `DELIVERING` is not converted to cancellation, lease expiry, retry,
+dead letter, reconciliation, failure, or success. The Adapter is not called and the durable state
+is preserved for governed recovery. Transactions remain short and never span external invocation.
+Prepared values are request-local, so no schema or migration `20260808_0025` is permitted.

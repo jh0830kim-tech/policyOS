@@ -252,3 +252,16 @@ cycle dispositions use bounded counts and optional opaque failure references and
 delivery, cancellation, retry, reconciliation, or audit authority. The following public-contract
 gate is limited to the exact nine paths listed in ADR-113 and still requires no schema or migration
 `20260808_0025`.
+
+## ADR-114 preparation and shutdown-order clarification
+
+ADR-114 separates facts knowable before invocation from result-specific facts knowable only after
+the Adapter returns. The trusted preparation capability is single-use for one exact selected due
+candidate. Its package carries the exact claim, delivery request, `DELIVERING` append, invocation,
+and a one-shot result-completion capability; it never guesses a delivery result or selects among
+latest rows.
+
+Sticky shutdown observed before claim stops without mutation. Shutdown observed after durable
+`DELIVERING` but before invocation calls the Adapter zero times and leaves `DELIVERING` unchanged.
+The existing not-invoked reasons are not broadened or substituted. This preserves the delivery-only
+operation set and requires no Worker persistence or migration `20260808_0025`.

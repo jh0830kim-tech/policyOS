@@ -2584,3 +2584,70 @@ def test_cp10_worker_public_contract_gate_is_exact_and_dependency_safe() -> None
         assert phrase in documents
     assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr114_governs_prepared_delivery_binding_and_outcome_ordering() -> None:
+    adr_root = ROOT / "docs/01_ARCHITECTURE/ADR"
+    adr114 = (
+        adr_root
+        / (
+            "ADR-114-CP10-RUNTIME-WORKER-PREPARED-DELIVERY-OWNERSHIP-EXACT-"
+            "BINDING-AND-OUTCOME-SEQUENCING.md"
+        )
+    ).read_text(encoding="utf-8")
+    related = "\n".join(
+        (
+            (
+                adr_root
+                / "ADR-111-CP10-RUNTIME-WORKER-OWNERSHIP-CLAIM-LEASE-AND-OPERATING-MODEL.md"
+            ).read_text(encoding="utf-8"),
+            (
+                adr_root
+                / (
+                    "ADR-112-CP10-RUNTIME-WORKER-CONTRACT-TIMING-SHUTDOWN-"
+                    "OBSERVATION-AND-RECONCILIATION-DISCOVERY.md"
+                )
+            ).read_text(encoding="utf-8"),
+            (
+                adr_root
+                / (
+                    "ADR-113-CP10-RUNTIME-WORKER-PUBLIC-CONTRACT-IDENTITY-"
+                    "SIGNATURE-LIFETIME-AND-RESULT-SEMANTICS.md"
+                )
+            ).read_text(encoding="utf-8"),
+            (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8"),
+        )
+    )
+
+    for phrase in (
+        "request-scoped trusted preparation producer",
+        "exact selected `RuntimeEffectDueCandidate`",
+        "one-shot result-completion capability",
+        "Claim and `DELIVERING` exact replay or conflict",
+        "Adapter call, completion, and later\n   lifecycle mutation all zero",
+        "Shutdown after DELIVERING",
+        "leaves the exact `DELIVERING` evidence durable",
+        "short independent transaction",
+        "no migration `20260808_0025`",
+    ):
+        assert phrase in adr114
+    for phrase in (
+        "ADR-114 prepared-delivery ownership clarification",
+        "ADR-114 preparation and shutdown-order clarification",
+        "ADR-114 prepared-delivery contract handoff",
+        "CP10 prepared-delivery ownership and sequencing governance",
+        "CP10 prepared-delivery ownership and sequencing security boundary",
+        "Governed / Validated, Pending Review",
+    ):
+        assert phrase in related
+    for forbidden in (
+        "shutdown_after_delivering =",
+        "migration `20260808_0025` is approved",
+        "latest lifecycle row",
+        "automatic retry after shutdown",
+    ):
+        assert forbidden not in adr114.lower()
+    assert not (ROOT / "app/services/runtime_worker_preparation.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))

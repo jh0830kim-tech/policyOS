@@ -347,3 +347,16 @@ existing CP8 clock.
 This decision deliberately adds contract precision rather than capability. Trusted preparation,
 production orchestration, process composition, PostgreSQL acceptance, and Sprint 15 closeout
 remain separate reviewed checkpoints.
+
+## ADR-114 prepared-delivery contract handoff
+
+ADR-114 governs the next public-contract boundary without changing the Worker contracts defined
+here. The exact cycle and iteration identity becomes part of one request-scoped prepared-package
+binding for one selected candidate. A one-shot producer supplies only pre-invocation facts and a
+separate one-shot completion capability supplies the exact lifecycle append after an exact Adapter
+result.
+
+Public Worker configuration, clock, shutdown, wait, cycle, iteration, and result signatures remain
+unchanged. Preparation and completion expose no transaction control, mutable shutdown source,
+hidden time, generated identity, arbitrary payload, or outcome authority. No migration
+`20260808_0025` is introduced.
