@@ -164,7 +164,7 @@ def test_cp9_runtime_api_governance_precedes_production_routes() -> None:
     assert "CP9-Gate-API-Contracts" in program
     assert "## Sprint 15 CP9 Runtime API transport" in security
     assert "| CP8 | Merged |" in roadmap
-    assert "| CP9 | Planned / Blocked |" in roadmap
+    assert "| CP9 | Merged |" in roadmap
     assert "| CP10 | Planned |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
 
@@ -223,15 +223,15 @@ def test_cp9_api_contract_gate_has_no_production_implementation() -> None:
 
     roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
     program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
-    for blocker in (
-        "permission-fact resolver",
-        "idempotency persistence",
-        "facade implementation",
+    for merged_evidence in (
+        "CP9 Production Transport Idempotency",
+        "CP9 Trusted Application Facade",
+        "CP9 Combined PostgreSQL and HTTP Acceptance",
     ):
-        assert blocker in roadmap or blocker in program
+        assert merged_evidence in roadmap or merged_evidence in program
     assert "CP9-Gate-Runtime-Grant-Provisioning | Merged, PR #67" in roadmap
     assert "external business-effect exactly-once" in roadmap
-    assert "| CP9 | Planned / Blocked |" in roadmap
+    assert "| CP9 | Merged |" in roadmap
     assert "| CP10 | Planned |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "workers").exists()
@@ -310,7 +310,7 @@ def test_cp9_auth_claims_gate_is_typed_and_documented_without_runtime_routes() -
     assert "CP9-Gate-API-Contracts | Merged, PR #61" in roadmap
     assert "CP9-Gate-Auth-Claims | Merged, PR #62" in roadmap
     assert "CP9-Gate-Auth-Claims | Merged, PR #62" in program
-    assert "| CP9 | Planned / Blocked |" in roadmap
+    assert "| CP9 | Merged |" in roadmap
     assert "| CP10 | Planned |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
@@ -337,7 +337,7 @@ def test_cp9_tenant_organization_binding_gate_is_implemented_without_runtime_rou
     assert "CP9-Gate-Tenant-Organization-Binding-Governance" in program
     assert "lifetime one-to-one" in program
     assert "lifetime one-to-one" in security
-    assert "| CP9 | Planned / Blocked |" in roadmap
+    assert "| CP9 | Merged |" in roadmap
     assert "| CP10 | Planned |" in roadmap
 
     assert not (ROOT / "app" / "models" / "tenant_organization_binding.py").exists()
@@ -572,7 +572,7 @@ def test_cp9_transport_idempotency_contracts_gate_is_additive_only() -> None:
     assert "CP9-Gate-Transport-Idempotency-Contracts" in combined
     assert "Merged, PR #72" in combined
     assert "CP9 Production Transport Idempotency | Merged, PR #74" in combined
-    assert "CP9 Runtime API | Planned / Blocked" in combined
+    assert "CP9 Runtime API | Merged" in combined
     assert "CP10 Workers | Planned" in combined
     assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "models" / "runtime_api_idempotency.py").is_file()
@@ -592,7 +592,7 @@ def test_cp9_atomic_commit_contract_correction_is_merged_before_persistence() ->
     assert "CP9-Gate-Transport-Idempotency-Atomic-Commit-Contract-Correction" in combined
     assert "Merged, PR #73" in combined
     assert "CP9 Production Transport Idempotency | Merged, PR #74" in combined
-    assert "CP9 Runtime API | Planned / Blocked" in combined
+    assert "CP9 Runtime API | Merged" in combined
     assert "CP10 Workers | Planned" in combined
     assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "models" / "runtime_api_idempotency.py").is_file()
@@ -641,7 +641,7 @@ def test_cp9_trusted_application_facade_governance_precedes_routes() -> None:
         "CP9 Production Transport Idempotency | Merged, PR #74",
         "20260808_0021",
         "facade contract amendment",
-        "CP9 Runtime API | Planned / Blocked",
+        "CP9 Runtime API | Merged",
         "CP10 Workers | Planned",
         "Merged, PR #75",
         "Trusted Application Facade Contracts | Merged, PR #76",
@@ -715,7 +715,7 @@ def test_cp9_local_fact_binding_governance_precedes_concrete_integration() -> No
         "Local Fact Binding and Active-Transaction Persistence Contracts | Merged, PR #80"
         in combined
     )
-    assert "CP9 Runtime API | Planned / Blocked" in combined
+    assert "CP9 Runtime API | Merged" in combined
     assert "CP10 Workers | Planned" in combined
     assert "additive binding and active-transaction Persistence contracts" in combined
     assert (ROOT / "app" / "services" / "runtime_api_facade.py").is_file()
@@ -757,14 +757,14 @@ def test_cp9_registry_snapshot_persistence_governance_precedes_implementation() 
         "are distinct",
     ):
         assert phrase in normalized
-    assert "Registry Snapshot Persistence and Active-Transaction Integration Governance" in combined
-    assert "Governed, pending review" in combined
+    assert "CP9 Registry/Active-Transaction Governance and Persistence" in combined
+    assert "Merged in PR #82 through PR #86" in combined
     assert (
         "Local Fact Binding and Active-Transaction Persistence Contracts | Merged, PR #80"
         in combined
     )
     assert "Registry Resolution and Admission Exactness Contracts Gate | Merged, PR #81" in combined
-    assert "CP9 Runtime API | Planned / Blocked" in combined
+    assert "CP9 Runtime API | Merged" in combined
     assert "CP10 Workers | Planned" in combined
     assert MIGRATION_0022.is_file()
     assert not (ROOT / "app" / "runtime" / "persistence" / "registry.py").exists()
@@ -799,9 +799,9 @@ def test_cp9_active_transaction_write_set_governance_precedes_contracts() -> Non
         "existing public facade method signatures remain unchanged",
     ):
         assert phrase in normalized
-    assert "Active-Transaction Write-Set and Session Binding Governance" in combined
-    assert "Governed, pending review" in combined
-    assert "CP9 Runtime API | Planned / Blocked" in combined
+    assert "CP9 Registry/Active-Transaction Governance and Persistence" in combined
+    assert "Merged in PR #82 through PR #86" in combined
+    assert "CP9 Runtime API | Merged" in combined
     assert "CP10 Workers | Planned" in combined
     assert MIGRATION_0022.is_file()
 
@@ -866,7 +866,7 @@ def test_cp9_reconciliation_request_persistence_ownership_governance() -> None:
         assert phrase in text
 
     assert "CP9-Gate-Reconciliation-Request-Persistence-Ownership" in roadmap
-    assert "CP9 Reconciliation Request Persistence Ownership" in program
+    assert "CP9 Registry/Active-Transaction Governance and Persistence" in program
     assert "### CP9 reconciliation-request persistence ownership" in security
     assert "CP9 remains Planned / Blocked" in combined
     assert "production Python" in text
@@ -937,7 +937,7 @@ def test_cp9_explicit_integration_facts_governance_precedes_contracts() -> None:
     ):
         assert phrase in normalized
     assert "CP9-Gate-Explicit-Integration-Facts-and-Request-Scoped-Persistence-Binding" in combined
-    assert "Governed, validated, pending review" in combined
+    assert "Merged in PR #87 and PR #88" in combined
     assert "CP9 remains Planned / Blocked" in combined
     assert "CP10 remains Planned" in combined
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
@@ -1994,7 +1994,7 @@ def test_cp9_dependency_bundle_factory_signature_correction_is_closed() -> None:
         assert field in adr
     for phrase in (
         "exactly one request-capability-scope factory",
-        "six privately captured leaf factories",
+        "six private leaf-factory signatures",
         "suppresses no exception",
         "production-only",
         "migration `20260808_0025`",
@@ -2087,7 +2087,7 @@ def test_cp9_runtime_preparation_provenance_capability_contracts_are_bounded() -
     assert "provenance: RuntimeApiPreparationProvenance" in protocols
     assert "validate_runtime_api_preparation_provenance" in validation
     assert "migration `20260808_0024`" in roadmap
-    assert "No production issuer, source, capability, dependency, or route" in roadmap
+    assert "CP9 Production Runtime Composition and Thin Routes" in roadmap
 
 
 def test_cp9_runtime_route_transport_preparation_contract_gate_is_bounded() -> None:
@@ -2295,7 +2295,6 @@ def test_cp9_combined_postgresql_http_acceptance_is_bounded() -> None:
         "independent PostgreSQL rate transaction",
         "Exact replay",
         "migration `20260808_0025`",
-        "CP9 closeout remains",
         "CP10 remains Planned",
     ):
         assert phrase in combined
@@ -2323,3 +2322,25 @@ def test_cp9_combined_postgresql_http_acceptance_is_bounded() -> None:
         "drop_all(",
     ):
         assert token not in forbidden
+
+
+def test_cp9_runtime_api_closeout_is_complete_and_cp10_remains_planned() -> None:
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((roadmap, program, security))
+
+    for phrase in (
+        "CP9 closeout",
+        "CP9 Runtime API is complete",
+        "PR #121",
+        "20260808_0024",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert "| CP9 | Merged |" in roadmap
+    assert "| CP9 Runtime API | Merged |" in program
+    assert "| CP9 | Planned / Blocked |" not in roadmap
+    assert "| CP9 Runtime API | Planned / Blocked |" not in program
+    assert "Status: Implemented / Validated, Pending Review. The acceptance harness" not in program
+    assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()

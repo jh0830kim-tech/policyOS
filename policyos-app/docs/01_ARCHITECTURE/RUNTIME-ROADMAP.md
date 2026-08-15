@@ -13,7 +13,7 @@ state, and execution result is not a policy outcome.
 
 ## 2. Current and target state
 
-### Current state - CP9 Application Integration merged
+### Current state - CP9 Runtime API complete
 
 - `app.runtime.authority`: immutable request, authority reference, permit reference, admission,
   revocation, bundle, audit-metadata, and pure validation contracts.
@@ -38,19 +38,21 @@ state, and execution result is not a policy outcome.
 - PR #56 corrected Alembic 0007 asyncpg execution, and PR #57 corrected repeated lifecycle
   projection cardinality. PR #65 merged the definition-only Runtime permissions, PR #66 merged
   grant/revoke governance, and PR #67 merged governed grant provisioning. The current migration
-  head is `20260808_0023`.
+  head is `20260808_0024`.
 - The CP8 Runtime Delivery Acceptance Gate passed PostgreSQL 16 verification and green CI and
   merged in PR #58. CP8 Runtime Delivery is complete within its approved local delivery boundary.
-  No real external adapter, runtime API, Worker, queue, polling loop, scheduler, live credential
-  resolver, or external effect exists.
+- CP9 production composition and three thin Runtime routes merged in PR #120. The combined
+  PostgreSQL 16 and HTTP acceptance gate merged in PR #121 with exact replay, independent rate
+  admission, facade transaction, rollback, and managed-lifecycle evidence. CP9 Runtime API is
+  complete within this approved boundary. No real external adapter, Worker, queue, polling loop,
+  scheduler, live credential resolver, or external business effect is introduced.
 
-### Target state - Planned
+### Target state - CP10 planned
 
-The ADR-085 delivery-contract gate, ADR-086 persistence-contract gate, Persistence, governed
-Delivery Orchestration, blocker corrections, and PostgreSQL Acceptance evidence are merged. The
-next planned checkpoint is CP9 Runtime API under its own governance, authentication/RBAC mapping,
-and transport-security entry conditions; this closeout does not implement CP9. Real adapters,
-credential resolution, authenticated API transport, and Workers remain separate future work.
+CP0 through CP9 are complete within their merged boundaries. CP10 Workers remain planned and may
+begin only under separate governance and explicit approval. Real external adapters, credential
+resolution, Worker execution, queues, polling, retries, scheduling, and external business effects
+remain separate future work.
 
 ## 3. Program sequence versus dependency order
 
@@ -154,38 +156,51 @@ grants permission or causes automatic execution.
 | CP9-Gate-Local-Fact-Binding-and-Transaction-Integration-Governance | Merged, PR #79 | Local integration governance | ADR-092 fixes exact persisted orchestration facts, Registry snapshot provenance, and active-transaction Persistence boundaries | Governance only |
 | CP9-Gate-Local-Fact-Binding-and-Active-Transaction-Persistence-Contracts | Merged, PR #80 | Local integration contracts | Adds exact persisted record, permit, Registry, scope, lineage, operation-binding, and caller-owned active-transaction Ports contracts | No concrete binder, store, migration, or route |
 | CP9-Gate-Registry-Resolution-and-Admission-Exactness-Contracts | Merged, PR #81 | Exactness contract correction | Binds persisted Registry snapshot/reference, resolution request/decision, and admission decision identities and scope fail closed | No Registry snapshot persistence, concrete binder/local operation, migration, or route |
-| CP9-Gate-Registry-Snapshot-Persistence-and-Active-Transaction-Integration-Governance | Governed, pending review | Persistence and transaction governance | ADR-093 requires a separate append-only Registry store, migration `20260808_0022`, exact admission binding, and caller-session participation | Governance only; no model, migration, store, binder, or route |
-| CP9-Gate-Active-Transaction-Write-Set-and-Session-Binding-Governance | Governed, pending review | Atomic local persistence governance | ADR-094 selects existing closed atomic/reconciliation payloads, rejects marker staging, and requires one-shot exact session/root-transaction binding | Governance only; public contracts and implementation remain separate |
-| CP9-Gate-Reconciliation-Request-Persistence-Ownership-and-Atomic-Integration-Sequencing | Governed, pending review | Reconciliation persistence governance | ADR-095 assigns the existing strict reconciliation request to a dedicated append-only Persistence table in `0022` and fixes checkpoint sequencing | Governance only; no production model, migration, repository, facade, or route |
-| CP9 Registry/Reconciliation Persistence and One-Shot Active Transaction | Implemented, pending review | Persistence implementation | Migration `20260808_0022`, seven append-only tables, strict Registry serialization/repositories, and exact caller-session/root one-shot staging | Concrete binder/facade composition and routes remain separate blockers |
-| CP9-Gate-Explicit-Integration-Facts-and-Request-Scoped-Persistence-Binding | Governed, validated, pending review | Concrete integration governance | ADR-096 preserves five-parameter facade methods and defines required nested operation facts, request-scoped preparation, exact persisted re-read, and closed mutation dataflow | Governance only; contract amendment, concrete integration, and routes remain blocked |
-| CP9 Explicit Integration Facts Public Contracts | Implemented, validated, pending review | Contract amendment | Adds required strict operation integration facts, pure exact-equality validation, command/query carriage, and a request-scoped provider Protocol | No provider, binder, local operation, facade behavior, route, model, migration, or repository implementation |
-| CP9-Gate-Authoritative-Result-and-Query-Projection-Ownership | Governed, validated, pending review | Result/projection governance | ADR-097 assigns new mutation results to a one-shot domain callback, replay results to transport receipts, and query projections to an exact read-only persisted-state Port | Separate public-contract amendment required; no schema or implementation |
-| CP9-Gate-Runtime-Lifecycle-and-Public-Projection-Domain-Governance | Governed, validated, pending review | Lifecycle projection governance | ADR-098 defines the total state-to-public-status mapping, result cardinality, persisted state-revision digest authority, and request-scoped exact locator | Governance only; three follow-up gates remain |
-| CP9-Gate-Runtime-Lifecycle-Public-Contracts | Implemented, validated, pending review | Public lifecycle contracts | Adds the ADR-098 statuses, immutable total mapping, strict cardinality enum, and pure fail-closed count validation | Persistence/read and integration remain deferred |
+| CP9-Gate-Registry-Snapshot-Persistence-and-Active-Transaction-Integration-Governance | Merged, PR #82 | Persistence and transaction governance | ADR-093 requires a separate append-only Registry store, migration `20260808_0022`, exact admission binding, and caller-session participation | Governance only |
+| CP9-Gate-Active-Transaction-Write-Set-and-Session-Binding-Governance | Merged, PR #83 | Atomic local persistence governance | ADR-094 selects existing closed atomic/reconciliation payloads, rejects marker staging, and requires one-shot exact session/root-transaction binding | Governance only |
+| CP9 Active-Transaction Public Contracts | Merged, PR #84 | Atomic local persistence contracts | Closed operation-matched write sets and an exact transaction-bound factory | No route or schema change |
+| CP9-Gate-Reconciliation-Request-Persistence-Ownership-and-Atomic-Integration-Sequencing | Merged, PR #85 | Reconciliation persistence governance | ADR-095 assigns the strict reconciliation request to dedicated append-only Persistence | Governance only |
+| CP9 Registry/Reconciliation Persistence and One-Shot Active Transaction | Merged, PR #86 | Persistence implementation | Migration `20260808_0022`, seven append-only tables, exact repositories, and caller-session/root staging | No facade or route |
+| CP9-Gate-Explicit-Integration-Facts-and-Request-Scoped-Persistence-Binding | Merged, PR #87 | Concrete integration governance | ADR-096 preserves five-parameter facade methods and exact request-scoped binding | Governance only |
+| CP9 Explicit Integration Facts Public Contracts | Merged, PR #88 | Contract amendment | Required strict operation integration facts and request-scoped provider Protocol | No production integration |
+| CP9-Gate-Authoritative-Result-and-Query-Projection-Ownership | Merged, PR #89 | Result/projection governance | ADR-097 fixes mutation-result, replay-result, and query-projection ownership | Governance only |
+| CP9-Gate-Runtime-Lifecycle-and-Public-Projection-Domain-Governance | Merged, PR #90 | Lifecycle projection governance | ADR-098 defines total public-status mapping, result cardinality, and exact locator authority | Governance only |
+| CP9-Gate-Runtime-Lifecycle-Public-Contracts | Merged, PR #91 | Public lifecycle contracts | Approved statuses, immutable total mapping, and strict cardinality validation | No persistence change |
 | CP9-Gate-Exact-Query-Locator-and-State-Revision-Read-Contracts | Merged, PR #92 | Exact projection read contracts | Adds closed query-only locators and an exact state-revision read result exposing the stored digest | Repository implementation and concrete integration remain deferred |
-| CP9-Gate-Authoritative-Domain-Operation-Result-Contracts | Implemented, validated, pending review | Mutation result contracts | Binds one immutable safe result and the approved closed local stage as sibling output, including the trusted server-owned expected submission invocation reference | No callback, persistence, facade, route, or external-effect implementation |
+| CP9-Gate-Authoritative-Domain-Operation-Result-Contracts | Merged, PR #93 | Mutation result contracts | Binds one immutable safe result and approved closed local stage as sibling output | No external effect |
+| CP9-Gate-Logical-Execution-Result-Ownership | Merged, PR #94 and PR #95 | Logical-result governance | ADR-099 and its correction separate API logical results from action-level adapter results | Governance only |
+| CP9 Logical Execution-Result Public Contracts | Merged, PR #96 | Result persistence contracts | Exact logical-result identity, revision, locator, and read contracts | No route |
+| CP9 Logical Execution-Result Persistence and Exact Reads | Merged, PR #97 | Result persistence | Migration `20260808_0023`, append-only persistence, and exact revision reads | No external effect |
 | CP9 Application Integration | Merged, PR #98 | Concrete application composition | Adds a request-scoped one-shot facts provider, pure binder, domain-callback local operation, exact binding/state/result reads, and same-transaction staging through the existing facade | Production routes and CP9 closeout remain separate |
-| CP9-Gate-Runtime-Route-Trusted-Preparation-and-Production-Composition | Governed, pending review | Route and composition governance | ADR-100 fixes header-only idempotency, server-owned prepared-operation sourcing, thin routes, error mapping, and composition ownership | Governance only; contract correction and routes remain separate |
-| CP9 Runtime Preparation Provenance and Operational Capability Contracts | Implemented, validated, pending review | Application public contracts | Adds immutable exact preparation provenance, server-owned package issuance, and request-scoped rate, deadline, and disconnect capability contracts | No production issuer, source, capability, dependency, or route; migration `20260808_0024` remains prohibited |
+| CP9-Gate-Runtime-Route-Trusted-Preparation-and-Production-Composition | Merged, PR #99 | Route and composition governance | ADR-100 fixes header-only idempotency, server-owned preparation, thin routes, and bounded errors | Governance only |
+| CP9 Runtime Route Transport and Preparation Contracts | Merged, PR #100 | Transport contracts | Header-only idempotency and strict trusted preparation carriage | No production route |
+| CP9 Preparation Provenance Governance and Contracts | Merged, PR #101 and PR #102 | Preparation authority | ADR-101 provenance plus exact operational capability contracts | Request-local only |
+| CP9 Preparation Producer Governance and Contracts | Merged, PR #103 and PR #104 | Production capability boundary | ADR-102 producer/backend ownership and public factory contracts | No route |
+| CP9 Rate-Admission Governance and Contracts | Merged, PR #105 and PR #106 | Rate policy boundary | ADR-103 fixed-window semantics and immutable public contracts | No default policy |
+| CP9 Rate-Policy Permission Governance | Merged, PR #107 | Permission authority | ADR-104 fixes definition ID, grant authority, and zero automatic grants | Governance only |
+| CP9 Rate-Admission Persistence | Merged, PR #108 | Rate persistence | Migration `20260808_0024`, definition-only permission, four append-only tables, and PostgreSQL evidence | No route |
 | CP9-Gate-Operational-Preflight-and-Preparation-Consumption-Governance | Merged, PR #109 | Preflight ordering governance | ADR-105 fixes closed operational inputs, non-consuming inspection, terminal rejection, and consume-after-success ordering | Governance only; public contracts and production remain separate |
-| CP9 Operational Preflight and Preparation Consumption Public Contracts | Implemented, validated, pending review | Application public contracts | Adds one closed exact preflight, operation-specific candidate carriage, server-owned context provision, and distinct inspect/consume/reject Protocols | No production lifecycle, capabilities, composition, route, or migration `20260808_0025` |
-| CP9-Gate-Production-Dependency-Bundle-Factory-Graph-and-Transport-Neutral-Observer-Ownership | Governed, validated, correction pending review | Production composition governance | ADR-107 fixes one bundle scope-factory field, six privately captured leaf factories, exact signatures, non-suppressing async disposal, upstream binding, transport-neutral disconnect signal, and production-only unavailable composition | Governance only; no public contract, production route, persistence, or migration `20260808_0025` |
-| CP9 Managed Request-Capability Public Contracts | Implemented, validated, pending review | Application public contracts | Adds the covariant managed-resource Protocol and exact managed return annotations for all six private leaf factories | No production lifecycle, routes, persistence, or migration `20260808_0025` |
-| CP9 | Planned / Blocked | API | `app.api`, `app.schemas`, trusted application facade | Requires production facade implementation and routes |
+| CP9 Operational Preflight and Preparation Consumption Public Contracts | Merged, PR #110 | Application public contracts | Closed exact preflight and distinct inspect/consume/reject Protocols | No migration `0025` |
+| CP9 Production Preparation Injection Governance | Merged, PR #111 | Composition ownership | ADR-106 immutable application injection and request-local lifetimes | Governance only |
+| CP9 Dependency-Bundle Governance and Correction | Merged, PR #112 and PR #113 | Factory graph | ADR-107 factory graph, exact signatures, and non-suppressing async disposal | Governance only |
+| CP9 Dependency-Bundle and Upstream Public Contracts | Merged, PR #114 | Composition contracts | One scope-factory bundle and transport-neutral observer Protocols | No route |
+| CP9 Managed Request-Capability Governance and Contracts | Merged, PR #115 and PR #116 | Managed lifetime | ADR-108 and covariant managed-resource Protocols | No migration `0025` |
+| CP9 Organization Selector and HTTP Semantics Governance | Merged, PR #117 | Transport semantics | ADR-109 canonical selector and bounded operational rejection mapping | Governance only |
+| CP9 Required-Audience Governance and Config Contracts | Merged, PR #118 and PR #119 | Authentication configuration | ADR-110 and strict immutable required-audience configuration | No schema change |
+| CP9 Production Runtime Composition and Thin Routes | Merged, PR #120 | Production API | Immutable dependency injection and exactly three thin Runtime routes | No Worker or external effect |
+| CP9 Combined PostgreSQL and HTTP Acceptance | Merged, PR #121 | Vertical acceptance | Real managed preparation, rate transaction, facade transaction, replay, rollback, and HTTP evidence | No migration `0025` |
+| CP9 closeout | Merged | Governance closeout | CP9 completion evidence and stale-status rejection | CP10 remains separately governed |
+| CP9 | Merged | API | Governed production Runtime API within the approved CP9 boundary | No Worker, queue, scheduler, or external business effect |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
-CP9 Governance / ADR-087 is merged in PR #60, API Contracts in PR #61, Auth Claims in PR #62,
-Tenant-Organization Binding Governance in PR #63, Binding in PR #64, and definition-only Runtime
-permissions in PR #65. ADR-088 governance merged in PR #66 and governed Runtime grant provisioning
-merged in PR #67 with migration head `20260808_0020`. Permission-fact resolver governance and its
-production resolver merged in PR #69 and PR #70 without a route or facade. Routes remain in
-`app.api`; `app.runtime.api` and
-`app.runtime.outbox` remain prohibited. CP9 remains Planned / Blocked, CP10 Workers remain Planned,
-and external business-effect exactly-once remains unguaranteed. Blind retry and automatic redrive
-remain prohibited.
+CP9 Governance began in PR #60 and its sequenced governance, contracts, persistence, application,
+production-route, and acceptance gates are merged through PR #121. Routes remain in `app.api`;
+`app.runtime.api` and `app.runtime.outbox` remain prohibited. The migration head is
+`20260808_0024`. CP9 is complete within its approved Runtime API boundary, CP10 Workers remain
+Planned, and external business-effect exactly-once remains unguaranteed. Blind retry and automatic
+redrive remain prohibited.
 
-The required implementation order is:
+The completed implementation order was:
 
 1. Merge ADR-092 local integration governance.
 2. Merge additive binding and active-transaction Persistence contracts (PR #80).
@@ -201,6 +216,9 @@ The required implementation order is:
 10. Run combined CP9 PostgreSQL and HTTP acceptance.
 11. Complete CP9 closeout.
 12. Begin CP10 only after separate approval.
+
+Steps 1 through 11 are merged through PR #121 and this closeout. Step 12 remains gated by separate
+CP10 governance and explicit approval.
 
 ### CP9 Runtime route trusted preparation and production composition
 
@@ -820,5 +838,14 @@ released exactly once in reverse order.
 The combined regression retains the three fixed endpoints, header-only mutation idempotency,
 verified-claims authentication, canonical organization selection, bounded errors, non-disclosure,
 query non-mutation, rollback residue zero, and concurrent rate/idempotency evidence. It creates no
-production contract, schema, backfill, or migration `20260808_0025`. CP9 closeout remains a
-separate documentation gate and CP10 remains Planned.
+production contract, schema, backfill, or migration `20260808_0025`.
+
+### CP9 closeout
+
+CP9 Runtime API is complete after the merged governance, contract, persistence, application,
+production-route, and combined PostgreSQL/HTTP acceptance gates through PR #121. The closeout
+changes documentation and architecture guards only. It adds no production behavior, public
+contract, permission, schema, migration, credential path, external adapter, Worker, queue, retry,
+polling loop, scheduler, or external effect. Historical checkpoint-local status statements remain
+records of their gate boundaries; the current-state table and this closeout are authoritative.
+CP10 remains Planned and requires separate governance and explicit approval.
