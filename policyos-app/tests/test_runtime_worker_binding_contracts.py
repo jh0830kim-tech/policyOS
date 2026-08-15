@@ -61,6 +61,8 @@ from app.services.runtime_worker_protocols import (
     RuntimeWorkerResultCompletionCapability,
     RuntimeWorkerShutdownObservationCapability,
     RuntimeWorkerShutdownObservationCapabilityFactory,
+    RuntimeWorkerShutdownObservationRequestPreparationCapability,
+    RuntimeWorkerShutdownObservationRequestPreparationCapabilityFactory,
 )
 
 
@@ -157,6 +159,15 @@ def test_worker_capability_signatures_are_exact():
         "request": RuntimeWorkerInterruptibleWaitRequest,
         "return": type(None),
     }
+    prepare = inspect.signature(
+        RuntimeWorkerShutdownObservationRequestPreparationCapability.prepare
+    )
+    assert tuple(prepare.parameters) == ("self", "configuration", "configuration_binding")
+    assert get_type_hints(RuntimeWorkerShutdownObservationRequestPreparationCapability.prepare) == {
+        "configuration": RuntimeWorkerConfiguration,
+        "configuration_binding": RuntimeWorkerConfigurationBinding,
+        "return": RuntimeWorkerShutdownObservationRequest,
+    }
 
 
 def test_worker_factory_signatures_are_zero_argument_and_exact():
@@ -164,6 +175,10 @@ def test_worker_factory_signatures_are_zero_argument_and_exact():
     wait = inspect.signature(RuntimeWorkerInterruptibleWaitCapabilityFactory.__call__)
     assert tuple(shutdown.parameters) == ("self",)
     assert tuple(wait.parameters) == ("self",)
+    preparation = inspect.signature(
+        RuntimeWorkerShutdownObservationRequestPreparationCapabilityFactory.__call__
+    )
+    assert tuple(preparation.parameters) == ("self",)
     assert (
         get_type_hints(RuntimeWorkerShutdownObservationCapabilityFactory.__call__)["return"]
         is RuntimeWorkerShutdownObservationCapability
@@ -316,7 +331,10 @@ def test_result_producer_and_application_service_signatures_are_exact():
 
 def test_production_dependency_bundle_has_exact_frozen_fields():
     assert RuntimeWorkerProductionDependencyBundle.__dataclass_params__.frozen
-    assert len(RuntimeWorkerProductionDependencyBundle.__dataclass_fields__) == 15
+    assert len(RuntimeWorkerProductionDependencyBundle.__dataclass_fields__) == 16
+    assert "shutdown_observation_request_preparation_factory" in (
+        RuntimeWorkerProductionDependencyBundle.__dataclass_fields__
+    )
     assert "pre_invocation_revalidation_factory" in (
         RuntimeWorkerProductionDependencyBundle.__dataclass_fields__
     )

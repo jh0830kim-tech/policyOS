@@ -1295,3 +1295,10 @@ Status: **Governed / Validated, Pending Review**.
 ADR-120 closes production sequencing by assigning fresh trusted time and exact shutdown-request
 construction to a fourth managed request-preparation capability. The existing observer remains
 sticky and unchanged; production implementation follows only after the public-contract correction.
+
+### CP10 shutdown-observation request-preparation public contracts
+
+Status: **Implemented / Validated, Pending Review**.
+
+Strict managed Protocols, exact preparation validation, and the sixteenth immutable dependency
+factory implement ADR-120 without schema or migration `20260808_0025`.

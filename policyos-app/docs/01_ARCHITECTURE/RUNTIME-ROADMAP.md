@@ -1052,3 +1052,11 @@ ADR-120 assigns every fresh shutdown-observation request and trusted clock read 
 one-shot preparation capability. It preserves the existing observation signature and adds one
 sixteenth production-bundle factory. Stale cycle-clock reuse, hidden Worker time, schema, and
 migration `20260808_0025` remain prohibited.
+
+### CP10 Worker shutdown-observation request-preparation public contracts
+
+Status: **Implemented / Validated, Pending Review**.
+
+The gate implements ADR-120's managed preparation capability and zero-argument factory, exact
+configuration/binding validation, and the additive sixteenth production-bundle field. Production
+Worker composition and PostgreSQL acceptance remain separate.

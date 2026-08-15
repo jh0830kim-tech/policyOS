@@ -80,6 +80,7 @@ from app.services.runtime_worker_validation import (
     validate_runtime_worker_prepared_delivery_request,
     validate_runtime_worker_result_completion,
     validate_runtime_worker_shutdown_observation_request,
+    validate_runtime_worker_shutdown_observation_request_preparation,
     validate_runtime_worker_shutdown_observation_result,
 )
 
@@ -516,6 +517,16 @@ def test_worker_shutdown_observation_uses_exact_deadline_and_binding():
         shutdown_drain_timeout_seconds=30,
     )
     assert validate_runtime_worker_shutdown_observation_request(config, request) is request
+    assert (
+        validate_runtime_worker_shutdown_observation_request_preparation(config, binding(), request)
+        is request
+    )
+    with pytest.raises(RuntimeWorkerContractConflict):
+        validate_runtime_worker_shutdown_observation_request_preparation(
+            config,
+            binding(clock_reference="clock.other"),
+            request,
+        )
     active = RuntimeWorkerShutdownObservationResult(
         **request.model_dump(),
         disposition=RuntimeWorkerShutdownDisposition.ACTIVE,
