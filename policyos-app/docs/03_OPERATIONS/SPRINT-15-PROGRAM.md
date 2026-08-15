@@ -1248,3 +1248,17 @@ deadline or invent cleanup outcomes. Due, claim, and append transactions remain 
 never span Adapter invocation. The next gates are additive public contracts, production
 composition, PostgreSQL acceptance, combined CP10 regression, and Sprint 15 closeout. Migration
 `20260808_0025` remains absent.
+
+### CP10 Worker operational-result and production-bundle signature governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-118 gives the next contract gate one exact surface: strict cycle and iteration production
+requests, closed failure-stage cardinality, asynchronous `produce(request)` methods, fresh managed
+factories, a frozen fourteen-field production bundle, and a single-method application-service
+Protocol. Existing preparation, shutdown, wait, result, and transaction contracts remain
+unchanged.
+
+The governance gate adds no production/public Python, persistence, model, schema, or migration
+`20260808_0025`. Public contracts, production Worker composition, PostgreSQL acceptance, combined
+regression, and Sprint closeout remain separate checkpoints.

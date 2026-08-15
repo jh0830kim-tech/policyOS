@@ -316,3 +316,12 @@ clock and bounded failure reference; the Worker supplies only exact requests, cl
 counts, and a closed failure stage. Shutdown stops new admission and drains only already-admitted
 tasks to the unchanged caller-supplied deadline. No transaction spans external invocation and no
 Worker, task, result, or shutdown schema or migration `20260808_0025` is introduced.
+
+## ADR-118 public-signature clarification
+
+ADR-118 fixes two strict operation-specific result-production requests, asynchronous `produce`
+methods, fresh managed zero-argument producer factories, the frozen fourteen-field
+`RuntimeWorkerProductionDependencyBundle`, and the exact asynchronous
+`RuntimeWorkerApplicationService.run(configuration, configuration_binding) -> None` Protocol.
+Loose producer parameters, union reporters, mutable bundles, and additional lifecycle methods are
+not approved. These process-local contracts add no migration `20260808_0025`.
