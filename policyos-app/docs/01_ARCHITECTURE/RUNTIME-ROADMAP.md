@@ -192,6 +192,7 @@ grants permission or causes automatic execution.
 | CP9 closeout | Merged | Governance closeout | CP9 completion evidence and stale-status rejection | CP10 remains separately governed |
 | CP9 | Merged | API | Governed production Runtime API within the approved CP9 boundary | No Worker, queue, scheduler, or external business effect |
 | CP10 Worker Operating Model Governance | Governed / Validated, Pending Review | Worker governance | ADR-111 configured identity, scoped PostgreSQL polling, claim/lease, concurrency, and shutdown model | No production Worker or migration `0025` |
+| CP10 Worker Contract Semantics Governance | Governed / Validated, Pending Review | Contract governance | ADR-112 delivery-only operation set, fixed-delay timing, immutable configuration lifetime, and sticky shutdown observation | No public Python or migration `0025` |
 | CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
 
 CP9 Governance began in PR #60 and its sequenced governance, contracts, persistence, application,
@@ -869,3 +870,22 @@ There is no Worker registry, assignment, heartbeat, scheduler, or process-sessio
 migration `20260808_0025`, backfill, normalization, deduplication, or rewrite. Public contracts,
 preparation/binding, production service/composition, PostgreSQL acceptance, and closeout remain
 separate CP10 gates; CP10 production remains Planned.
+
+### CP10 Worker contract-semantics governance
+
+ADR-112 fixes the remaining public-contract meanings before any Worker Python is introduced. The
+initial Worker is delivery-only and consumes exactly the existing initial-enqueue, eligible-retry,
+and expired-claim due reasons. Reconciliation remains an explicit authorized application service;
+neither ambiguous lifecycle nor observation evidence is a pending-work source.
+
+The immutable process configuration contains one through 64 canonical assignments, the existing
+1..100 candidate limit, concurrency 1..32, a 100..60,000 millisecond fixed delay, and a 1..300
+second shutdown drain. A cycle visits assignments in canonical order without overlap, jitter,
+backoff, or catch-up. Configuration replacement requires process reconstruction. Shutdown
+observation is caller-timed, single-use, transport-neutral, and sticky, stops all new work, and
+creates no Runtime outcome authority.
+
+The next gate may add only strict Worker configuration, polling, timing, shutdown, and bounded
+operational contracts and Protocols. Prepared delivery binding, production service/composition,
+PostgreSQL acceptance, and closeout remain separate. No schema or migration `20260808_0025` is
+approved; CP10 production remains Planned.

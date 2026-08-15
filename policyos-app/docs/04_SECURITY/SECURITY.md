@@ -881,3 +881,24 @@ new polling and claims before draining; it cannot declare an outcome without exa
 evidence. Deployment configuration contains no credential, session, client, callback, or sensitive
 payload. No Worker registry, heartbeat, assignment, schedule, process-session schema, migration
 `20260808_0025`, backfill, normalization, deduplication, or rewrite is permitted by this gate.
+
+### CP10 Worker contract-semantics security boundary
+
+ADR-112 prevents infrastructure from broadening the Worker operation set. The initial Worker may
+consume only exact scoped delivery candidates returned by the existing due Port. It cannot treat
+ambiguous lifecycle, reconciliation requests or observations, audit events, provider failures, or
+missing acknowledgements as pending work. Reconciliation remains an explicit authorized service
+invocation.
+
+Configuration identity is immutable for the process lifetime. Exact assignment, version, digest,
+clock, and numeric bounds must match; live reload, latest-version selection, environment-derived
+replacement, cross-process prepared facts, and partial substitution fail closed. Polling is
+canonical fixed delay with no random jitter, hidden backoff, overlap, catch-up, or exception retry.
+
+Shutdown observation is transport-neutral, single-use, caller-timed, and sticky. Once requested,
+no new due selection, claim, preparation, or Adapter call may begin. The observation and drain
+deadline cannot create or infer cancellation, retry, reconciliation, delivery outcome, dead
+letter, or compensation. The contracts expose no OS signal object, event-loop handle, task,
+thread, session, transaction, credential, payload, provider response, or traceback. No Worker or
+reconciliation queue, registry, heartbeat, scheduler, shutdown table, schema, or migration
+`20260808_0025` is permitted.
