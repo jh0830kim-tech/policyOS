@@ -265,3 +265,10 @@ Sticky shutdown observed before claim stops without mutation. Shutdown observed 
 `DELIVERING` but before invocation calls the Adapter zero times and leaves `DELIVERING` unchanged.
 The existing not-invoked reasons are not broadened or substituted. This preserves the delivery-only
 operation set and requires no Worker persistence or migration `20260808_0025`.
+
+## ADR-115 request timing and identity clarification
+
+The cycle preparation capability binds an exact trusted-clock observation to caller-supplied cycle
+identity. A separate iteration source owns the complete `RuntimeEffectDueSelectionRequest`, including
+request identity, contract version, requested and observed times, scope, and bounds. Shutdown before
+preparation produces no request; a produced request is never reusable across an iteration or cycle.

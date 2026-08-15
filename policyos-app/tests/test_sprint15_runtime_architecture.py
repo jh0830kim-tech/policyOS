@@ -2401,6 +2401,48 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_cp10_worker_request_preparation_ownership_is_governed() -> None:
+    adr_path = ROOT / "docs/01_ARCHITECTURE/ADR"
+    adr_path /= (
+        "ADR-115-CP10-RUNTIME-WORKER-CYCLE-ITERATION-AND-CANDIDATE-REQUEST-PREPARATION-OWNERSHIP.md"
+    )
+    adr = adr_path.read_text(encoding="utf-8")
+    related = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            ROOT / "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+    for phrase in (
+        "request-scoped cycle preparation capability",
+        "trusted iteration request source",
+        "trusted candidate request source",
+        "fresh managed one-shot capability",
+        "RuntimeEffectDueSelectionRequest",
+        "RuntimeWorkerPreparedDeliveryRequest",
+        "no schema or migration `20260808_0025`",
+    ):
+        assert phrase in adr
+    lowered = adr.lower()
+    for forbidden in (
+        "worker generates the request id",
+        "worker generates the preparation reference",
+        "select the latest row",
+        "infer from an opaque reference",
+    ):
+        assert forbidden not in lowered
+    for phrase in (
+        "CP10 Worker request-preparation ownership governance",
+        "Governed / Validated, Pending Review",
+        "CP10 Worker request-preparation ownership security boundary",
+    ):
+        assert phrase in related
+    assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_cp10_worker_public_contract_precision_is_governed_before_contracts() -> None:
     adr113 = (
         ROOT

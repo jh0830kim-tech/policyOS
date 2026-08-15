@@ -963,3 +963,11 @@ only the exact Adapter result and exact result append for the prepared effect an
 Managed capability contracts guarantee request-local entry and exactly-once exit while exposing no
 close, reset, retry, pool, session, or transaction authority. This gate creates no production
 Worker, database owner, schema, or migration `20260808_0025`.
+
+### CP10 Worker request-preparation ownership security boundary
+
+Cycle, iteration, and candidate request preparation are separate request-scoped managed one-shot
+capabilities. Missing, stale, consumed, substituted, digest-mismatched, ambiguous, or cross-scope
+values fail closed before discovery, claim, Adapter invocation, or persistence mutation. The Worker
+must not generate or infer UUIDs, contract versions, times, digests, references, tenant scope, or
+lineage, and bounded diagnostics must not disclose their values.

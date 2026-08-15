@@ -954,3 +954,13 @@ Pure validation binds scope, lineage, effect, attempt, claim, claimant, envelope
 invocation, Adapter result, and result append exactly. Substitution and cross-scope reuse fail
 closed. This contract-only gate adds no production Worker, persistence, schema, or migration
 `20260808_0025`.
+
+### CP10 Worker request-preparation ownership governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-115 assigns complete cycle, iteration/due-selection, and selected-candidate delivery requests to
+three trusted request-scoped managed one-shot capabilities. The Worker consumes exact prepared
+values and creates no UUID, version, time, digest, reference, scope, or lineage. Preparation is
+process-local, ordered before the corresponding operation, and adds no schema or migration
+`20260808_0025`. Public contracts and production composition remain separate checkpoints.
