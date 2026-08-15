@@ -1037,3 +1037,17 @@ dependency-unavailable envelope and create no cancellation, retry, compensation,
 effect-termination authority. Rate denial alone remains `429` with exact persisted retry-after.
 Production Python, HTTP acceptance, migration `20260808_0025`, CP10, tag, and release remain
 deferred.
+
+### CP9 Runtime required-audience configuration ownership
+
+Status: Governed / Validated, Pending Review. ADR-110 makes the mandatory immutable
+`runtime_api_required_audience` process setting the sole owner of the production facade's exact
+audience. It must be a non-empty, trimmed, bounded exact member of `jwt_audiences`; missing,
+malformed, or non-member configuration fails application construction. Selecting the first
+allowlisted audience or deriving one from token claims, prepared facts, request values,
+dependencies, or persistence is prohibited.
+
+The production dependency bundle retains exactly one request-scope-factory field, facade public
+signatures remain unchanged, and no schema or migration `20260808_0025` is approved. A separate
+config-contract correction, production composition/routes, PostgreSQL/HTTP acceptance, regression,
+and closeout remain blocked. CP9 remains Planned / Blocked and CP10 remains Planned.

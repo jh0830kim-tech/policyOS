@@ -244,3 +244,13 @@ organization selection are prohibited. Deadline expiry and observed disconnect u
 generic `503` dependency-unavailable envelope as missing operational composition without creating
 Runtime cancellation or effect-termination authority. Rate denial alone remains `429` with the
 exact persisted retry-after value.
+
+## ADR-110 clarification
+
+The production facade's exact required audience comes only from the mandatory immutable
+`runtime_api_required_audience` process setting. It must be a non-empty, trimmed, bounded exact
+member of `jwt_audiences`; invalid or absent configuration fails application construction. The
+allowlist's first element, token claims, prepared facts, request values, dependency objects, and
+persisted rows are prohibited audience selectors. The production dependency bundle retains its
+exact one-field scope-factory contract, facade signatures remain unchanged, and no schema or
+migration `20260808_0025` is introduced.

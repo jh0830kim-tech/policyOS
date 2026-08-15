@@ -331,3 +331,13 @@ suppresses or replaces an active primary exception. The frozen dependency set is
 concrete guarded capability views reject calls before entry, during exit, after exit, or from a
 different request scope. Capability Protocols expose no public close, reset, retry, or reuse API.
 Lifecycle state remains request-local, so persistence and migration `20260808_0025` are prohibited.
+
+## ADR-110 required-audience correction
+
+`RuntimeApiProductionDependencyBundle` continues to expose exactly one field,
+`request_capability_scope_factory`. Required-audience configuration is not a seventh capability,
+prepared fact, request dependency, or bundle field. The application factory privately captures the
+validated `runtime_api_required_audience` scalar beside the bundle and supplies it when constructing
+the facade. Allowlist ordering, token claims, and request-local objects cannot select it. No public
+factory signature, request-scope lifecycle, facade signature, persistence owner, or migration
+`20260808_0025` changes.

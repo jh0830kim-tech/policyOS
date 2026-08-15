@@ -1664,6 +1664,74 @@ def test_cp9_operational_preflight_consumption_ordering_governance_is_bounded() 
     assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
 
 
+def test_cp9_required_audience_configuration_ownership_is_governed() -> None:
+    adr = (ADR / "ADR-110-CP9-RUNTIME-REQUIRED-AUDIENCE-CONFIGURATION-OWNERSHIP.md").read_text(
+        encoding="utf-8"
+    )
+    adr100 = (
+        ADR / "ADR-100-CP9-RUNTIME-ROUTE-TRUSTED-PREPARATION-AND-PRODUCTION-COMPOSITION.md"
+    ).read_text(encoding="utf-8")
+    adr106 = (
+        ADR
+        / (
+            "ADR-106-CP9-RUNTIME-PRODUCTION-PREPARATION-CONTEXT-INJECTION-"
+            "AND-COMPOSITION-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr107 = (
+        ADR
+        / (
+            "ADR-107-CP9-RUNTIME-PRODUCTION-DEPENDENCY-BUNDLE-FACTORY-GRAPH-"
+            "AND-TRANSPORT-NEUTRAL-OBSERVER-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    combined = " ".join(
+        "".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md",
+                ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md",
+                ROOT / "docs" / "04_SECURITY" / "SECURITY.md",
+            )
+        ).split()
+    )
+    for phrase in (
+        "runtime_api_required_audience",
+        "sole authoritative source",
+        "non-empty",
+        "no surrounding whitespace",
+        "200 characters",
+        "jwt_audiences",
+        "fail application construction",
+        "Select the first allowlisted audience",
+        "five-parameter public signatures",
+        "No persistence or migration",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in adr
+    for clarification in (adr100, adr106, adr107):
+        assert "ADR-110" in clarification
+        assert "runtime_api_required_audience" in clarification
+        assert "migration `20260808_0025`" in clarification
+    assert "exactly one field" in adr107
+    assert "request_capability_scope_factory" in adr107
+    for phrase in (
+        "mandatory immutable `runtime_api_required_audience`",
+        "exact member of `jwt_audiences`",
+        "dependency bundle remains the exact one-field",
+        "no schema or migration `20260808_0025`",
+        "CP9 remains Planned / Blocked",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert "runtime_api_required_audience" not in (
+        ROOT / "app" / "services" / "runtime_api_protocols.py"
+    ).read_text(encoding="utf-8")
+    assert not (ROOT / "app" / "api" / "routes" / "runtime.py").exists()
+    assert not (ROOT / "alembic" / "versions" / "20260808_0025_runtime_api.py").exists()
+
+
 def test_cp9_runtime_http_semantics_are_governed_before_production_routes() -> None:
     adr_name = (
         "ADR-109-CP9-RUNTIME-ORGANIZATION-SELECTOR-TRANSPORT-AND-"

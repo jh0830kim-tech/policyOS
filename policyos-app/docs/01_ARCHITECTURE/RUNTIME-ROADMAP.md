@@ -773,3 +773,17 @@ disconnect, and operational dependency failure share one generic `503` envelope 
 Runtime cancellation or effect authority. Rate denial alone remains `429` with exact persisted
 retry-after provenance. This governance adds no production code, schema, or migration
 `20260808_0025`; production composition, acceptance, regression, and closeout remain blocked.
+
+### CP9 Runtime required-audience configuration ownership
+
+ADR-110 assigns the production facade's exact required audience to one mandatory immutable
+`runtime_api_required_audience` process setting. The value must be non-empty, trimmed, bounded,
+and an exact member of `jwt_audiences`; missing or invalid configuration fails application
+construction. Allowlist ordering, verified token claims, prepared facts, request input, dependency
+objects, and persisted records cannot select or replace it.
+
+The production dependency bundle remains the exact one-field request-scope-factory contract and
+the facade keeps all three five-parameter signatures. A separate config-contract correction must
+merge before production composition resumes. This governance creates no production code, public
+Runtime contract, schema, or migration `20260808_0025`; CP9 remains Planned / Blocked and CP10
+remains Planned.

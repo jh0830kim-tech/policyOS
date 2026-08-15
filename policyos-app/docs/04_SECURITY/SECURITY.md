@@ -793,3 +793,19 @@ internal cause, deadline, observation, package, callback, policy, provider, data
 transaction, bearer, body, or cross-scope facts. Disconnect creates no second response attempt and
 no Runtime cancellation or external-effect conclusion. Rate denial alone uses `429` and only the
 exact persisted retry-after value. No schema or migration `20260808_0025` is permitted.
+
+### CP9 Runtime required-audience configuration security boundary
+
+ADR-110 assigns one mandatory immutable `runtime_api_required_audience` process setting as the
+sole source for the production facade's exact audience. The value must be non-empty, trimmed,
+bounded, and an exact member of the configured duplicate-free `jwt_audiences` tuple. Missing,
+malformed, non-member, or mutable configuration fails before request-scope construction,
+preparation inspection, rate admission, or facade work.
+
+Allowlist order, bearer claims, request values, prepared facts, opaque references, dependency
+objects, and persisted records cannot choose or replace the required audience. JWT verification
+continues to accept the configured allowlist, while Runtime facade validation separately requires
+the exact configured member. The one-field production dependency bundle, facade signatures, and
+all tenant, organization, classification, lineage, permission, idempotency, and transaction
+boundaries remain unchanged. No audience persistence, schema, or migration `20260808_0025` is
+permitted.
