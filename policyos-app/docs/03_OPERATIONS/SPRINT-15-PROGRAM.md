@@ -1200,6 +1200,15 @@ and immutable exports. No existing request contract or validator changed. Produc
 PostgreSQL acceptance, combined regression, and closeout remain separate; migration
 `20260808_0025` remains absent.
 
+### CP10 production Worker application service
+
+Status: Implemented / Validated, Pending Review. One explicitly constructed production service
+implements the fixed-delay delivery loop, canonical assignment traversal, exact candidate order,
+bounded task admission, replay-safe lifecycle sequencing, marker-only operational failure
+translation, and sticky shutdown drain. It owns no session or Runtime outcome and calls no
+transaction-control API. PostgreSQL acceptance, combined regression, and closeout remain
+separate checkpoints; migration `20260808_0025` remains absent.
+
 ### CP10 prepared-delivery public contracts
 
 Status: Implemented / Validated, Pending Review. Worker preparation and completion are now closed,

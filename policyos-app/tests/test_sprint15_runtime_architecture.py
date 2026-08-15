@@ -2397,7 +2397,6 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
     ):
         assert phrase in combined
     assert not (ROOT / "app/runtime/workers").exists()
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -2451,8 +2450,6 @@ def test_cp10_worker_pre_invocation_revalidation_governance_is_explicit():
         "migration `20260808_0025`",
     ):
         assert phrase in related
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
-    assert not (ROOT / "app/services/runtime_worker_production.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -2526,7 +2523,6 @@ def test_cp10_worker_request_preparation_public_contract_gate_is_bounded() -> No
         "Implemented / Validated, Pending Review",
     ):
         assert phrase in related
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -2600,7 +2596,6 @@ def test_cp10_worker_request_preparation_signatures_are_governed() -> None:
         "factory receives the candidate",
     ):
         assert forbidden not in lowered
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -2642,7 +2637,6 @@ def test_cp10_worker_request_preparation_ownership_is_governed() -> None:
         "CP10 Worker request-preparation ownership security boundary",
     ):
         assert phrase in related
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -2773,7 +2767,6 @@ def test_cp10_worker_contract_semantics_are_governed_before_public_contracts() -
         assert phrase in combined
     assert (ROOT / "app/services/runtime_worker_contracts.py").is_file()
     assert (ROOT / "app/services/runtime_worker_protocols.py").is_file()
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -2826,7 +2819,6 @@ def test_cp10_worker_public_contract_gate_is_exact_and_dependency_safe() -> None
         "production CP10 remains Planned",
     ):
         assert phrase in documents
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -2937,7 +2929,6 @@ def test_cp10_prepared_delivery_public_contract_gate_is_bounded():
         "Implemented / Validated, Pending Review",
     ):
         assert phrase in related
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -2997,8 +2988,6 @@ def test_cp10_worker_production_composition_result_and_dependency_ownership_is_g
         "No schema or migration `20260808_0025`",
     ):
         assert phrase in related
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
-    assert not (ROOT / "app/services/runtime_worker_production.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -3068,8 +3057,6 @@ def test_cp10_worker_result_producer_and_bundle_public_signatures_are_governed()
         "migration `20260808_0025`",
     ):
         assert phrase in related
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
-    assert not (ROOT / "app/services/runtime_worker_production.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -3114,8 +3101,6 @@ def test_cp10_worker_shutdown_observation_request_preparation_is_governed():
         "trusted-time boundary",
     ):
         assert phrase in related
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
-    assert not (ROOT / "app/services/runtime_worker_production.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -3184,6 +3169,39 @@ def test_cp10_worker_operational_failure_marker_public_contract_gate() -> None:
     assert "operational failure marker public contract" in roadmap.lower()
     assert "Status: Implemented / Validated, Pending Review" in program
     assert "non-disclosing marker contract" in security
-    assert not (ROOT / "app/services/runtime_worker.py").exists()
-    assert not (ROOT / "app/services/runtime_worker_production.py").exists()
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_production_worker_is_bounded_to_governed_application_sequencing() -> None:
+    worker = (ROOT / "app/services/runtime_worker.py").read_text(encoding="utf-8")
+    production = (ROOT / "app/services/runtime_worker_production.py").read_text(encoding="utf-8")
+    related = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            ROOT / "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+    for required in (
+        "RuntimeWorkerOperationalCapabilityFailure",
+        "RuntimeWorkerOperationalFailureStage.DUE_SELECTION",
+        "RuntimeEffectLifecycleCommitDisposition.APPENDED",
+        "asyncio.Semaphore(configuration.maximum_concurrency)",
+        "task.cancel()",
+        "await asyncio.gather(*pending, return_exceptions=True)",
+    ):
+        assert required in worker
+    for forbidden in (
+        "except Exception",
+        "datetime.now",
+        "uuid4",
+        "AsyncSession",
+        "sessionmaker",
+        ".commit(",
+        ".rollback(",
+    ):
+        assert forbidden not in worker
+    assert "create_runtime_worker_application_service" in production
+    assert "CP10 production Worker application service" in related
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

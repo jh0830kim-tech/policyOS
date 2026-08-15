@@ -1078,3 +1078,14 @@ operational inability. It carries no public field, message input, failure refere
 authority fact and is explicitly exported from `runtime_worker_protocols`. Existing Worker
 factory, bundle, and service signatures remain unchanged. Production translation and bounded drain
 implementation remain separate, and migration `20260808_0025` remains absent.
+
+### CP10 production Worker application service
+
+Status: Implemented / Validated, Pending Review. The production `app.services` Worker now
+sequences the governed fresh preparation, selection, claim, lifecycle, revalidation, Adapter,
+completion, and result-production capabilities. Exact replay stops before Adapter invocation,
+bounded concurrency is process-local, and only the closed non-disclosing operational marker is
+translated. Sticky shutdown prevents new work and cancels only still-pending admitted tasks at
+the exact supplied drain deadline, awaiting residue zero without creating Runtime authority.
+PostgreSQL acceptance, combined regression, and closeout remain separate gates. Migration
+`20260808_0025` remains absent.

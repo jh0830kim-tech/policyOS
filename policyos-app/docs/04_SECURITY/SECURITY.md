@@ -1076,3 +1076,13 @@ credential, provider response, SQL, traceback, identity, scope, or authority fac
 type may later be translated by production code; contract errors, programmer defects, and host
 cancellation remain distinct. The marker changes no transaction, persistence, lifecycle,
 classification, tenant, organization, or migration boundary.
+
+### CP10 production Worker application-service security boundary
+
+The service accepts only the immutable validated dependency bundle and exact configuration
+binding. It never generates identity, time, revision, digest, reference, status, claim, attempt,
+or authority; never catches broad exceptions; and never exposes backend detail. Exact replay and
+shutdown preserve Adapter-call count zero. Each candidate owns fresh request capabilities, and
+deadline cancellation is limited to application-admitted pending tasks with cleanup awaited to
+zero residue. The service imports no SQLAlchemy or framework transport and creates no schema or
+migration `20260808_0025`.
