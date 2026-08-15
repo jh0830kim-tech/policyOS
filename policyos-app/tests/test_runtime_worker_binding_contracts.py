@@ -40,6 +40,7 @@ from app.services.runtime_worker_protocols import (
     RuntimeWorkerLifecycleAppendCapability,
     RuntimeWorkerLifecycleAppendCapabilityFactory,
     RuntimeWorkerManagedRequestCapability,
+    RuntimeWorkerOperationalCapabilityFailure,
     RuntimeWorkerPollCycleRequestPreparationCapability,
     RuntimeWorkerPollCycleRequestPreparationCapabilityFactory,
     RuntimeWorkerPollCycleResultProductionCapability,
@@ -64,6 +65,12 @@ from app.services.runtime_worker_protocols import (
     RuntimeWorkerShutdownObservationRequestPreparationCapability,
     RuntimeWorkerShutdownObservationRequestPreparationCapabilityFactory,
 )
+
+
+def test_operational_capability_failure_public_signature_is_exact() -> None:
+    assert issubclass(RuntimeWorkerOperationalCapabilityFailure, RuntimeError)
+    assert tuple(inspect.signature(RuntimeWorkerOperationalCapabilityFailure).parameters) == ()
+    assert RuntimeWorkerOperationalCapabilityFailure.__slots__ == ()
 
 
 class ShutdownCapabilityDouble:
@@ -162,7 +169,11 @@ def test_worker_capability_signatures_are_exact():
     prepare = inspect.signature(
         RuntimeWorkerShutdownObservationRequestPreparationCapability.prepare
     )
-    assert tuple(prepare.parameters) == ("self", "configuration", "configuration_binding")
+    assert tuple(prepare.parameters) == (
+        "self",
+        "configuration",
+        "configuration_binding",
+    )
     assert get_type_hints(RuntimeWorkerShutdownObservationRequestPreparationCapability.prepare) == {
         "configuration": RuntimeWorkerConfiguration,
         "configuration_binding": RuntimeWorkerConfigurationBinding,
@@ -237,7 +248,10 @@ def test_managed_capability_and_preparation_factory_are_exact():
 
 def test_persistence_and_adapter_factories_return_exact_managed_capabilities():
     expected = (
-        (RuntimeWorkerDueSelectionCapabilityFactory, RuntimeWorkerDueSelectionCapability),
+        (
+            RuntimeWorkerDueSelectionCapabilityFactory,
+            RuntimeWorkerDueSelectionCapability,
+        ),
         (RuntimeWorkerClaimCapabilityFactory, RuntimeWorkerClaimCapability),
         (
             RuntimeWorkerLifecycleAppendCapabilityFactory,
@@ -316,8 +330,14 @@ def test_result_producer_and_application_service_signatures_are_exact():
     )
     for capability, request, result, factory in expected:
         assert inspect.iscoroutinefunction(capability.produce)
-        assert tuple(inspect.signature(capability.produce).parameters) == ("self", "request")
-        assert get_type_hints(capability.produce) == {"request": request, "return": result}
+        assert tuple(inspect.signature(capability.produce).parameters) == (
+            "self",
+            "request",
+        )
+        assert get_type_hints(capability.produce) == {
+            "request": request,
+            "return": result,
+        }
         factory_return = get_type_hints(factory.__call__)["return"]
         assert get_origin(factory_return) is RuntimeWorkerManagedRequestCapability
         assert get_args(factory_return) == (capability,)

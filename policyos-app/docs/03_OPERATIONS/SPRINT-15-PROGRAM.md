@@ -1311,3 +1311,11 @@ supplies the exact bounded scheduling duration; deadline cleanup leaves task res
 writes no invented outcome. Public marker contracts, production implementation, PostgreSQL
 acceptance, combined regression, and closeout remain separately reviewed gates. Migration
 `20260808_0025` remains absent.
+### CP10 Worker operational failure marker public contract
+
+Status: Implemented / Validated, Pending Review. The Worker Protocol surface now exports one
+zero-argument `RuntimeWorkerOperationalCapabilityFailure` marker with empty arguments and no
+caller-supplied message or backend detail. Existing capability, factory, dependency-bundle, and
+application-service signatures are unchanged. Production Worker composition, PostgreSQL
+acceptance, combined regression, and closeout remain separate gates; migration
+`20260808_0025` remains absent.

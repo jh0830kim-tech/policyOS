@@ -41,6 +41,15 @@ from app.services.runtime_worker_contracts import (
 CapabilityT_co = TypeVar("CapabilityT_co", covariant=True)
 
 
+class RuntimeWorkerOperationalCapabilityFailure(RuntimeError):
+    """Signal one bounded, non-disclosing capability failure."""
+
+    __slots__ = ()
+
+    def __init__(self) -> None:
+        super().__init__()
+
+
 @runtime_checkable
 class RuntimeWorkerManagedRequestCapability(Protocol[CapabilityT_co]):
     """Manage one fresh request capability without suppressing errors."""
@@ -222,7 +231,9 @@ class RuntimeWorkerDueSelectionCapabilityFactory(Protocol):
 
 @runtime_checkable
 class RuntimeWorkerClaimCapabilityFactory(Protocol):
-    def __call__(self) -> RuntimeWorkerManagedRequestCapability[RuntimeWorkerClaimCapability]: ...
+    def __call__(
+        self,
+    ) -> RuntimeWorkerManagedRequestCapability[RuntimeWorkerClaimCapability]: ...
 
 
 @runtime_checkable
@@ -241,12 +252,16 @@ class RuntimeWorkerDeliveryCapabilityFactory(Protocol):
 
 @runtime_checkable
 class RuntimeWorkerCancellationCapabilityFactory(Protocol):
-    def __call__(self) -> RuntimeWorkerManagedRequestCapability[RuntimeCancellationPort]: ...
+    def __call__(
+        self,
+    ) -> RuntimeWorkerManagedRequestCapability[RuntimeCancellationPort]: ...
 
 
 @runtime_checkable
 class RuntimeWorkerCredentialCapabilityFactory(Protocol):
-    def __call__(self) -> RuntimeWorkerManagedRequestCapability[RuntimeCredentialBrokerPort]: ...
+    def __call__(
+        self,
+    ) -> RuntimeWorkerManagedRequestCapability[RuntimeCredentialBrokerPort]: ...
 
 
 @runtime_checkable
@@ -385,9 +400,15 @@ class RuntimeWorkerProductionDependencyBundle:
                 RuntimeWorkerPreparedDeliveryRequestPreparationCapabilityFactory,
             ),
             (self.due_selection_factory, RuntimeWorkerDueSelectionCapabilityFactory),
-            (self.prepared_delivery_factory, RuntimeWorkerPreparedDeliveryCapabilityFactory),
+            (
+                self.prepared_delivery_factory,
+                RuntimeWorkerPreparedDeliveryCapabilityFactory,
+            ),
             (self.claim_factory, RuntimeWorkerClaimCapabilityFactory),
-            (self.lifecycle_append_factory, RuntimeWorkerLifecycleAppendCapabilityFactory),
+            (
+                self.lifecycle_append_factory,
+                RuntimeWorkerLifecycleAppendCapabilityFactory,
+            ),
             (self.delivery_factory, RuntimeWorkerDeliveryCapabilityFactory),
             (self.cancellation_factory, RuntimeWorkerCancellationCapabilityFactory),
             (self.credential_factory, RuntimeWorkerCredentialCapabilityFactory),
@@ -395,8 +416,14 @@ class RuntimeWorkerProductionDependencyBundle:
                 self.shutdown_observation_request_preparation_factory,
                 RuntimeWorkerShutdownObservationRequestPreparationCapabilityFactory,
             ),
-            (self.shutdown_observation_factory, RuntimeWorkerShutdownObservationCapabilityFactory),
-            (self.interruptible_wait_factory, RuntimeWorkerInterruptibleWaitCapabilityFactory),
+            (
+                self.shutdown_observation_factory,
+                RuntimeWorkerShutdownObservationCapabilityFactory,
+            ),
+            (
+                self.interruptible_wait_factory,
+                RuntimeWorkerInterruptibleWaitCapabilityFactory,
+            ),
             (
                 self.poll_iteration_result_production_factory,
                 RuntimeWorkerPollIterationResultProductionCapabilityFactory,
@@ -437,6 +464,7 @@ __all__ = (
     "RuntimeWorkerLifecycleAppendCapability",
     "RuntimeWorkerLifecycleAppendCapabilityFactory",
     "RuntimeWorkerManagedRequestCapability",
+    "RuntimeWorkerOperationalCapabilityFailure",
     "RuntimeWorkerPollCycleRequestPreparationCapability",
     "RuntimeWorkerPollCycleRequestPreparationCapabilityFactory",
     "RuntimeWorkerPollCycleResultProductionCapability",

@@ -61,6 +61,7 @@ from app.services.runtime_worker_contracts import (
     RuntimeWorkerShutdownObservationResult,
 )
 from app.services.runtime_worker_protocols import (
+    RuntimeWorkerOperationalCapabilityFailure,
     RuntimeWorkerPreInvocationRevalidationRequest,
     RuntimeWorkerPreInvocationRevalidationResult,
     RuntimeWorkerPreparedDelivery,
@@ -85,6 +86,16 @@ from app.services.runtime_worker_validation import (
 )
 
 NOW = datetime(2026, 8, 15, 12, 0, tzinfo=UTC)
+
+
+def test_operational_capability_failure_is_closed_and_non_disclosing() -> None:
+    failure = RuntimeWorkerOperationalCapabilityFailure()
+
+    assert isinstance(failure, RuntimeError)
+    assert failure.args == ()
+    assert str(failure) == ""
+    with pytest.raises(TypeError):
+        RuntimeWorkerOperationalCapabilityFailure("backend detail")  # type: ignore[call-arg]
 
 
 def uid(value: int) -> UUID:

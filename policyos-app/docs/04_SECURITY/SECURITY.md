@@ -1069,3 +1069,10 @@ defects, host cancellation, exception text, causes, tracebacks, SQL, provider re
 credentials, payloads, and cross-scope facts are never copied. Deadline cleanup cancels only
 application-admitted tasks, reaches residue zero, and creates no Runtime cancellation, retry,
 reconciliation, or lifecycle authority. No migration `20260808_0025` is approved.
+### CP10 Worker operational failure marker public-contract security boundary
+
+The non-disclosing marker contract accepts no message, payload, failure reference, exception text,
+credential, provider response, SQL, traceback, identity, scope, or authority fact. Only its exact
+type may later be translated by production code; contract errors, programmer defects, and host
+cancellation remain distinct. The marker changes no transaction, persistence, lifecycle,
+classification, tenant, organization, or migration boundary.
