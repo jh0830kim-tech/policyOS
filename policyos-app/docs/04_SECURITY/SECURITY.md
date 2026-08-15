@@ -834,3 +834,17 @@ exactly once only on admission. Missing dependencies, expired deadlines, and dis
 only the same bounded 503; denial alone returns bounded 429 plus exact `Retry-After`. No default
 fake, mutable `app.state`, environment-selected dependency object, preparation persistence, or
 migration `20260808_0025` is permitted.
+
+### CP9 combined Runtime PostgreSQL and HTTP acceptance boundary
+
+The acceptance gate proves that transport cannot manufacture preparation, clock, rate, binding,
+stage, receipt, or result facts. A verified principal and canonical organization selector enter
+one fresh managed request scope; preparation is inspected once, operational checks run in fixed
+order, and the package is consumed once before the facade transaction. The rate decision commits
+in its independent PostgreSQL transaction, while local mutation and transport receipt remain
+atomic in the facade-owned transaction.
+
+Exact replay performs no second callback or local mutation and preserves one counter mutation.
+Failure paths retain bounded non-disclosing HTTP envelopes, reverse-order cleanup, and zero facade
+rollback residue. The gate introduces no credential path, public authority, persistence owner,
+schema, backfill, or migration `20260808_0025`; CP9 closeout and CP10 remain separate.
