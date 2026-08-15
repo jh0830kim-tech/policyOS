@@ -250,3 +250,22 @@ external ambiguity stays visible.
 This decision requires a trusted configuration and prepared-fact composition boundary before a
 production Worker can exist. It intentionally favors stopping over inferred scope, hidden retry,
 or invented recovery.
+
+## ADR-112 contract-semantics clarification
+
+ADR-112 closes the timing, shutdown-observation, configuration-lifetime, and operation-set gaps
+that precede Worker public contracts. The initial Sprint 15 Worker is delivery-only. It consumes
+only the existing `INITIAL_ENQUEUE`, `RETRY_ELIGIBLE`, and expired `CLAIMED` due candidates;
+reconciliation remains an explicit authorized application invocation and is never inferred from
+`AMBIGUOUS` lifecycle or observation rows.
+
+The immutable configuration uses the existing 1..100 due-selection bound, concurrency 1..32,
+poll interval 100..60,000 milliseconds, shutdown drain 1..300 seconds, and one through 64
+canonical assignments. Polling is a non-overlapping fixed-delay cycle over assignments in exact
+canonical order. Configuration replacement requires process reconstruction, and exact
+version/digest mismatch fails closed.
+
+Shutdown observation is transport-neutral, caller-timed, single-use, and sticky once requested.
+It stops new cycles, selections, claims, preparation, and invocations and creates no Runtime
+outcome authority. These public semantics add no Worker persistence or migration
+`20260808_0025`; prepared delivery facts and production composition remain separate gates.

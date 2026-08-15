@@ -107,6 +107,7 @@ The baseline is `main` after merged CP9 PostgreSQL/HTTP acceptance PR #121.
 | CP9 Combined PostgreSQL and HTTP Acceptance | Merged, PR #121 | Real managed preparation, independent rate transaction, facade transaction, replay, rollback, and HTTP evidence. |
 | CP9 Runtime API | Merged | Governed CP9 Runtime API boundary complete; migration head `20260808_0024`. |
 | CP10 Worker Operating Model Governance | Governed / Validated, Pending Review | ADR-111 selects configured Worker identity, scoped PostgreSQL polling, claim/lease, concurrency, and shutdown without migration `0025`. |
+| CP10 Worker Contract Semantics Governance | Governed / Validated, Pending Review | ADR-112 fixes delivery-only discovery, exact operational bounds, fixed-delay cycles, configuration lifetime, and sticky shutdown observation. |
 | CP10 Workers | Planned | Worker implementation is not present. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
@@ -1117,3 +1118,23 @@ outcome authority. No Worker registry, assignment, heartbeat, schedule, or proce
 migration `20260808_0025`, backfill, normalization, deduplication, or rewrite is approved. CP10
 contracts, preparation/binding, production composition, PostgreSQL acceptance, and closeout remain
 separate gates; production CP10 remains Planned.
+
+### CP10 Worker contract-semantics governance
+
+Status: Governed / Validated, Pending Review. ADR-112 limits the initial Worker operation set to
+delivery candidates returned by the existing CP8 due repository. Reconciliation stays an explicit
+authorized application invocation; ambiguous lifecycle and reconciliation observations are not
+queues or discovery indexes.
+
+The public configuration contract is bounded exactly: 1..64 canonical assignments, candidate
+count 1..100, concurrency 1..32, poll interval 100..60,000 milliseconds, and shutdown drain
+1..300 seconds. Polling is one non-overlapping fixed-delay cycle over canonical assignments with
+no jitter, catch-up, hidden backoff, or immediate retry. Configuration version/digest are fixed
+for a process lifetime and replacement requires reconstruction.
+
+Each shutdown observation uses one fresh single-use transport-neutral capability and a trusted
+caller-supplied clock fact. Shutdown is sticky, stops new selection and invocation, drains only to
+the exact deadline, and grants no cancellation, retry, reconciliation, success, failure, or
+dead-letter authority. Public contracts, trusted preparation, production Worker composition,
+PostgreSQL acceptance, and closeout remain independent gates. No migration `20260808_0025` is
+approved and production CP10 remains Planned.

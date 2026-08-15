@@ -2399,3 +2399,71 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
     assert not (ROOT / "app/runtime/workers").exists()
     assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_worker_contract_semantics_are_governed_before_public_contracts() -> None:
+    adr112 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-112-CP10-RUNTIME-WORKER-CONTRACT-TIMING-SHUTDOWN-"
+            "OBSERVATION-AND-RECONCILIATION-DISCOVERY.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr111 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / "ADR-111-CP10-RUNTIME-WORKER-OWNERSHIP-CLAIM-LEASE-AND-OPERATING-MODEL.md"
+    ).read_text(encoding="utf-8")
+    adr085 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / "ADR-085-CP8-OUTBOX-PACKAGE-PLACEMENT-AND-EFFECT-DELIVERY-SEMANTICS.md"
+    ).read_text(encoding="utf-8")
+    adr086 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / "ADR-086-CP8-POSTGRESQL-EFFECT-DELIVERY-IMPLEMENTATION.md"
+    ).read_text(encoding="utf-8")
+    combined = "\n".join(
+        (
+            (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8"),
+        )
+    )
+
+    for phrase in (
+        "initial Sprint 15 CP10 Worker supports exactly one operation",
+        "does not discover, schedule, or invoke reconciliation",
+        "one through 64 exact assignments",
+        "maximum_candidate_count",
+        "integer 1 through 100",
+        "maximum_concurrency",
+        "strict integer 1 through 32",
+        "poll_interval_milliseconds",
+        "strict integer 100 through 60,000",
+        "shutdown_drain_timeout_seconds",
+        "strict integer 1 through 300",
+        "fixed delay after\ncycle completion",
+        "SHUTDOWN_REQUESTED",
+        "shutdown is sticky",
+        "Migration `20260808_0025`",
+    ):
+        assert phrase in adr112
+    assert "ADR-112 contract-semantics clarification" in adr111
+    assert "ADR-112 delivery-only Worker clarification" in adr085
+    assert "ADR-112 due-selection and reconciliation clarification" in adr086
+    for phrase in (
+        "CP10 Worker Contract Semantics Governance",
+        "Governed / Validated, Pending Review",
+        "CP10 Worker contract-semantics governance",
+        "Reconciliation remains an explicit authorized application service",
+        "No schema or migration `20260808_0025`",
+        "production CP10 remains Planned",
+    ):
+        assert phrase in combined
+    assert not (ROOT / "app/services/runtime_worker_contracts.py").exists()
+    assert not (ROOT / "app/services/runtime_worker_protocols.py").exists()
+    assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))

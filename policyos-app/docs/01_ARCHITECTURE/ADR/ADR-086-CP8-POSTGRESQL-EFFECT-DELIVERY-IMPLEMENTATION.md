@@ -288,3 +288,17 @@ credential acquisition, or Adapter invocation.
 Durable Worker registration, assignment lookup, heartbeat, scheduling, or process-session state
 would be a new schema owner and must stop for a separate ADR and migration gate. CP10 performs no
 backfill, normalization, deduplication, inferred assignment, or rewrite of existing CP8 rows.
+
+## ADR-112 due-selection and reconciliation clarification
+
+ADR-112 preserves the existing PostgreSQL due query unchanged. Initial CP10 Worker selection is
+limited to the three existing due reasons and the existing 1..100 request limit. One fixed-delay
+cycle visits explicit assignments in canonical order; concurrency and process shutdown do not
+alter due eligibility, lock scope, deterministic ordering, or claim exclusion.
+
+The reconciliation-observation table remains append-only evidence for explicit observation
+service calls. It is not a pending-work source, scheduler, or authority index. Polling
+`AMBIGUOUS` lifecycle heads or observation rows for reconciliation is prohibited. Supporting a
+future reconciliation Worker requires a separately governed durable work identity and discovery
+mechanism and may require a new migration. This gate adds none and keeps
+`20260808_0024` as the single head.

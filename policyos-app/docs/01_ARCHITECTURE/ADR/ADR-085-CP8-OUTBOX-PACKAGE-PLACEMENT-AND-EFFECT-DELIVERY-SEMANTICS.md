@@ -399,3 +399,15 @@ The four existing CP8 tables remain sufficient for the initial Worker operating 
 `claimant_reference` is preserved in immutable claim payload evidence, while service-principal
 and Runtime authority are revalidated before delivery. No Worker registry, heartbeat, schedule,
 assignment table, backfill, or migration `20260808_0025` is approved.
+
+## ADR-112 delivery-only Worker clarification
+
+The initial CP10 Worker treats only the existing CP8 due reasons `INITIAL_ENQUEUE`,
+`RETRY_ELIGIBLE`, and expired `CLAIMED` as discoverable work. `AMBIGUOUS` is not a due reason,
+pending reconciliation, retry grant, or delivery permission. Reconciliation remains an explicit
+authorized Orchestration observation invocation; an observation record is evidence, not a queue.
+
+Fixed-delay polling, bounded concurrency, configuration identity, and shutdown observation are
+application contracts governed by ADR-112. They do not change stable effect identity, claim,
+lease, retry, dead-letter, reconciliation, or Adapter authority. No queue, reconciliation-work
+table, Worker registry, or migration `20260808_0025` is approved.
