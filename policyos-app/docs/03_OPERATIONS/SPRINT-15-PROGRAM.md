@@ -1072,3 +1072,17 @@ request enters six managed capabilities in governed order, performs non-consumin
 operational preflight, consumes once, then calls the existing five-parameter facade. Rate admission
 uses an independent PostgreSQL transaction. No migration `20260808_0025` is created; combined
 PostgreSQL/HTTP acceptance and CP9 closeout remain the next gates.
+
+### CP9 combined PostgreSQL and HTTP acceptance
+
+Status: Implemented / Validated, Pending Review. The acceptance harness exercises one real
+reconciliation HTTP request through the production managed-capability scope, exact preparation
+inspection and consumption, an independent PostgreSQL rate transaction, the existing facade root
+transaction, reconciliation persistence, and transport receipt. Exact replay invokes the domain
+callback once in total and leaves one durable decision, counter, local request, and receipt.
+
+The combined CP9 regression also covers all three endpoints, authentication, canonical scope,
+header-only idempotency, bounded error translation, denial, concurrency, rollback residue zero,
+query mutation zero, and lifecycle cleanup. No production/public contract, model, repository,
+schema, or migration `20260808_0025` is added. CP9 closeout remains separate and CP10 remains
+Planned.

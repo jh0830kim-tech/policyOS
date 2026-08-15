@@ -2278,3 +2278,48 @@ def test_cp9_production_runtime_composition_and_thin_routes_are_bounded() -> Non
     assert "app.state" not in production + routes + main
     assert "20260808_0025" in combined
     assert "production Runtime composition and thin routes" in combined
+
+
+def test_cp9_combined_postgresql_http_acceptance_is_bounded() -> None:
+    roadmap = (ROOT / "docs" / "01_ARCHITECTURE" / "RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs" / "03_OPERATIONS" / "SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs" / "04_SECURITY" / "SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((roadmap, program, security))
+    support = (ROOT / "tests" / "runtime_api_acceptance_test_support.py").read_text(
+        encoding="utf-8"
+    )
+    acceptance = (ROOT / "tests" / "test_runtime_api_acceptance.py").read_text(encoding="utf-8")
+
+    for phrase in (
+        "CP9 combined PostgreSQL and HTTP acceptance",
+        "independent PostgreSQL rate transaction",
+        "Exact replay",
+        "migration `20260808_0025`",
+        "CP9 closeout remains",
+        "CP10 remains Planned",
+    ):
+        assert phrase in combined
+    for symbol in (
+        "RuntimeApiProductionRequestScopeFactory",
+        "SQLAlchemyRuntimeApiRateAdmissionCapability",
+        "SQLAlchemyRuntimeRateAdmissionRepository",
+        "SQLAlchemyRuntimeRegistryRepository",
+    ):
+        assert symbol in support
+    for symbol in (
+        "create_app",
+        "get_runtime_verified_claims",
+        "RuntimeApiIdempotencyReceiptRecord",
+        "RuntimeReconciliationRequestRecord",
+        "RuntimeRateWindowCounterRecord",
+    ):
+        assert symbol in acceptance
+    forbidden = "\n".join((support, acceptance))
+    for token in (
+        "app.runtime.workers",
+        "app.runtime.api",
+        "20260808_0025_runtime",
+        "create_all(",
+        "drop_all(",
+    ):
+        assert token not in forbidden

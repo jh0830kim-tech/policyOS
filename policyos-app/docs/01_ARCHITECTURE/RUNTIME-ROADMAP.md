@@ -808,3 +808,17 @@ Runtime audience, and exactly three thin `/api/v1/runtime` endpoints. Missing pr
 dependencies fail closed with a bounded 503; no default fake, service locator, mutable `app.state`,
 preparation persistence, schema change, or migration `20260808_0025` is introduced. PostgreSQL and
 HTTP acceptance plus the combined CP9 closeout regression remain separate completion evidence.
+
+### CP9 combined PostgreSQL and HTTP acceptance
+
+The acceptance gate connects the merged production Runtime route to the real managed preparation
+chain, independent PostgreSQL rate-admission transaction, facade-owned transaction, exact
+reconciliation stage, and transport receipt. Exact replay preserves one callback, one local row,
+one receipt, one rate decision, and one counter mutation while every managed request capability is
+released exactly once in reverse order.
+
+The combined regression retains the three fixed endpoints, header-only mutation idempotency,
+verified-claims authentication, canonical organization selection, bounded errors, non-disclosure,
+query non-mutation, rollback residue zero, and concurrent rate/idempotency evidence. It creates no
+production contract, schema, backfill, or migration `20260808_0025`. CP9 closeout remains a
+separate documentation gate and CP10 remains Planned.
