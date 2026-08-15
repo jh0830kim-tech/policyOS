@@ -1155,3 +1155,17 @@ process-lifetime factories over one private sticky source; wait returns no shutd
 The next public-contract gate is limited to nine named files. Prepared delivery binding,
 production service/composition, PostgreSQL acceptance, and Sprint closeout remain later gates.
 Migration `20260808_0025` remains prohibited and production CP10 remains Planned.
+
+### CP10 Worker public-contract gate
+
+Status: Implemented / Validated, Pending Review. The exact nine-file ADR-113 gate adds strict
+Worker configuration, configuration binding, poll-cycle, poll-iteration, shutdown observation,
+interruptible wait, closed operational results, structural capabilities, zero-argument factories,
+and pure cross-value validation. It reuses the exact synchronous Runtime Ports clock and CP8 due
+selection contracts and preserves all CP9 Runtime API facade signatures.
+
+Focused contract and binding tests cover every numeric bound, canonical assignment order,
+position/scope/classification/clock/limit substitution, aware times, closed count/disposition
+shapes, exact drain arithmetic, Protocol annotations, and immutable exports. Production Worker
+composition, preparation, persistence and PostgreSQL acceptance remain deferred. No schema or
+migration `20260808_0025` is introduced; production CP10 remains Planned.
