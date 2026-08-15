@@ -387,3 +387,11 @@ optional closed operational-failure stage. The producer owns the trusted complet
 opaque bounded failure reference. Raw exceptions and messages are never result inputs; unexpected
 programmer defects propagate after cleanup. A later additive public-contract gate defines these
 producers without changing the existing result models or adding migration `20260808_0025`.
+
+## ADR-118 result-production signature clarification
+
+The public input boundary is one strict immutable request per result kind. Each producer exposes
+only `produce(request)` and returns the matching existing result. `OPERATIONAL_FAILURE` requires one
+closed failure stage; all other dispositions require none. Completion time and failure reference
+remain producer-owned outputs. Individual loose parameters, a cycle/iteration union reporter, raw
+exceptions, and generated Worker facts are prohibited.

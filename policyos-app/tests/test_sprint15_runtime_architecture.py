@@ -2924,3 +2924,74 @@ def test_cp10_worker_production_composition_result_and_dependency_ownership_is_g
     assert not (ROOT / "app/services/runtime_worker.py").exists()
     assert not (ROOT / "app/services/runtime_worker_production.py").exists()
     assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_worker_result_producer_and_bundle_public_signatures_are_governed():
+    adr = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-118-CP10-RUNTIME-WORKER-OPERATIONAL-RESULT-PRODUCER-AND-"
+            "PRODUCTION-DEPENDENCY-BUNDLE-PUBLIC-SIGNATURE.md"
+        )
+    ).read_text(encoding="utf-8")
+    related = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            ROOT / "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+    for symbol in (
+        "RuntimeWorkerOperationalFailureStage",
+        "RuntimeWorkerPollIterationResultProductionRequest",
+        "RuntimeWorkerPollCycleResultProductionRequest",
+        "RuntimeWorkerPollIterationResultProductionCapability",
+        "RuntimeWorkerPollCycleResultProductionCapability",
+        "RuntimeWorkerPollIterationResultProductionCapabilityFactory",
+        "RuntimeWorkerPollCycleResultProductionCapabilityFactory",
+        "RuntimeWorkerProductionDependencyBundle",
+        "RuntimeWorkerApplicationService",
+    ):
+        assert symbol in adr
+    for signature in (
+        "RuntimeWorkerPollIterationResultProductionCapability.produce(",
+        "RuntimeWorkerPollCycleResultProductionCapability.produce(",
+        "run(\n    self,\n    configuration: RuntimeWorkerConfiguration,",
+    ):
+        assert signature in adr
+    for field in (
+        "poll_cycle_request_preparation_factory",
+        "poll_iteration_request_preparation_factory",
+        "prepared_delivery_request_preparation_factory",
+        "due_selection_factory",
+        "prepared_delivery_factory",
+        "claim_factory",
+        "lifecycle_append_factory",
+        "delivery_factory",
+        "cancellation_factory",
+        "credential_factory",
+        "shutdown_observation_factory",
+        "interruptible_wait_factory",
+        "poll_iteration_result_production_factory",
+        "poll_cycle_result_production_factory",
+    ):
+        assert f"`{field}`" in adr
+    for phrase in (
+        "`OPERATIONAL_FAILURE` requires exactly one failure stage",
+        "Every other disposition requires",
+        "frozen, slotted,",
+        "migration `20260808_0025` is needed or approved",
+    ):
+        assert phrase in adr
+    for phrase in (
+        "CP10 Worker operational-result and production-bundle signature governance",
+        "Governed / Validated, Pending Review",
+        "fourteen-field",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in related
+    assert not (ROOT / "app/services/runtime_worker.py").exists()
+    assert not (ROOT / "app/services/runtime_worker_production.py").exists()
+    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))

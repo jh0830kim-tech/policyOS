@@ -1003,3 +1003,17 @@ new work after sticky shutdown, and drains only already-admitted tasks to the un
 caller-supplied deadline. Short transaction ownership and `DELIVERING` crash ambiguity remain
 unchanged. Public contracts, production implementation, PostgreSQL acceptance, combined regression,
 and closeout remain separate. No schema or migration `20260808_0025` is approved.
+
+### CP10 Worker operational-result and production-bundle signature governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-118 fixes two strict operation-specific result-production requests, one closed operational
+failure-stage enum, exact asynchronous `produce(request)` capabilities and managed factories, a
+frozen fourteen-field `RuntimeWorkerProductionDependencyBundle`, and a runtime-checkable
+`RuntimeWorkerApplicationService` with only `run(configuration, configuration_binding) -> None`.
+
+Completion time and failure references remain producer-owned. Loose parameters, union reporters,
+mutable bundles, transaction controls, extra service lifecycle methods, and reverse dependencies
+remain prohibited. Public implementation and production composition are separate gates; no schema
+or migration `20260808_0025` is approved.

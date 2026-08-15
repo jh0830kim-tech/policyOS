@@ -224,3 +224,13 @@ service, operational failure stage, and two result-producer capability pairs. Pr
 then have no authority to generate completion time or failure references and no freedom to invent
 transaction or shutdown behavior. The additional contracts remain process-local and require no
 schema or migration `20260808_0025`.
+
+## ADR-118 exact public-signature handoff
+
+ADR-118 selects strict operation-specific production requests and exact asynchronous
+`produce(request)` methods. It names the frozen fourteen-field
+`RuntimeWorkerProductionDependencyBundle` and runtime-checkable
+`RuntimeWorkerApplicationService` with only `run(configuration, configuration_binding) -> None`.
+Producer factories are zero-argument managed factories; existing shutdown and wait factory
+signatures remain unchanged. No concrete constructor, mutable bundle, loose result parameters,
+schema, or migration `20260808_0025` is approved.

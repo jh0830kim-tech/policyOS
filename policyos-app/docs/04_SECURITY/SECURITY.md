@@ -1013,3 +1013,16 @@ Every candidate receives isolated managed capabilities. Shutdown stops new admis
 only already-admitted tasks to the exact sticky deadline without invented cancellation, retry, or
 lifecycle evidence. No transaction spans an external effect, and no schema or migration
 `20260808_0025` is introduced.
+
+### CP10 Worker operational-result public-signature security boundary
+
+ADR-118 places every producer input in a strict, frozen, extra-forbidden operation-specific model.
+Only `OPERATIONAL_FAILURE` carries one closed failure stage; every other disposition carries none.
+Completion time and the bounded opaque failure reference are trusted producer outputs. Raw
+exceptions, messages, tracebacks, arbitrary metadata, credentials, provider responses, SQL, and
+cross-scope identifiers cannot enter the request or result.
+
+The frozen fourteen-field dependency bundle accepts typed factories only and exposes no mutable
+container, session, transaction, repository, framework object, task, semaphore, clock callback,
+credential, or environment selector. The application-service Protocol exposes only exact process
+configuration and binding. This governance adds no schema or migration `20260808_0025`.
