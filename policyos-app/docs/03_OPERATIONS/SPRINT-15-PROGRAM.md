@@ -1188,3 +1188,15 @@ and calls the Adapter zero times because shutdown is neither cancellation nor le
 The following public-contract, production composition, PostgreSQL acceptance, combined regression,
 and closeout gates remain separate. Existing CP8 delivery tables remain authoritative and no
 schema or migration `20260808_0025` is approved.
+
+### CP10 prepared-delivery public contracts
+
+Status: Implemented / Validated, Pending Review. Worker preparation and completion are now closed,
+strict public contracts. A managed preparation capability accepts one exact iteration/candidate
+request and returns the caller-owned prepared package once. The package exposes one exact
+result-completion capability; replay/conflict and definite non-invocation paths do not call it.
+
+All persistence-facing capabilities remain narrow and request-scoped, and no contract exposes
+session, transaction, retry, reset, or pooling controls. Production composition, PostgreSQL
+acceptance, combined regression, and closeout remain separate checkpoints. Migration
+`20260808_0025` remains absent.

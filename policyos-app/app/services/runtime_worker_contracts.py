@@ -8,7 +8,11 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.ai.privacy import DataClassification
-from app.runtime.ports import RuntimeClockReading, RuntimeEffectDueSelectionRequest
+from app.runtime.ports import (
+    RuntimeClockReading,
+    RuntimeEffectDueCandidate,
+    RuntimeEffectDueSelectionRequest,
+)
 
 BoundedWorkerReference = Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,199}$")]
 BoundedWorkerVersion = Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.+-]{0,99}$")]
@@ -98,6 +102,15 @@ class RuntimeWorkerPollIterationRequest(RuntimeWorkerModel):
         return value
 
 
+class RuntimeWorkerPreparedDeliveryRequest(RuntimeWorkerModel):
+    """Bind one caller-selected due candidate to one exact Worker iteration."""
+
+    iteration_request: RuntimeWorkerPollIterationRequest
+    candidate: RuntimeEffectDueCandidate
+    preparation_reference: BoundedWorkerReference
+    preparation_digest_reference: BoundedWorkerReference
+
+
 class RuntimeWorkerPollIterationResult(RuntimeWorkerModel):
     configuration_binding: RuntimeWorkerConfigurationBinding
     cycle_started_at: datetime
@@ -172,6 +185,7 @@ __all__ = (
     "RuntimeWorkerPollIterationDisposition",
     "RuntimeWorkerPollIterationRequest",
     "RuntimeWorkerPollIterationResult",
+    "RuntimeWorkerPreparedDeliveryRequest",
     "RuntimeWorkerShutdownDisposition",
     "RuntimeWorkerShutdownObservationRequest",
     "RuntimeWorkerShutdownObservationResult",

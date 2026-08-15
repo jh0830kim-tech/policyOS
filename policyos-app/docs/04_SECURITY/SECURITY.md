@@ -951,3 +951,15 @@ Sticky shutdown after durable `DELIVERING` is not converted to cancellation, lea
 dead letter, reconciliation, failure, or success. The Adapter is not called and the durable state
 is preserved for governed recovery. Transactions remain short and never span external invocation.
 Prepared values are request-local, so no schema or migration `20260808_0025` is permitted.
+
+### CP10 prepared-delivery public-contract security boundary
+
+The prepared-delivery request and package are strict, caller-supplied, and operation-scoped.
+Validation rejects missing, stale, substituted, cross-tenant, cross-organization,
+cross-classification, cross-lineage, cross-effect, cross-attempt, cross-claim, and cross-envelope
+facts before Adapter invocation or lifecycle mutation. The result-completion capability accepts
+only the exact Adapter result and exact result append for the prepared effect and attempt.
+
+Managed capability contracts guarantee request-local entry and exactly-once exit while exposing no
+close, reset, retry, pool, session, or transaction authority. This gate creates no production
+Worker, database owner, schema, or migration `20260808_0025`.
