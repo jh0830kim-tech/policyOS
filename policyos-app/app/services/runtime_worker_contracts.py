@@ -52,6 +52,19 @@ class RuntimeWorkerShutdownDisposition(StrEnum):
     SHUTDOWN_REQUESTED = "shutdown_requested"
 
 
+class RuntimeWorkerOperationalFailureStage(StrEnum):
+    REQUEST_PREPARATION = "request_preparation"
+    SHUTDOWN_OBSERVATION = "shutdown_observation"
+    DUE_SELECTION = "due_selection"
+    CANDIDATE_PREPARATION = "candidate_preparation"
+    CLAIM = "claim"
+    DELIVERING_APPEND = "delivering_append"
+    PRE_INVOCATION_REVALIDATION = "pre_invocation_revalidation"
+    ADAPTER_INVOCATION = "adapter_invocation"
+    RESULT_COMPLETION = "result_completion"
+    LIFECYCLE_APPEND = "lifecycle_append"
+
+
 class RuntimeWorkerAssignment(RuntimeWorkerModel):
     tenant_id: UUID
     organization_id: UUID
@@ -129,6 +142,13 @@ class RuntimeWorkerPollIterationResult(RuntimeWorkerModel):
         return value
 
 
+class RuntimeWorkerPollIterationResultProductionRequest(RuntimeWorkerModel):
+    iteration_request: RuntimeWorkerPollIterationRequest
+    disposition: RuntimeWorkerPollIterationDisposition
+    selected_candidate_count: CandidateCount
+    failure_stage: RuntimeWorkerOperationalFailureStage | None
+
+
 class RuntimeWorkerPollCycleResult(RuntimeWorkerModel):
     configuration_binding: RuntimeWorkerConfigurationBinding
     cycle_started_at: datetime
@@ -144,6 +164,14 @@ class RuntimeWorkerPollCycleResult(RuntimeWorkerModel):
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError(f"{info.field_name} must be timezone-aware")
         return value
+
+
+class RuntimeWorkerPollCycleResultProductionRequest(RuntimeWorkerModel):
+    cycle_request: RuntimeWorkerPollCycleRequest
+    disposition: RuntimeWorkerPollCycleDisposition
+    visited_assignment_count: VisitedAssignmentCount
+    selected_candidate_count: CycleCandidateCount
+    failure_stage: RuntimeWorkerOperationalFailureStage | None
 
 
 class RuntimeWorkerShutdownObservationRequest(RuntimeWorkerModel):
@@ -178,13 +206,16 @@ __all__ = (
     "RuntimeWorkerConfiguration",
     "RuntimeWorkerConfigurationBinding",
     "RuntimeWorkerInterruptibleWaitRequest",
+    "RuntimeWorkerOperationalFailureStage",
     "RuntimeWorkerOperation",
     "RuntimeWorkerPollCycleDisposition",
     "RuntimeWorkerPollCycleRequest",
     "RuntimeWorkerPollCycleResult",
+    "RuntimeWorkerPollCycleResultProductionRequest",
     "RuntimeWorkerPollIterationDisposition",
     "RuntimeWorkerPollIterationRequest",
     "RuntimeWorkerPollIterationResult",
+    "RuntimeWorkerPollIterationResultProductionRequest",
     "RuntimeWorkerPreparedDeliveryRequest",
     "RuntimeWorkerShutdownDisposition",
     "RuntimeWorkerShutdownObservationRequest",

@@ -1026,3 +1026,11 @@ The frozen fourteen-field dependency bundle accepts typed factories only and exp
 container, session, transaction, repository, framework object, task, semaphore, clock callback,
 credential, or environment selector. The application-service Protocol exposes only exact process
 configuration and binding. This governance adds no schema or migration `20260808_0025`.
+
+### CP10 Worker operational-result public-contract security boundary
+
+Strict operation-specific production requests carry only caller-owned disposition, bounded counts,
+and a closed failure stage. Managed producers remain the sole owners of completion time and bounded
+failure references. The immutable dependency bundle exposes factories only and contains no engine,
+session, transaction, credential, framework object, environment selector, or mutable service
+locator. No schema or migration `20260808_0025` is introduced.

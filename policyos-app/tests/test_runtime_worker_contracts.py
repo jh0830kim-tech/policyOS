@@ -42,12 +42,15 @@ from app.services.runtime_worker_contracts import (
     RuntimeWorkerConfigurationBinding,
     RuntimeWorkerInterruptibleWaitRequest,
     RuntimeWorkerOperation,
+    RuntimeWorkerOperationalFailureStage,
     RuntimeWorkerPollCycleDisposition,
     RuntimeWorkerPollCycleRequest,
     RuntimeWorkerPollCycleResult,
+    RuntimeWorkerPollCycleResultProductionRequest,
     RuntimeWorkerPollIterationDisposition,
     RuntimeWorkerPollIterationRequest,
     RuntimeWorkerPollIterationResult,
+    RuntimeWorkerPollIterationResultProductionRequest,
     RuntimeWorkerPreparedDeliveryRequest,
     RuntimeWorkerShutdownDisposition,
     RuntimeWorkerShutdownObservationRequest,
@@ -59,8 +62,10 @@ from app.services.runtime_worker_validation import (
     validate_runtime_worker_configuration,
     validate_runtime_worker_interruptible_wait_request,
     validate_runtime_worker_poll_cycle_result,
+    validate_runtime_worker_poll_cycle_result_production_request,
     validate_runtime_worker_poll_iteration_request,
     validate_runtime_worker_poll_iteration_result,
+    validate_runtime_worker_poll_iteration_result_production_request,
     validate_runtime_worker_prepared_delivery,
     validate_runtime_worker_prepared_delivery_request,
     validate_runtime_worker_result_completion,
@@ -372,6 +377,46 @@ def test_worker_iteration_result_accepts_only_closed_invariants(disposition, cou
         failure_reference=failure,
     )
     assert validate_runtime_worker_poll_iteration_result(request, result) is result
+
+
+def test_worker_result_production_requests_are_closed_and_exact():
+    iteration = RuntimeWorkerPollIterationResultProductionRequest(
+        iteration_request=iteration_request(),
+        disposition=RuntimeWorkerPollIterationDisposition.OPERATIONAL_FAILURE,
+        selected_candidate_count=0,
+        failure_stage=RuntimeWorkerOperationalFailureStage.DUE_SELECTION,
+    )
+    assert validate_runtime_worker_poll_iteration_result_production_request(iteration) is iteration
+    cycle = RuntimeWorkerPollCycleResultProductionRequest(
+        cycle_request=cycle_request(),
+        disposition=RuntimeWorkerPollCycleDisposition.COMPLETED,
+        visited_assignment_count=1,
+        selected_candidate_count=10,
+        failure_stage=None,
+    )
+    assert validate_runtime_worker_poll_cycle_result_production_request(cycle) is cycle
+
+
+def test_worker_result_production_rejects_failure_stage_and_count_substitution():
+    with pytest.raises(RuntimeWorkerContractConflict):
+        validate_runtime_worker_poll_iteration_result_production_request(
+            RuntimeWorkerPollIterationResultProductionRequest(
+                iteration_request=iteration_request(),
+                disposition=RuntimeWorkerPollIterationDisposition.EMPTY,
+                selected_candidate_count=0,
+                failure_stage=RuntimeWorkerOperationalFailureStage.DUE_SELECTION,
+            )
+        )
+    with pytest.raises(RuntimeWorkerContractConflict):
+        validate_runtime_worker_poll_cycle_result_production_request(
+            RuntimeWorkerPollCycleResultProductionRequest(
+                cycle_request=cycle_request(),
+                disposition=RuntimeWorkerPollCycleDisposition.COMPLETED,
+                visited_assignment_count=2,
+                selected_candidate_count=0,
+                failure_stage=None,
+            )
+        )
 
 
 def test_worker_iteration_result_rejects_invalid_selected_and_failure_shapes():
