@@ -787,3 +787,15 @@ the facade keeps all three five-parameter signatures. A separate config-contract
 merge before production composition resumes. This governance creates no production code, public
 Runtime contract, schema, or migration `20260808_0025`; CP9 remains Planned / Blocked and CP10
 remains Planned.
+
+### CP9 Runtime required-audience config-contract correction
+
+The configuration contract now requires `runtime_api_required_audience` as one required, strict,
+frozen scalar. It rejects empty, whitespace-padded, oversized, non-string, and non-member values
+and requires exact `jwt_audiences` membership. The development example and pytest process
+configuration supply explicit values; no allowlist ordering or token-derived selection exists.
+
+The JWT verifier, one-field production dependency bundle, Runtime public contracts, and facade
+five-parameter signatures remain unchanged. Production composition/routes and HTTP acceptance
+remain separate. No schema or migration `20260808_0025` is introduced; CP9 remains Planned /
+Blocked and CP10 remains Planned.

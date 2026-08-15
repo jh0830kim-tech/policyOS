@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     jwt_algorithm: Literal["HS256"] = "HS256"
     jwt_issuer: str
     jwt_audiences: tuple[str, ...]
+    runtime_api_required_audience: str = Field(
+        frozen=True,
+        strict=True,
+        min_length=1,
+        max_length=200,
+    )
     access_token_expire_minutes: int = 30
     ai_provider: str = "fake"
     openai_api_key: str | None = None
@@ -142,6 +148,10 @@ class Settings(BaseSettings):
             raise ValueError("JWT_AUDIENCES must not contain duplicates")
         if any(not item or item != item.strip() or len(item) > 200 for item in self.jwt_audiences):
             raise ValueError("JWT_AUDIENCES entries must be non-empty, bounded, and trimmed")
+        if self.runtime_api_required_audience != self.runtime_api_required_audience.strip():
+            raise ValueError("RUNTIME_API_REQUIRED_AUDIENCE must have no surrounding whitespace")
+        if self.runtime_api_required_audience not in self.jwt_audiences:
+            raise ValueError("RUNTIME_API_REQUIRED_AUDIENCE must be an exact JWT_AUDIENCES member")
         is_production = self.app_env.lower() not in {"development", "test", "testing", "local"}
         if is_production and (
             len(self.secret_key.encode()) < _MINIMUM_SECRET_LENGTH
