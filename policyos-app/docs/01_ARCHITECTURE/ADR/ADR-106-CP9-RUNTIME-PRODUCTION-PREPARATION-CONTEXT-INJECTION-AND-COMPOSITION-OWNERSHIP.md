@@ -190,3 +190,12 @@ while the scope is active, and exits acquired resources exactly once in reverse 
 never suppresses or replaces an active exception. Rate admission still closes each independent
 per-call session before returning; request-scope cleanup never owns the facade transaction. No
 preparation persistence or migration `20260808_0025` is introduced.
+
+## ADR-110 required-audience clarification
+
+The application factory receives the exact Runtime audience from the separately validated,
+required, immutable `runtime_api_required_audience` process setting. It captures that scalar for
+facade construction without adding it to the production dependency bundle or any request scope.
+Missing, malformed, non-member, or mutable configuration fails application construction; no token,
+request, prepared fact, allowlist ordering, or dependency can select or replace it. The bundle
+remains the exact one-field lifecycle entry point and migration `20260808_0025` remains prohibited.
