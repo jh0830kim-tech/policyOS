@@ -302,3 +302,16 @@ service calls. It is not a pending-work source, scheduler, or authority index. P
 future reconciliation Worker requires a separately governed durable work identity and discovery
 mechanism and may require a new migration. This gate adds none and keeps
 `20260808_0024` as the single head.
+
+## Sprint 16 provider-evidence sufficiency clarification
+
+ADR-123 reuses the existing CP8 lifecycle revision and reconciliation-observation evidence as the
+default owner of bounded connector result, acknowledgement, failure, and observation references
+and digests. It does not add a connector table, credential-use ledger, external-operation table,
+backfill, or migration `20260808_0025`.
+
+That sufficiency is conditional rather than inferred. A later provider contract that requires an
+independently queryable connector enablement, lease-use fact, external operation binding, or
+reconciliation work identity must stop before implementation for a separate schema-ownership and
+migration gate. Existing CP8 rows cannot be normalized, deduplicated, rewritten, or populated
+from opaque provider evidence.

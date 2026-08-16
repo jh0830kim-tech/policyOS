@@ -1140,3 +1140,21 @@ Sprint 15 is complete within these merged boundaries. This closeout adds no prod
 authority, public contract, model, repository, schema, credential path, external adapter, queue,
 scheduler, migration `20260808_0025`, tag, or release. External business-effect exactly-once,
 autonomous redrive, and live provider execution remain explicitly outside Sprint 15.
+
+## Sprint 16 production connector governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-123 selects the initial real-adapter direction without enabling production I/O. The first
+family is `CONNECTOR`, limited to one explicitly provisioned HTTPS destination with no dynamic
+URL, redirect, caller selection, or fallback. Credential material is owned by a request-local
+managed invocation capability bound to the exact opaque lease and is absent from every Runtime
+fact, persistence, audit, log, and error surface.
+
+`DELIVERED` requires a stable provider-issued operation or resource identity and validated
+bounded acknowledgement evidence; HTTP `2xx` alone is insufficient. Only a proven
+pre-transmission rejection is definitely not delivered, and possible transmission or missing
+acknowledgement remains ambiguous. Existing CP8 bounded evidence is the default persistence owner,
+so this governance gate adds no migration `20260808_0025`. Public contracts, persistence
+sufficiency, production connector implementation, provider-sandbox acceptance, and enablement
+remain separate checkpoints.

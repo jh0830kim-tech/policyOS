@@ -411,3 +411,22 @@ Fixed-delay polling, bounded concurrency, configuration identity, and shutdown o
 application contracts governed by ADR-112. They do not change stable effect identity, claim,
 lease, retry, dead-letter, reconciliation, or Adapter authority. No queue, reconciliation-work
 table, Worker registry, or migration `20260808_0025` is approved.
+
+## Sprint 16 production connector clarification
+
+ADR-123 preserves this ADR's local-atomicity and external-uncertainty model while selecting the
+first production adapter boundary. Only one explicitly provisioned `CONNECTOR` family HTTPS
+destination is eligible. Dynamic URLs, redirects, caller-selected endpoints, adapter fallback,
+and global destination selection remain prohibited.
+
+Credential material is confined to one request-local managed connector capability bound exactly
+to the issued opaque lease, scope, attempt, adapter, connector, destination, classification,
+permits, and expiry. It is never added to the delivery envelope or persisted evidence. A stable
+provider-issued operation or resource identity plus validated bounded acknowledgement evidence is
+required for `DELIVERED`; HTTP `2xx` alone is insufficient. Only a proven pre-transmission failure
+may be `DEFINITELY_NOT_DELIVERED`, while possible transmission or acknowledgement uncertainty
+remains `AMBIGUOUS`.
+
+ADR-123 adds no production call, schema, or migration `20260808_0025`. If provider-specific exact
+evidence requires a new durable relational identity, implementation stops for a separate
+persistence-governance gate.
