@@ -11,6 +11,7 @@ from app.runtime.ports.cancellation import (
 from app.runtime.ports.clock import RuntimeClockReading
 from app.runtime.ports.credentials import (
     RuntimeCredentialLeaseOutcome,
+    RuntimeCredentialLeaseReference,
     RuntimeCredentialLeaseRequest,
     RuntimeCredentialLeaseStatus,
 )
@@ -244,8 +245,7 @@ def validate_runtime_adapter_invocation_envelope(
     entries = tuple(
         item
         for item in snapshot.entries
-        if item.runtime_registry_snapshot_entry_id
-        == resolution.resolved_snapshot_entry_id
+        if item.runtime_registry_snapshot_entry_id == resolution.resolved_snapshot_entry_id
     )
     if len(entries) != 1 or entries[0].status is not RuntimeActionStatus.ACTIVE:
         raise RuntimePortReferenceError("invocation requires one active registry entry")
@@ -369,10 +369,7 @@ def validate_runtime_adapter_invocation_envelope(
         step.classification,
         definition.classification,
     )
-    if any(
-        not not_lower(scope.classification, required)
-        for required in required_classifications
-    ):
+    if any(not not_lower(scope.classification, required) for required in required_classifications):
         raise RuntimePortClassificationError("invocation classification is below upstream facts")
     if envelope.requested_at < max(
         plan.recorded_at,
@@ -471,34 +468,15 @@ def validate_runtime_credential_lease_outcome(
     request: RuntimeCredentialLeaseRequest,
     outcome: RuntimeCredentialLeaseOutcome,
 ) -> RuntimeCredentialLeaseOutcome:
-    if outcome.runtime_credential_lease_request_id != (
-        request.runtime_credential_lease_request_id
-    ):
+    if outcome.runtime_credential_lease_request_id != (request.runtime_credential_lease_request_id):
         raise RuntimePortCredentialError("credential outcome request reference differs")
     if outcome.decided_at < request.requested_at:
         raise RuntimePortTimestampError("credential outcome predates request")
     if outcome.status is RuntimeCredentialLeaseStatus.ISSUED:
         lease = outcome.lease_reference
-        if lease is None or (
-            lease.runtime_credential_lease_request_id,
-            lease.credential_reference,
-            lease.tenant_id,
-            lease.organization_id,
-            lease.actor_id,
-            lease.agent_instance_id,
-            lease.attempt_id,
-        ) != (
-            request.runtime_credential_lease_request_id,
-            request.credential_reference,
-            request.scope.tenant_id,
-            request.scope.organization_id,
-            request.scope.actor_id,
-            request.scope.agent_instance_id,
-            request.scope.attempt_id,
-        ):
-            raise RuntimePortCredentialError("credential lease crosses request scope")
-        if not not_lower(lease.classification, request.scope.classification):
-            raise RuntimePortClassificationError("credential lease classification is too low")
+        if lease is None:
+            raise RuntimePortCredentialError("credential lease is absent")
+        validate_runtime_credential_lease_reference(request, lease)
         if (
             lease.issued_at < request.requested_at
             or lease.issued_at > outcome.decided_at
@@ -510,6 +488,59 @@ def validate_runtime_credential_lease_outcome(
     ):
         raise RuntimePortCredentialError("denied credential outcome lacks safe failure")
     return outcome
+
+
+def validate_runtime_credential_lease_reference(
+    request: RuntimeCredentialLeaseRequest,
+    lease: RuntimeCredentialLeaseReference,
+) -> RuntimeCredentialLeaseReference:
+    expected = (
+        request.runtime_credential_lease_request_id,
+        request.scope.runtime_execution_request_id,
+        request.adapter_family,
+        request.adapter_reference,
+        request.adapter_contract_version,
+        request.connector_provisioning_reference,
+        request.destination_reference,
+        request.credential_reference,
+        request.credential_purpose_reference,
+        request.permit_reference_ids,
+        request.runtime_effect_delivery_envelope_id,
+        request.envelope_digest_reference,
+        request.runtime_effect_id,
+        request.effect_idempotency_key,
+        request.scope.tenant_id,
+        request.scope.organization_id,
+        request.scope.actor_id,
+        request.scope.agent_instance_id,
+        request.scope.attempt_id,
+    )
+    actual = (
+        lease.runtime_credential_lease_request_id,
+        lease.runtime_execution_request_id,
+        lease.adapter_family,
+        lease.adapter_reference,
+        lease.adapter_contract_version,
+        lease.connector_provisioning_reference,
+        lease.destination_reference,
+        lease.credential_reference,
+        lease.credential_purpose_reference,
+        lease.permit_reference_ids,
+        lease.runtime_effect_delivery_envelope_id,
+        lease.envelope_digest_reference,
+        lease.runtime_effect_id,
+        lease.effect_idempotency_key,
+        lease.tenant_id,
+        lease.organization_id,
+        lease.actor_id,
+        lease.agent_instance_id,
+        lease.attempt_id,
+    )
+    if actual != expected:
+        raise RuntimePortCredentialError("credential lease exact binding differs")
+    if lease.classification is not request.scope.classification:
+        raise RuntimePortClassificationError("credential lease classification differs")
+    return lease
 
 
 def validate_runtime_cancellation_observation(
@@ -537,7 +568,9 @@ def validate_runtime_cancellation_observation(
     return observation
 
 
-def validate_runtime_atomic_write_set(write_set: RuntimeAtomicWriteSet) -> RuntimeAtomicWriteSet:
+def validate_runtime_atomic_write_set(
+    write_set: RuntimeAtomicWriteSet,
+) -> RuntimeAtomicWriteSet:
     state = write_set.state_record
     audit = write_set.audit_trail
     reservation = write_set.idempotency_reservation
@@ -649,7 +682,9 @@ def validate_runtime_atomic_write_set(write_set: RuntimeAtomicWriteSet) -> Runti
     return write_set
 
 
-def _validate_runtime_transaction_commit_facts(write_set: RuntimeAtomicWriteSet) -> None:
+def _validate_runtime_transaction_commit_facts(
+    write_set: RuntimeAtomicWriteSet,
+) -> None:
     state = write_set.state_record
     audit = write_set.audit_trail
     reservation = write_set.idempotency_reservation
@@ -690,9 +725,7 @@ def _validate_runtime_transaction_commit_facts(write_set: RuntimeAtomicWriteSet)
             "transaction audit receipt fact differs from the atomic audit trail"
         )
 
-    reservation_receipt = records[
-        RuntimeTransactionRecordType.IDEMPOTENCY_RESERVATION
-    ]
+    reservation_receipt = records[RuntimeTransactionRecordType.IDEMPOTENCY_RESERVATION]
     if (
         reservation_receipt.record_id,
         reservation_receipt.record_revision,

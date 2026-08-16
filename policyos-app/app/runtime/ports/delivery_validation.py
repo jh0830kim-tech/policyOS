@@ -104,9 +104,7 @@ def validate_runtime_effect_delivery_attempt(
         raise RuntimePortContractError("delivery attempt effect differs from envelope")
     if claim.runtime_effect_id != identity.runtime_effect_id:
         raise RuntimePortClaimError("delivery claim effect differs from envelope")
-    if claim.tenant_id != identity.tenant_id or (
-        claim.organization_id != identity.organization_id
-    ):
+    if claim.tenant_id != identity.tenant_id or (claim.organization_id != identity.organization_id):
         raise RuntimePortClaimError("delivery claim scope differs from envelope")
     if attempt.runtime_effect_claim_id != claim.runtime_effect_claim_id:
         raise RuntimePortContractError("delivery attempt claim differs")
@@ -127,9 +125,7 @@ def validate_runtime_effect_delivery_result(
 ) -> None:
     if result.runtime_effect_id != envelope.effect_identity.runtime_effect_id:
         raise RuntimePortContractError("delivery result effect differs")
-    if result.runtime_effect_delivery_attempt_id != (
-        attempt.runtime_effect_delivery_attempt_id
-    ):
+    if result.runtime_effect_delivery_attempt_id != (attempt.runtime_effect_delivery_attempt_id):
         raise RuntimePortContractError("delivery result attempt differs")
     if result.adapter_reference != envelope.adapter_reference:
         raise RuntimePortContractError("delivery result adapter differs")
@@ -212,9 +208,21 @@ def validate_runtime_effect_reconciliation(
         raise RuntimePortReconciliationError("reconciliation observation scope differs")
     if observation.destination_reference != request.destination_reference:
         raise RuntimePortReconciliationError("reconciliation destination differs")
-    if observation.observation_capability_reference != (
-        request.observation_capability_reference
+    if observation.connector_provisioning_reference != (request.connector_provisioning_reference):
+        raise RuntimePortReconciliationError("reconciliation connector differs")
+    if observation.effect_idempotency_key != request.effect_idempotency_key:
+        raise RuntimePortReconciliationError("reconciliation idempotency identity differs")
+    if (
+        observation.root_lineage_id != request.root_lineage_id
+        or observation.root_lineage_digest_reference != request.root_lineage_digest_reference
     ):
+        raise RuntimePortReconciliationError("reconciliation lineage differs")
+    if (
+        observation.acknowledgement_reference != request.acknowledgement_reference
+        or observation.acknowledgement_digest_reference != request.acknowledgement_digest_reference
+    ):
+        raise RuntimePortReconciliationError("reconciliation acknowledgement differs")
+    if observation.observation_capability_reference != (request.observation_capability_reference):
         raise RuntimePortReconciliationError("reconciliation capability differs")
     if observation.runtime_authority_bundle_id != request.runtime_authority_bundle_id:
         raise RuntimePortReconciliationError("reconciliation authority differs")
@@ -277,10 +285,15 @@ def validate_runtime_effect_lifecycle_transition(
         and current.runtime_effect_claim_id == previous.runtime_effect_claim_id
     ):
         raise RuntimePortLifecycleError("reclaim requires a distinct claim identity")
-    if previous.status is RuntimeEffectLifecycleStatus.AMBIGUOUS and current.status in {
-        RuntimeEffectLifecycleStatus.DELIVERED,
-        RuntimeEffectLifecycleStatus.RETRY_SCHEDULED,
-    } and current.runtime_effect_reconciliation_observation_id is None:
+    if (
+        previous.status is RuntimeEffectLifecycleStatus.AMBIGUOUS
+        and current.status
+        in {
+            RuntimeEffectLifecycleStatus.DELIVERED,
+            RuntimeEffectLifecycleStatus.RETRY_SCHEDULED,
+        }
+        and current.runtime_effect_reconciliation_observation_id is None
+    ):
         raise RuntimePortLifecycleError(
             "ambiguous delivery requires reconciliation before progression"
         )

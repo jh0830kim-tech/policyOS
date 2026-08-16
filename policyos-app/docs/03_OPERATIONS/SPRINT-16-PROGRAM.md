@@ -96,3 +96,15 @@ contract, envelope and digest, stable effect idempotency key, permits, tenant, o
 attempt, classification, credential purpose, and lifetime. Validation precedes cleanup; cleanup
 after a validated provider outcome cannot rewrite certainty. The correction adds no production
 I/O, provider-operation table, backfill, or migration `20260808_0025`.
+
+## 10. Managed connector contract gate
+
+Public Ports now define an exact credential materialization request, a one-shot managed connector
+invocation capability, a provider-specific managed observation capability, and pure binding
+validators. Lease request/reference equality covers every ADR-124 identity and rejects stale,
+substituted, cross-scope, cross-attempt, cross-destination, changed-idempotency, permit, and
+classification mismatches before capability use.
+
+The gate validates the three closed delivery certainties and exact reconciliation binding without
+networking or secret material. PostgreSQL and provider-sandbox execution remain later gates;
+existing payload persistence remains unchanged and Alembic stays at `20260808_0024`.

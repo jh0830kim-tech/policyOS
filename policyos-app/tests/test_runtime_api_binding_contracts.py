@@ -719,6 +719,12 @@ def reconciliation_write_set(*, persisted=None) -> RuntimeEffectReconciliationRe
         tenant_id=item.scope.tenant_id,
         organization_id=item.scope.organization_id,
         destination_reference="destination.approved",
+        connector_provisioning_reference="connector.provisioning",
+        effect_idempotency_key="effect.idempotency",
+        root_lineage_id=item.scope.root_lineage_id,
+        root_lineage_digest_reference=item.scope.root_lineage_digest_reference,
+        acknowledgement_reference=None,
+        acknowledgement_digest_reference=None,
         observation_capability_reference="observation.approved",
         runtime_authority_bundle_id=item.authority_bundle.record_id,
         runtime_admission_decision_id=item.admission.record_id,
@@ -1122,7 +1128,10 @@ def test_managed_request_capability_and_leaf_factory_returns_are_exact() -> None
     )
 
     expected = (
-        (RuntimeApiDomainOperationCapabilityFactory, RuntimeApiDomainOperationCapability),
+        (
+            RuntimeApiDomainOperationCapabilityFactory,
+            RuntimeApiDomainOperationCapability,
+        ),
         (RuntimeClockFactory, RuntimeClockPort),
         (RuntimeApiRateAdmissionCapabilityFactory, RuntimeApiRateAdmissionCapability),
         (RuntimeApiDeadlineBudgetCapabilityFactory, RuntimeApiDeadlineBudgetCapability),
@@ -1130,7 +1139,10 @@ def test_managed_request_capability_and_leaf_factory_returns_are_exact() -> None
             RuntimeApiDisconnectObservationCapabilityFactory,
             RuntimeApiDisconnectObservationCapability,
         ),
-        (RuntimeApiPreparationContextUpstreamFactory, RuntimeApiPreparationContextUpstream),
+        (
+            RuntimeApiPreparationContextUpstreamFactory,
+            RuntimeApiPreparationContextUpstream,
+        ),
     )
     for factory, capability in expected:
         annotation = signature(factory.__call__).return_annotation

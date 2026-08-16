@@ -8,6 +8,22 @@ from app.runtime.ports.cancellation import (
     RuntimeCancellationStatus,
 )
 from app.runtime.ports.clock import RuntimeClockPort, RuntimeClockReading
+from app.runtime.ports.connector import (
+    RuntimeConnectorInvocationCapability,
+    RuntimeConnectorInvocationCapabilityFactory,
+    RuntimeConnectorMaterializationRequest,
+    RuntimeConnectorObservationCapability,
+    RuntimeConnectorObservationCapabilityFactory,
+    RuntimeConnectorObservationInvocation,
+    RuntimeManagedConnectorInvocationCapability,
+    RuntimeManagedConnectorObservationCapability,
+)
+from app.runtime.ports.connector_validation import (
+    validate_runtime_connector_delivery_result,
+    validate_runtime_connector_materialization_request,
+    validate_runtime_connector_observation,
+    validate_runtime_connector_observation_invocation,
+)
 from app.runtime.ports.credentials import (
     RuntimeCredentialBrokerPort,
     RuntimeCredentialLeaseOutcome,
@@ -192,6 +208,7 @@ from app.runtime.ports.validation import (
     validate_runtime_cancellation_observation,
     validate_runtime_clock_reading,
     validate_runtime_credential_lease_outcome,
+    validate_runtime_credential_lease_reference,
     validate_runtime_repository_write_receipt,
     validate_runtime_transaction_receipt,
 )
@@ -237,11 +254,19 @@ __all__ = (
     "RuntimeCancellationStatus",
     "RuntimeClockPort",
     "RuntimeClockReading",
+    "RuntimeConnectorInvocationCapability",
+    "RuntimeConnectorInvocationCapabilityFactory",
+    "RuntimeConnectorMaterializationRequest",
+    "RuntimeConnectorObservationCapability",
+    "RuntimeConnectorObservationCapabilityFactory",
+    "RuntimeConnectorObservationInvocation",
     "RuntimeCredentialBrokerPort",
     "RuntimeCredentialLeaseOutcome",
     "RuntimeCredentialLeaseReference",
     "RuntimeCredentialLeaseRequest",
     "RuntimeCredentialLeaseStatus",
+    "RuntimeManagedConnectorInvocationCapability",
+    "RuntimeManagedConnectorObservationCapability",
     "RuntimeEffectClaim",
     "RuntimeEffectDeadLetterRecord",
     "RuntimeEffectDeliveryAttempt",
@@ -353,7 +378,12 @@ __all__ = (
     "validate_runtime_atomic_write_set",
     "validate_runtime_cancellation_observation",
     "validate_runtime_clock_reading",
+    "validate_runtime_connector_delivery_result",
+    "validate_runtime_connector_materialization_request",
+    "validate_runtime_connector_observation",
+    "validate_runtime_connector_observation_invocation",
     "validate_runtime_credential_lease_outcome",
+    "validate_runtime_credential_lease_reference",
     "validate_runtime_effect_claim",
     "validate_runtime_effect_delivery_attempt",
     "validate_runtime_effect_delivery_envelope",
