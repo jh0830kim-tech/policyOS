@@ -1142,6 +1142,21 @@ closed. Cleanup after a validated outcome cannot rewrite certainty or disclose a
 transmission before validation remains ambiguous. Existing CP8 payload evidence is sufficient,
 and no provider-operation table, backfill, or migration `20260808_0025` is approved.
 
+### Sprint 16 managed connector contract boundary
+
+Managed connector Ports expose only opaque exact references and bounded facts. Credential lease
+requests and references bind the connector provisioning, destination, adapter contract, envelope,
+stable effect idempotency identity, canonical permits, tenant, organization, execution request,
+attempt, actor, classification, issuance, and expiry. Secret, token, password, authorization
+header, provider body, raw client, session, transaction, and arbitrary metadata fields are absent.
+
+The provider-issued operation identity is preserved only as the acknowledgement reference.
+Ambiguity may retain its complete acknowledgement pair for authorized observation, but identity
+presence never proves success. Definite non-delivery cannot carry acknowledgement evidence.
+Observation requires exact connector, destination, idempotency, lineage, scope, classification,
+authority, permits, and provider identity. The gate performs no production I/O and creates no
+schema or migration `20260808_0025`.
+
 ### CP10 Worker PostgreSQL shutdown/crash-window acceptance
 
 PostgreSQL 16 tests prove that concurrent Worker claims cannot create two authoritative revisions,

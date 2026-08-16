@@ -308,6 +308,12 @@ def reconciliation_request() -> RuntimeEffectReconciliationRequest:
         tenant_id=uid(2),
         organization_id=uid(3),
         destination_reference="destination.approved",
+        connector_provisioning_reference="connector.provisioning",
+        effect_idempotency_key="effect.idempotency",
+        root_lineage_id=uid(4),
+        root_lineage_digest_reference="digest.lineage",
+        acknowledgement_reference=None,
+        acknowledgement_digest_reference=None,
         observation_capability_reference="observation.provider",
         runtime_authority_bundle_id=uid(50),
         runtime_admission_decision_id=uid(51),
@@ -332,6 +338,12 @@ def observation(
         tenant_id=uid(2),
         organization_id=uid(3),
         destination_reference="destination.approved",
+        connector_provisioning_reference="connector.provisioning",
+        effect_idempotency_key="effect.idempotency",
+        root_lineage_id=uid(4),
+        root_lineage_digest_reference="digest.lineage",
+        acknowledgement_reference=None,
+        acknowledgement_digest_reference=None,
         observation_capability_reference="observation.provider",
         runtime_authority_bundle_id=uid(50),
         permit_reference_ids=(uid(52),),
@@ -427,9 +439,7 @@ def test_claim_requires_exact_revision_and_no_overlapping_lease() -> None:
 
 def test_delivery_attempt_and_certainty_are_bounded() -> None:
     validate_runtime_effect_delivery_attempt(delivery_envelope(), claim(), attempt())
-    validate_runtime_effect_delivery_result(
-        delivery_envelope(), attempt(), delivery_result()
-    )
+    validate_runtime_effect_delivery_result(delivery_envelope(), attempt(), delivery_result())
     with pytest.raises(ValidationError):
         delivery_result(
             RuntimeEffectDeliveryCertainty.AMBIGUOUS,
@@ -462,9 +472,7 @@ def test_ambiguous_delivery_needs_reconciliation_before_retry() -> None:
     decision = retry_decision(
         prior_certainty=RuntimeEffectDeliveryCertainty.AMBIGUOUS,
         reconciliation_observation_id=uid(91),
-        reconciliation_outcome=(
-            RuntimeEffectReconciliationOutcome.CONFIRMED_NOT_DELIVERED
-        ),
+        reconciliation_outcome=(RuntimeEffectReconciliationOutcome.CONFIRMED_NOT_DELIVERED),
     )
     with pytest.raises(RuntimePortRetryError):
         validate_runtime_effect_retry_decision(
@@ -533,10 +541,7 @@ def test_dead_letter_is_terminal_reference_only_evidence() -> None:
         dead_lettered_at=NOW + timedelta(minutes=3),
         dead_letter_digest_reference="digest.dead-letter",
     )
-    assert not any(
-        "payload" in name or "credential" in name
-        for name in type(record).model_fields
-    )
+    assert not any("payload" in name or "credential" in name for name in type(record).model_fields)
     dead = lifecycle(2, RuntimeEffectLifecycleStatus.DEAD_LETTERED)
     with pytest.raises(RuntimePortLifecycleError):
         validate_runtime_effect_lifecycle_transition(
@@ -646,8 +651,7 @@ def test_delivery_gate_has_no_io_or_forbidden_dependency() -> None:
         calls = {
             node.func.attr if isinstance(node.func, ast.Attribute) else node.func.id
             for node in ast.walk(tree)
-            if isinstance(node, ast.Call)
-            and isinstance(node.func, (ast.Attribute, ast.Name))
+            if isinstance(node, ast.Call) and isinstance(node.func, (ast.Attribute, ast.Name))
         }
         assert not calls.intersection(forbidden_calls)
     assert not (ROOT / "app" / "runtime" / "outbox").exists()

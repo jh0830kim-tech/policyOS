@@ -1171,3 +1171,17 @@ Credential leases must carry exact connector, destination, adapter-contract, env
 idempotency, permit, scope, attempt, classification, and lifetime binding without secret content.
 Existing lifecycle payloads preserve these bounded outcome references, so no provider-operation
 table, backfill, or migration `20260808_0025` is approved.
+
+### Sprint 16 managed connector public contracts
+
+The contract gate adds strict, immutable, secret-free connector materialization and observation
+capabilities. Credential lease requests and references carry exact connector, destination,
+adapter-contract, envelope, effect-idempotency, permit, scope, attempt, classification, and
+lifetime bindings. Managed invocation and observation capabilities are request-local asynchronous
+context managers with no session, transaction, retry, reset, or raw-client API.
+
+Delivered results require separate logical-result and provider-acknowledgement pairs. Ambiguous
+results may retain a complete provider acknowledgement pair for exact observation, while definite
+non-delivery prohibits acknowledgement evidence. Reconciliation preserves the connector,
+destination, idempotency, lineage, and provider-operation identity exactly. This contract-only
+gate performs no external I/O and adds no schema or migration `20260808_0025`.

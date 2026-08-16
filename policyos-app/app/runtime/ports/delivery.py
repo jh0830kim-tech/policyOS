@@ -239,7 +239,10 @@ class RuntimeEffectDeliveryResult(RuntimePortModel):
         if self.completed_at < self.started_at:
             raise ValueError("delivery result cannot complete before it starts")
         result_pair = (self.result_reference, self.result_digest_reference)
-        ack_pair = (self.acknowledgement_reference, self.acknowledgement_digest_reference)
+        ack_pair = (
+            self.acknowledgement_reference,
+            self.acknowledgement_digest_reference,
+        )
         if (result_pair[0] is None) != (result_pair[1] is None):
             raise ValueError("delivery result reference and digest must appear together")
         if (ack_pair[0] is None) != (ack_pair[1] is None):
@@ -252,6 +255,11 @@ class RuntimeEffectDeliveryResult(RuntimePortModel):
                 raise ValueError("delivered result requires result and acknowledgement evidence")
         elif failure_pair[0] is None or result_pair[0] is not None:
             raise ValueError("non-delivered result requires bounded failure evidence only")
+        elif (
+            self.certainty is RuntimeEffectDeliveryCertainty.DEFINITELY_NOT_DELIVERED
+            and ack_pair[0] is not None
+        ):
+            raise ValueError("definite non-delivery cannot contain acknowledgement evidence")
         return self
 
 
@@ -299,8 +307,7 @@ class RuntimeEffectRetryDecision(RuntimePortModel):
                 is RuntimeEffectReconciliationOutcome.CONFIRMED_NOT_DELIVERED
             )
             if (
-                self.prior_certainty
-                is not RuntimeEffectDeliveryCertainty.DEFINITELY_NOT_DELIVERED
+                self.prior_certainty is not RuntimeEffectDeliveryCertainty.DEFINITELY_NOT_DELIVERED
                 and not reconciled_not_delivered
             ):
                 raise ValueError("approved retry requires definitely-not-delivered evidence")
@@ -327,9 +334,13 @@ class RuntimeEffectRetryDecision(RuntimePortModel):
         )
         if (observation_pair[0] is None) != (observation_pair[1] is None):
             raise ValueError("reconciliation identity and outcome must appear together")
-        if approved and observation_pair[0] is not None and (
-            self.reconciliation_outcome
-            is not RuntimeEffectReconciliationOutcome.CONFIRMED_NOT_DELIVERED
+        if (
+            approved
+            and observation_pair[0] is not None
+            and (
+                self.reconciliation_outcome
+                is not RuntimeEffectReconciliationOutcome.CONFIRMED_NOT_DELIVERED
+            )
         ):
             raise ValueError("approved retry reconciliation must confirm not delivered")
         return self
@@ -374,6 +385,12 @@ class RuntimeEffectReconciliationRequest(RuntimePortModel):
     tenant_id: UUID
     organization_id: UUID
     destination_reference: BoundedId
+    connector_provisioning_reference: BoundedId
+    effect_idempotency_key: BoundedId
+    root_lineage_id: UUID
+    root_lineage_digest_reference: BoundedId
+    acknowledgement_reference: BoundedId | None = None
+    acknowledgement_digest_reference: BoundedId | None = None
     observation_capability_reference: BoundedId
     runtime_authority_bundle_id: UUID
     runtime_admission_decision_id: UUID
@@ -395,6 +412,13 @@ class RuntimeEffectReconciliationRequest(RuntimePortModel):
     def timestamp(cls, value: datetime) -> datetime:
         return aware(value, "requested_at")
 
+    @model_validator(mode="after")
+    def acknowledgement_pair(self) -> Self:
+        pair = (self.acknowledgement_reference, self.acknowledgement_digest_reference)
+        if (pair[0] is None) != (pair[1] is None):
+            raise ValueError("reconciliation acknowledgement evidence must be complete")
+        return self
+
 
 class RuntimeEffectReconciliationObservation(RuntimePortModel):
     runtime_effect_reconciliation_observation_id: UUID
@@ -403,6 +427,12 @@ class RuntimeEffectReconciliationObservation(RuntimePortModel):
     tenant_id: UUID
     organization_id: UUID
     destination_reference: BoundedId
+    connector_provisioning_reference: BoundedId
+    effect_idempotency_key: BoundedId
+    root_lineage_id: UUID
+    root_lineage_digest_reference: BoundedId
+    acknowledgement_reference: BoundedId | None = None
+    acknowledgement_digest_reference: BoundedId | None = None
     observation_capability_reference: BoundedId
     runtime_authority_bundle_id: UUID
     permit_reference_ids: tuple[UUID, ...]
@@ -427,12 +457,16 @@ class RuntimeEffectReconciliationObservation(RuntimePortModel):
 
     @model_validator(mode="after")
     def bounded_observation(self) -> Self:
+        acknowledgement_pair = (
+            self.acknowledgement_reference,
+            self.acknowledgement_digest_reference,
+        )
+        if (acknowledgement_pair[0] is None) != (acknowledgement_pair[1] is None):
+            raise ValueError("observation acknowledgement evidence must be complete")
         evidence_pair = (self.observation_reference, self.observation_digest_reference)
         if (evidence_pair[0] is None) != (evidence_pair[1] is None):
             raise ValueError("observation reference and digest must appear together")
-        unavailable = (
-            self.outcome is RuntimeEffectReconciliationOutcome.OBSERVATION_UNAVAILABLE
-        )
+        unavailable = self.outcome is RuntimeEffectReconciliationOutcome.OBSERVATION_UNAVAILABLE
         if unavailable:
             if self.failure_reference is None or evidence_pair[0] is not None:
                 raise ValueError("unavailable observation requires only a failure reference")
@@ -495,7 +529,11 @@ class RuntimeEffectLifecycleRecord(RuntimePortModel):
             RuntimeEffectLifecycleStatus.ENQUEUED: set(),
             RuntimeEffectLifecycleStatus.CLAIMED: {"claim"},
             RuntimeEffectLifecycleStatus.DELIVERING: {"claim", "attempt"},
-            RuntimeEffectLifecycleStatus.DELIVERED: {"attempt", "result", "observation"},
+            RuntimeEffectLifecycleStatus.DELIVERED: {
+                "attempt",
+                "result",
+                "observation",
+            },
             RuntimeEffectLifecycleStatus.RETRY_SCHEDULED: {
                 "attempt",
                 "retry",

@@ -1,0 +1,434 @@
+"""Focused, network-free tests for Sprint 16 managed connector contracts."""
+
+import inspect
+from datetime import UTC, datetime, timedelta
+from typing import Literal
+from uuid import UUID
+
+import pytest
+from pydantic import ValidationError
+
+from app.ai.privacy import DataClassification
+from app.runtime.ports import (
+    RuntimeAdapterFamily,
+    RuntimeConnectorInvocationCapability,
+    RuntimeConnectorInvocationCapabilityFactory,
+    RuntimeConnectorMaterializationRequest,
+    RuntimeConnectorObservationCapability,
+    RuntimeConnectorObservationCapabilityFactory,
+    RuntimeConnectorObservationInvocation,
+    RuntimeCredentialLeaseReference,
+    RuntimeCredentialLeaseRequest,
+    RuntimeEffectClaim,
+    RuntimeEffectDeliveryAttempt,
+    RuntimeEffectDeliveryCertainty,
+    RuntimeEffectDeliveryEnvelope,
+    RuntimeEffectDeliveryInvocation,
+    RuntimeEffectDeliveryResult,
+    RuntimeEffectIdentity,
+    RuntimeEffectReconciliationObservation,
+    RuntimeEffectReconciliationOutcome,
+    RuntimeEffectReconciliationRequest,
+    RuntimeManagedConnectorInvocationCapability,
+    RuntimeManagedConnectorObservationCapability,
+    RuntimePortContractError,
+    RuntimePortCredentialError,
+    RuntimePortErrorCode,
+    RuntimePortReconciliationError,
+    RuntimePortScope,
+    validate_runtime_connector_delivery_result,
+    validate_runtime_connector_materialization_request,
+    validate_runtime_connector_observation,
+    validate_runtime_connector_observation_invocation,
+)
+
+NOW = datetime(2026, 8, 16, 4, 0, tzinfo=UTC)
+
+
+def uid(value: int) -> UUID:
+    return UUID(int=value)
+
+
+def scope() -> RuntimePortScope:
+    return RuntimePortScope.model_construct(
+        runtime_execution_request_id=uid(1),
+        runtime_authority_bundle_id=uid(2),
+        runtime_admission_decision_id=uid(3),
+        execution_plan_id=uid(4),
+        execution_plan_step_id=uid(5),
+        attempt_id=uid(40),
+        actor_id=uid(6),
+        agent_instance_id=uid(7),
+        on_behalf_of_user_id=None,
+        tenant_id=uid(8),
+        organization_id=uid(9),
+        classification=DataClassification.CONFIDENTIAL,
+        root_lineage_id=uid(10),
+        root_lineage_digest_reference="digest.lineage",
+        provenance_reference_ids=(),
+        policy_revision=1,
+        authorization_revision=1,
+        registry_revision=1,
+        state_revision=1,
+    )
+
+
+def identity() -> RuntimeEffectIdentity:
+    return RuntimeEffectIdentity.model_construct(
+        runtime_effect_id=uid(20),
+        tenant_id=uid(8),
+        organization_id=uid(9),
+        runtime_execution_request_id=uid(1),
+        execution_plan_id=uid(4),
+        execution_plan_step_id=uid(5),
+        destination_reference="destination.approved",
+        effect_idempotency_key="effect.idempotency",
+        classification=DataClassification.CONFIDENTIAL,
+        root_lineage_id=uid(10),
+        root_lineage_digest_reference="digest.lineage",
+    )
+
+
+def envelope() -> RuntimeEffectDeliveryEnvelope:
+    return RuntimeEffectDeliveryEnvelope.model_construct(
+        runtime_effect_delivery_envelope_id=uid(30),
+        effect_identity=identity(),
+        adapter_family=RuntimeAdapterFamily.CONNECTOR,
+        adapter_reference="adapter.connector",
+        adapter_contract_version="1.0",
+        actor_id=uid(6),
+        agent_instance_id=uid(7),
+        envelope_digest_reference="digest.envelope",
+    )
+
+
+def attempt() -> RuntimeEffectDeliveryAttempt:
+    return RuntimeEffectDeliveryAttempt.model_construct(
+        runtime_effect_delivery_attempt_id=uid(40),
+        runtime_effect_id=uid(20),
+        attempt_number=1,
+        runtime_effect_claim_id=uid(42),
+        lease_id=uid(43),
+        runtime_authority_bundle_id=uid(2),
+        runtime_admission_decision_id=uid(3),
+        permit_reference_ids=(uid(50),),
+        policy_revision=1,
+        authorization_revision=1,
+        registry_revision=1,
+        state_revision=1,
+        audit_revision=1,
+        credential_lease_reference_id=uid(61),
+        cancellation_reference_id=None,
+        clock_reference="clock.trusted",
+        requested_at=NOW,
+        deadline=NOW + timedelta(minutes=5),
+        attempt_digest_reference="digest.attempt",
+    )
+
+
+def claim() -> RuntimeEffectClaim:
+    return RuntimeEffectClaim.model_construct(
+        runtime_effect_claim_id=uid(42),
+        runtime_effect_id=uid(20),
+        tenant_id=uid(8),
+        organization_id=uid(9),
+        expected_lifecycle_revision=1,
+        claimant_reference="worker.connector",
+        lease_id=uid(43),
+        clock_reference="clock.trusted",
+        claimed_at=NOW - timedelta(seconds=1),
+        expires_at=NOW + timedelta(minutes=5),
+        claim_digest_reference="digest.claim",
+    )
+
+
+def invocation() -> RuntimeEffectDeliveryInvocation:
+    return RuntimeEffectDeliveryInvocation.model_construct(
+        runtime_effect_delivery_invocation_id=uid(41),
+        envelope=envelope(),
+        claim=claim(),
+        attempt=attempt(),
+    )
+
+
+def lease_request() -> RuntimeCredentialLeaseRequest:
+    return RuntimeCredentialLeaseRequest(
+        runtime_credential_lease_request_id=uid(60),
+        scope=scope(),
+        adapter_family=RuntimeAdapterFamily.CONNECTOR,
+        adapter_reference="adapter.connector",
+        adapter_contract_version="1.0",
+        connector_provisioning_reference="connector.provisioning",
+        destination_reference="destination.approved",
+        credential_reference="credential.reference",
+        credential_purpose_reference="connector.invoke",
+        permit_reference_ids=(uid(50),),
+        runtime_effect_delivery_envelope_id=uid(30),
+        envelope_digest_reference="digest.envelope",
+        runtime_effect_id=uid(20),
+        effect_idempotency_key="effect.idempotency",
+        requested_at=NOW,
+        expires_at=NOW + timedelta(minutes=4),
+    )
+
+
+def lease_reference() -> RuntimeCredentialLeaseReference:
+    return RuntimeCredentialLeaseReference(
+        runtime_credential_lease_reference_id=uid(61),
+        runtime_credential_lease_request_id=uid(60),
+        broker_reference="broker.production",
+        runtime_execution_request_id=uid(1),
+        adapter_family=RuntimeAdapterFamily.CONNECTOR,
+        adapter_reference="adapter.connector",
+        adapter_contract_version="1.0",
+        connector_provisioning_reference="connector.provisioning",
+        destination_reference="destination.approved",
+        credential_reference="credential.reference",
+        credential_purpose_reference="connector.invoke",
+        permit_reference_ids=(uid(50),),
+        runtime_effect_delivery_envelope_id=uid(30),
+        envelope_digest_reference="digest.envelope",
+        runtime_effect_id=uid(20),
+        effect_idempotency_key="effect.idempotency",
+        tenant_id=uid(8),
+        organization_id=uid(9),
+        actor_id=uid(6),
+        agent_instance_id=uid(7),
+        attempt_id=uid(40),
+        classification=DataClassification.CONFIDENTIAL,
+        issued_at=NOW,
+        expires_at=NOW + timedelta(minutes=4),
+    )
+
+
+def materialization() -> RuntimeConnectorMaterializationRequest:
+    return RuntimeConnectorMaterializationRequest(
+        runtime_connector_materialization_request_id=uid(62),
+        credential_lease_request=lease_request(),
+        credential_lease_reference=lease_reference(),
+        invocation=invocation(),
+        requested_at=NOW + timedelta(seconds=1),
+    )
+
+
+def delivery_result(
+    certainty: RuntimeEffectDeliveryCertainty,
+    *,
+    acknowledged: bool,
+) -> RuntimeEffectDeliveryResult:
+    delivered = certainty is RuntimeEffectDeliveryCertainty.DELIVERED
+    return RuntimeEffectDeliveryResult(
+        runtime_effect_delivery_result_id=uid(70),
+        runtime_effect_id=uid(20),
+        runtime_effect_delivery_attempt_id=uid(40),
+        certainty=certainty,
+        adapter_reference="adapter.connector",
+        adapter_contract_version="1.0",
+        result_reference="result.logical" if delivered else None,
+        result_digest_reference="digest.result" if delivered else None,
+        acknowledgement_reference="provider.operation" if acknowledged else None,
+        acknowledgement_digest_reference="digest.acknowledgement" if acknowledged else None,
+        failure_code=None if delivered else RuntimePortErrorCode.TIMEOUT,
+        failure_reference=None if delivered else "failure.safe",
+        started_at=NOW + timedelta(seconds=2),
+        completed_at=NOW + timedelta(seconds=3),
+        result_fact_digest_reference="digest.result-fact",
+    )
+
+
+def reconciliation_request() -> RuntimeEffectReconciliationRequest:
+    return RuntimeEffectReconciliationRequest.model_construct(
+        runtime_effect_reconciliation_request_id=uid(80),
+        runtime_effect_id=uid(20),
+        ambiguous_attempt_id=uid(40),
+        ambiguous_result_id=uid(70),
+        tenant_id=uid(8),
+        organization_id=uid(9),
+        destination_reference="destination.approved",
+        connector_provisioning_reference="connector.provisioning",
+        effect_idempotency_key="effect.idempotency",
+        root_lineage_id=uid(10),
+        root_lineage_digest_reference="digest.lineage",
+        acknowledgement_reference="provider.operation",
+        acknowledgement_digest_reference="digest.acknowledgement",
+        observation_capability_reference="observation.connector",
+        runtime_authority_bundle_id=uid(2),
+        runtime_admission_decision_id=uid(3),
+        permit_reference_ids=(uid(50),),
+        classification=DataClassification.CONFIDENTIAL,
+        clock_reference="clock.trusted",
+        requested_at=NOW + timedelta(seconds=4),
+        request_digest_reference="digest.reconciliation-request",
+    )
+
+
+def observation_invocation() -> RuntimeConnectorObservationInvocation:
+    return RuntimeConnectorObservationInvocation(
+        runtime_connector_observation_invocation_id=uid(81),
+        envelope=envelope(),
+        ambiguous_result=delivery_result(
+            RuntimeEffectDeliveryCertainty.AMBIGUOUS,
+            acknowledged=True,
+        ),
+        reconciliation_request=reconciliation_request(),
+        requested_at=NOW + timedelta(seconds=4),
+    )
+
+
+def observation() -> RuntimeEffectReconciliationObservation:
+    request = reconciliation_request()
+    return RuntimeEffectReconciliationObservation.model_construct(
+        runtime_effect_reconciliation_observation_id=uid(82),
+        runtime_effect_reconciliation_request_id=request.runtime_effect_reconciliation_request_id,
+        runtime_effect_id=uid(20),
+        tenant_id=uid(8),
+        organization_id=uid(9),
+        destination_reference="destination.approved",
+        connector_provisioning_reference="connector.provisioning",
+        effect_idempotency_key="effect.idempotency",
+        root_lineage_id=uid(10),
+        root_lineage_digest_reference="digest.lineage",
+        acknowledgement_reference="provider.operation",
+        acknowledgement_digest_reference="digest.acknowledgement",
+        observation_capability_reference="observation.connector",
+        runtime_authority_bundle_id=request.runtime_authority_bundle_id,
+        permit_reference_ids=request.permit_reference_ids,
+        classification=DataClassification.CONFIDENTIAL,
+        outcome=RuntimeEffectReconciliationOutcome.STILL_AMBIGUOUS,
+        observation_reference="provider.observation",
+        observation_digest_reference="digest.observation",
+        failure_reference=None,
+        observed_at=NOW + timedelta(seconds=5),
+    )
+
+
+def test_materialization_is_exact_and_secret_free() -> None:
+    request = materialization()
+    assert validate_runtime_connector_materialization_request(request) is request
+    fields = set(RuntimeCredentialLeaseReference.model_fields)
+    assert not fields.intersection({"secret", "token", "password", "authorization_header"})
+
+    substituted = request.model_copy(
+        update={
+            "credential_lease_reference": lease_reference().model_copy(
+                update={"destination_reference": "destination.substituted"}
+            )
+        }
+    )
+    with pytest.raises(RuntimePortCredentialError):
+        validate_runtime_connector_materialization_request(substituted)
+
+
+def test_connector_result_mapping_preserves_ambiguity_and_rejects_false_certainty() -> None:
+    request = materialization()
+    delivered = delivery_result(RuntimeEffectDeliveryCertainty.DELIVERED, acknowledged=True)
+    assert validate_runtime_connector_delivery_result(request, delivered) is delivered
+
+    ambiguous = delivery_result(RuntimeEffectDeliveryCertainty.AMBIGUOUS, acknowledged=True)
+    assert validate_runtime_connector_delivery_result(request, ambiguous) is ambiguous
+    assert ambiguous.acknowledgement_reference == "provider.operation"
+
+    with pytest.raises(ValidationError):
+        delivery_result(
+            RuntimeEffectDeliveryCertainty.DEFINITELY_NOT_DELIVERED,
+            acknowledged=True,
+        )
+    with pytest.raises(ValidationError):
+        RuntimeEffectDeliveryResult(
+            **{
+                **delivered.model_dump(),
+                "acknowledgement_digest_reference": None,
+            }
+        )
+
+
+def test_connector_observation_requires_exact_ambiguous_identity() -> None:
+    invocation_fact = observation_invocation()
+    assert validate_runtime_connector_observation_invocation(invocation_fact) is invocation_fact
+    observed = observation()
+    assert validate_runtime_connector_observation(invocation_fact, observed) is observed
+
+    substituted = invocation_fact.model_copy(
+        update={
+            "reconciliation_request": reconciliation_request().model_copy(
+                update={"acknowledgement_reference": "provider.other"}
+            )
+        }
+    )
+    with pytest.raises(RuntimePortReconciliationError):
+        validate_runtime_connector_observation_invocation(substituted)
+
+
+def test_managed_protocols_are_runtime_checkable_and_have_closed_exit() -> None:
+    class InvocationCapability:
+        connector_provisioning_reference = "connector.provisioning"
+        destination_reference = "destination.approved"
+        runtime_credential_lease_reference_id = uid(61)
+
+        async def invoke(self, invocation):
+            return delivery_result(RuntimeEffectDeliveryCertainty.DELIVERED, acknowledged=True)
+
+    class ManagedInvocation:
+        async def __aenter__(self):
+            return InvocationCapability()
+
+        async def __aexit__(self, exc_type, exc_value, traceback):
+            return False
+
+    class InvocationFactory:
+        def create(self, request):
+            return ManagedInvocation()
+
+    class ObservationCapability:
+        connector_provisioning_reference = "connector.provisioning"
+        destination_reference = "destination.approved"
+
+        async def observe(self, invocation):
+            return observation()
+
+    class ManagedObservation:
+        async def __aenter__(self):
+            return ObservationCapability()
+
+        async def __aexit__(self, exc_type, exc_value, traceback):
+            return False
+
+    class ObservationFactory:
+        def create(self, invocation):
+            return ManagedObservation()
+
+    assert isinstance(InvocationCapability(), RuntimeConnectorInvocationCapability)
+    assert isinstance(ManagedInvocation(), RuntimeManagedConnectorInvocationCapability)
+    assert isinstance(InvocationFactory(), RuntimeConnectorInvocationCapabilityFactory)
+    assert isinstance(ObservationCapability(), RuntimeConnectorObservationCapability)
+    assert isinstance(ManagedObservation(), RuntimeManagedConnectorObservationCapability)
+    assert isinstance(ObservationFactory(), RuntimeConnectorObservationCapabilityFactory)
+    for managed in (
+        RuntimeManagedConnectorInvocationCapability,
+        RuntimeManagedConnectorObservationCapability,
+    ):
+        assert inspect.signature(managed.__aexit__).return_annotation == Literal[False]
+
+
+def test_connector_contracts_are_strict_and_extra_forbidden() -> None:
+    with pytest.raises(ValidationError):
+        RuntimeConnectorMaterializationRequest(
+            **{
+                **materialization().model_dump(),
+                "credential_secret": "forbidden",
+            }
+        )
+    with pytest.raises(ValidationError):
+        RuntimeCredentialLeaseRequest(
+            **{
+                **lease_request().model_dump(),
+                "adapter_family": RuntimeAdapterFamily.PROVIDER,
+            }
+        )
+
+
+def test_connector_result_binding_rejects_adapter_substitution() -> None:
+    result = delivery_result(RuntimeEffectDeliveryCertainty.DELIVERED, acknowledged=True)
+    substituted = result.model_copy(update={"adapter_reference": "adapter.other"})
+    with pytest.raises(RuntimePortContractError):
+        validate_runtime_connector_delivery_result(materialization(), substituted)

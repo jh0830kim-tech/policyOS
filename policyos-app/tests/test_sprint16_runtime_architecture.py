@@ -106,3 +106,40 @@ def test_adr124_governs_connector_evidence_mapping_and_exact_lease_binding() -> 
         assert prohibited not in combined
 
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_managed_connector_public_contract_gate_is_bounded() -> None:
+    connector = (ROOT / "app/runtime/ports/connector.py").read_text(encoding="utf-8")
+    credentials = (ROOT / "app/runtime/ports/credentials.py").read_text(encoding="utf-8")
+    delivery = (ROOT / "app/runtime/ports/delivery.py").read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((connector, credentials, delivery, roadmap, program, security))
+
+    for required in (
+        "RuntimeConnectorMaterializationRequest",
+        "RuntimeManagedConnectorInvocationCapability",
+        "RuntimeConnectorObservationInvocation",
+        "RuntimeManagedConnectorObservationCapability",
+        "adapter_contract_version",
+        "connector_provisioning_reference",
+        "runtime_effect_delivery_envelope_id",
+        "effect_idempotency_key",
+        "definite non-delivery cannot contain acknowledgement evidence",
+        "request-local asynchronous",
+        "no schema or migration `20260808_0025`",
+    ):
+        assert required in combined
+
+    for prohibited in (
+        "import fastapi",
+        "import sqlalchemy",
+        "import requests",
+        "import httpx",
+        "authorization_header:",
+        "credential_secret:",
+    ):
+        assert prohibited not in connector.lower()
+
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

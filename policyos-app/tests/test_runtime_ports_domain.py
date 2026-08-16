@@ -492,17 +492,13 @@ def test_invocation_policy_binding_rejects_validation_only_and_inconsistent_retr
 
 def test_invocation_envelope_binds_exact_upstream_facts() -> None:
     invocation = envelope()
-    assert validate_runtime_adapter_invocation_envelope(
-        invocation, *upstream_facts()
-    ) is invocation
+    assert validate_runtime_adapter_invocation_envelope(invocation, *upstream_facts()) is invocation
     with pytest.raises(RuntimePortReferenceError):
         validate_runtime_adapter_invocation_envelope(
             invocation.model_copy(update={"action": "substituted-action"}),
             *upstream_facts(),
         )
-    substituted = invocation.policy_binding.model_copy(
-        update={"purpose": "purpose.substituted"}
-    )
+    substituted = invocation.policy_binding.model_copy(update={"purpose": "purpose.substituted"})
     with pytest.raises(RuntimePortReferenceError):
         validate_runtime_adapter_invocation_envelope(
             invocation.model_copy(update={"policy_binding": substituted}),
@@ -542,13 +538,16 @@ def test_adapter_result_is_bounded_and_exact() -> None:
     assert validate_runtime_adapter_invocation_result(result, invocation) is result
     with pytest.raises(ValidationError):
         result.model_validate(
-            {**result.model_dump(), "failure": RuntimePortFailure(
-                runtime_port_failure_id=uid(81),
-                error_code=RuntimePortErrorCode.ADAPTER_REJECTED,
-                error_reference="safe-error",
-                classification=DataClassification.CONFIDENTIAL,
-                occurred_at=NOW + timedelta(seconds=4),
-            )}
+            {
+                **result.model_dump(),
+                "failure": RuntimePortFailure(
+                    runtime_port_failure_id=uid(81),
+                    error_code=RuntimePortErrorCode.ADAPTER_REJECTED,
+                    error_reference="safe-error",
+                    classification=DataClassification.CONFIDENTIAL,
+                    occurred_at=NOW + timedelta(seconds=4),
+                ),
+            }
         )
 
 
@@ -580,22 +579,15 @@ def test_repository_write_revision_and_receipt_are_exact() -> None:
     with pytest.raises(RuntimePortRevisionError):
         validate_runtime_repository_write_receipt(
             request,
-            receipt.model_copy(
-                update={"runtime_repository_write_receipt_id": uid(93)}
-            ),
+            receipt.model_copy(update={"runtime_repository_write_receipt_id": uid(93)}),
         )
     with pytest.raises(ValidationError):
-        RuntimeRepositoryWriteRequest(
-            **{**request.model_dump(), "resulting_revision": 9}
-        )
+        RuntimeRepositoryWriteRequest(**{**request.model_dump(), "resulting_revision": 9})
 
 
 def test_clock_reading_is_injected_and_reference_bound() -> None:
     reading = RuntimeClockReading(clock_reference="clock.test", observed_at=NOW)
-    assert (
-        validate_runtime_clock_reading(reading, expected_clock_reference="clock.test")
-        is reading
-    )
+    assert validate_runtime_clock_reading(reading, expected_clock_reference="clock.test") is reading
     with pytest.raises(RuntimePortReferenceError):
         validate_runtime_clock_reading(reading, expected_clock_reference="clock.other")
 
@@ -604,10 +596,18 @@ def test_credential_lease_contains_no_secret_and_matches_scope() -> None:
     request = RuntimeCredentialLeaseRequest(
         runtime_credential_lease_request_id=uid(100),
         scope=port_scope(),
-        adapter_reference="adapter.provider",
+        adapter_family=RuntimeAdapterFamily.CONNECTOR,
+        adapter_reference="adapter.connector",
+        adapter_contract_version="1.0",
+        connector_provisioning_reference="connector.provisioning",
+        destination_reference="destination.approved",
         credential_reference="credential-ref",
         credential_purpose_reference="provider-invoke",
         permit_reference_ids=(uid(40),),
+        runtime_effect_delivery_envelope_id=uid(102),
+        envelope_digest_reference="digest.envelope",
+        runtime_effect_id=uid(103),
+        effect_idempotency_key="effect.idempotency",
         requested_at=NOW,
         expires_at=NOW + timedelta(minutes=5),
     )
@@ -615,7 +615,19 @@ def test_credential_lease_contains_no_secret_and_matches_scope() -> None:
         runtime_credential_lease_reference_id=uid(101),
         runtime_credential_lease_request_id=uid(100),
         broker_reference="broker.internal",
+        runtime_execution_request_id=uid(1),
+        adapter_family=RuntimeAdapterFamily.CONNECTOR,
+        adapter_reference="adapter.connector",
+        adapter_contract_version="1.0",
+        connector_provisioning_reference="connector.provisioning",
+        destination_reference="destination.approved",
         credential_reference="credential-ref",
+        credential_purpose_reference="provider-invoke",
+        permit_reference_ids=(uid(40),),
+        runtime_effect_delivery_envelope_id=uid(102),
+        envelope_digest_reference="digest.envelope",
+        runtime_effect_id=uid(103),
+        effect_idempotency_key="effect.idempotency",
         tenant_id=uid(10),
         organization_id=uid(11),
         actor_id=uid(7),
@@ -749,9 +761,7 @@ def test_atomic_write_set_and_transaction_receipt_are_exact() -> None:
         validate_runtime_transaction_receipt(
             write_set, receipt.model_copy(update={"clock_reference": "clock.other"})
         )
-    substituted = commit_facts.record_receipts[0].model_copy(
-        update={"record_id": uid(999)}
-    )
+    substituted = commit_facts.record_receipts[0].model_copy(update={"record_id": uid(999)})
     with pytest.raises(RuntimePortTransactionError):
         validate_runtime_atomic_write_set(
             write_set.model_copy(
