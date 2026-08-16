@@ -44,15 +44,18 @@ state, and execution result is not a policy outcome.
 - CP9 production composition and three thin Runtime routes merged in PR #120. The combined
   PostgreSQL 16 and HTTP acceptance gate merged in PR #121 with exact replay, independent rate
   admission, facade transaction, rollback, and managed-lifecycle evidence. CP9 Runtime API is
-  complete within this approved boundary. No real external adapter, Worker, queue, polling loop,
-  scheduler, live credential resolver, or external business effect is introduced.
+  complete within this approved boundary.
+- CP10 Worker governance, public contracts, trusted preparation, production composition, bounded
+  poll/drain correction, and PostgreSQL shutdown/crash-window acceptance merged through PR #144.
+  The delivery-only Worker consumes persisted governed work without adding migration
+  `20260808_0025`, a Worker registry, scheduling authority, or external-effect exactly-once.
 
-### Target state - CP10 planned
+### Target state - Sprint 15 complete
 
-CP0 through CP9 are complete within their merged boundaries. CP10 Workers remain planned and may
-begin only under separate governance and explicit approval. Real external adapters, credential
-resolution, Worker execution, queues, polling, retries, scheduling, and external business effects
-remain separate future work.
+CP0 through CP10 are complete within their merged Sprint 15 boundaries. Real external adapters,
+live credential resolution, queue infrastructure, autonomous scheduling, generalized retries, and
+external business-effect exactly-once remain separate future work. The CP10 Worker is bounded to
+governed persisted delivery facts and does not infer policy, retry, reconciliation, or authority.
 
 ## 3. Program sequence versus dependency order
 
@@ -191,9 +194,11 @@ grants permission or causes automatic execution.
 | CP9 Combined PostgreSQL and HTTP Acceptance | Merged, PR #121 | Vertical acceptance | Real managed preparation, rate transaction, facade transaction, replay, rollback, and HTTP evidence | No migration `0025` |
 | CP9 closeout | Merged | Governance closeout | CP9 completion evidence and stale-status rejection | CP10 remains separately governed |
 | CP9 | Merged | API | Governed production Runtime API within the approved CP9 boundary | No Worker, queue, scheduler, or external business effect |
-| CP10 Worker Operating Model Governance | Governed / Validated, Pending Review | Worker governance | ADR-111 configured identity, scoped PostgreSQL polling, claim/lease, concurrency, and shutdown model | No production Worker or migration `0025` |
-| CP10 Worker Contract Semantics Governance | Governed / Validated, Pending Review | Contract governance | ADR-112 delivery-only operation set, fixed-delay timing, immutable configuration lifetime, and sticky shutdown observation | No public Python or migration `0025` |
-| CP10 | Planned | Workers | Governed persisted-work consumers | No inferred policy or hidden retry |
+| CP10 Worker Governance and Public Contracts | Merged, PR #123 through PR #140 | Worker governance and contracts | ADR-111 through ADR-121, exact prepared delivery, request preparation, result production, revalidation, shutdown observation, and operational-failure contracts | No migration `0025` |
+| CP10 Production Worker and Ordering Correction | Merged, PR #141 through PR #143 | Production Worker | Bounded delivery-only application service with non-blocking poll results and sticky shutdown drain | No scheduler or inferred retry |
+| CP10 PostgreSQL Shutdown/Crash-Window Acceptance | Merged, PR #144 | PostgreSQL evidence | Concurrent claim serialization, exact replay, durable `DELIVERING` exclusion, and zero-residue bounded drain | Test-only; no schema change |
+| CP10 closeout | Merged | Governance closeout | Combined CP8/CP9/CP10 regression and authoritative Sprint 15 completion state | No tag or release |
+| CP10 | Merged | Workers | Governed persisted-work delivery consumer | No inferred policy, hidden retry, or external exactly-once claim |
 
 CP9 Governance began in PR #60 and its sequenced governance, contracts, persistence, application,
 production-route, and acceptance gates are merged through PR #121. Routes remain in `app.api`;
@@ -1121,4 +1126,17 @@ PostgreSQL 16 acceptance proves concurrent claim serialization with exact replay
 `DELIVERING` exclusion from blind redelivery after a crash window, and bounded shutdown drain
 that preserves an already committed `CLAIMED` revision while reaching task residue zero. The gate
 is test-only, reuses existing lifecycle persistence, introduces no production/public contract,
-schema, or migration `20260808_0025`, and leaves combined regression and Sprint closeout separate.
+schema, or migration `20260808_0025`.
+
+### CP10 and Sprint 15 closeout
+
+CP10 is complete within the approved delivery-only Worker boundary. Governance and contract gates
+merged in PR #123 through PR #140, the production Worker and its ordering correction merged in
+PR #141 through PR #143, and PostgreSQL shutdown/crash-window acceptance merged in PR #144. The
+combined CP8/CP9/CP10 regression covers delivery, Runtime API, Worker contracts and production,
+and the PostgreSQL acceptance paths with the single Alembic head `20260808_0024`.
+
+Sprint 15 is complete within these merged boundaries. This closeout adds no production behavior,
+authority, public contract, model, repository, schema, credential path, external adapter, queue,
+scheduler, migration `20260808_0025`, tag, or release. External business-effect exactly-once,
+autonomous redrive, and live provider execution remain explicitly outside Sprint 15.

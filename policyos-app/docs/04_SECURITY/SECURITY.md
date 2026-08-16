@@ -129,9 +129,9 @@ All body, header, query, and path values are untrusted. HTTP callers cannot dire
 
 Invocation mutations require transport idempotency persistence and a bounded ASCII `Idempotency-Key` scoped to tenant, organization, principal, operation, explicit command version, and canonical command digest. Body size, collection size, content type, headers, rate, timeout, cancellation, and public errors are bounded. No raw credential, body, provider response, internal exception, SQL detail, or cross-tenant existence is exposed.
 
-Internal due, claim, lease, `DELIVERING`, lifecycle append, retry, and dead-letter operations are not public endpoints. External business-effect exactly-once is not guaranteed. Real provider/MCP/connector Adapters and Worker, queue, polling loop, and scheduler behavior remain excluded; Workers are CP10 scope. CP9 production routes and combined acceptance are merged through PR #121, the migration graph has the single head `20260808_0024`, CP9 Runtime API is complete within its approved boundary, and CP10 remains Planned.
+Internal due, claim, lease, `DELIVERING`, lifecycle append, retry, and dead-letter operations are not public endpoints. External business-effect exactly-once is not guaranteed. CP9 production routes and combined acceptance are merged through PR #121. CP10's delivery-only Worker governance, contracts, production composition, ordering correction, and PostgreSQL acceptance are merged through PR #144. The migration graph has the single head `20260808_0024`; CP9 and CP10 are complete within their approved Sprint 15 boundaries. Real provider/MCP/connector Adapters, queue infrastructure, autonomous scheduling, and external business-effect exactly-once remain excluded.
 
-Runtime permission definitions `runtime.read`, `runtime.invoke`, and `runtime.reconcile` are persisted by definition-only migration `20260807_0019`; a definition is not authority. Explicit `RolePermission` plus `MembershipRole`, active user/membership/binding, exact organization/tenant scope, and classification within the ceiling are required. No automatic grants, including admin/system grants, or existing role/membership backfill occurs. Wildcard and cross-organization substitution fail closed. Grant link deletion is visible on the next database resolution. Permission facts are not accepted from an HTTP body, and no raw bearer token, signing secret, or provider body is stored. Governed production grant/revoke provisioning and immutable evidence merged in PR #67; the later rate-policy management definition is added without automatic grants in migration `20260808_0024`. Trusted bootstrap assignment remains outside the Runtime API. CP9 Runtime API: Merged. CP10: Planned.
+Runtime permission definitions `runtime.read`, `runtime.invoke`, and `runtime.reconcile` are persisted by definition-only migration `20260807_0019`; a definition is not authority. Explicit `RolePermission` plus `MembershipRole`, active user/membership/binding, exact organization/tenant scope, and classification within the ceiling are required. No automatic grants, including admin/system grants, or existing role/membership backfill occurs. Wildcard and cross-organization substitution fail closed. Grant link deletion is visible on the next database resolution. Permission facts are not accepted from an HTTP body, and no raw bearer token, signing secret, or provider body is stored. Governed production grant/revoke provisioning and immutable evidence merged in PR #67; the later rate-policy management definition is added without automatic grants in migration `20260808_0024`. Trusted bootstrap assignment remains outside the Runtime API. CP9 Runtime API: Merged. CP10 Worker: Merged.
 ## Sprint 15 CP9 Runtime permission grant/revoke governance
 
 ADR-088 defines exact `runtime.grant.manage` authority as definition-only with automatic grant 0;
@@ -1086,6 +1086,20 @@ shutdown preserve Adapter-call count zero. Each candidate owns fresh request cap
 deadline cancellation is limited to application-admitted pending tasks with cleanup awaited to
 zero residue. The service imports no SQLAlchemy or framework transport and creates no schema or
 migration `20260808_0025`.
+
+### CP10 and Sprint 15 closeout security boundary
+
+CP10 is complete only within the governed delivery-only Worker boundary merged through PR #144.
+The Worker consumes exact persisted due, claim, lease, attempt, lifecycle, receipt, and effect facts;
+it does not derive authority, invent retry or reconciliation, or claim external exactly-once. The
+combined regression preserves tenant, organization, classification, lineage, identity, revision,
+digest, reference, replay, transaction, and rollback fail-closed boundaries across CP8, CP9, and
+CP10 with Alembic single head `20260808_0024`.
+
+Sprint 15 closeout adds no production code, public contract, permission, credential path, model,
+repository, schema, migration `20260808_0025`, external adapter, queue, scheduler, automatic
+redrive, tag, or release. Real provider execution and external business-effect exactly-once remain
+outside the completed Sprint 15 scope.
 
 ### CP10 Worker PostgreSQL shutdown/crash-window acceptance
 

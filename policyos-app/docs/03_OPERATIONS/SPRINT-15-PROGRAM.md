@@ -106,18 +106,19 @@ The baseline is `main` after merged CP9 PostgreSQL/HTTP acceptance PR #121.
 | CP9 Production Runtime Composition and Thin Routes | Merged, PR #120 | Immutable dependency injection and exactly three thin Runtime endpoints without Worker or external-effect execution. |
 | CP9 Combined PostgreSQL and HTTP Acceptance | Merged, PR #121 | Real managed preparation, independent rate transaction, facade transaction, replay, rollback, and HTTP evidence. |
 | CP9 Runtime API | Merged | Governed CP9 Runtime API boundary complete; migration head `20260808_0024`. |
-| CP10 Worker Operating Model Governance | Merged, PR #123 | ADR-111 selects configured Worker identity, scoped PostgreSQL polling, claim/lease, concurrency, and shutdown without migration `0025`. |
-| CP10 Worker Contract Semantics and Precision Governance | Merged, PR #124 and PR #125 | ADR-112 and ADR-113 fix delivery-only discovery, operational bounds, timing, identity, signatures, and sticky shutdown observation. |
-| CP10 Worker Public Contracts | Merged, PR #126 | Strict Worker configuration, cycle, iteration, shutdown, wait, closed-result, capability, and validation contracts. |
-| CP10 Prepared Delivery Governance | Governed / Validated, Pending Review | ADR-114 fixes request-scoped preparation, exact candidate binding, post-result completion, replay ordering, and shutdown-after-delivering behavior. |
-| CP10 Workers | Planned | Worker implementation is not present. |
+| CP10 Worker Governance and Public Contracts | Merged, PR #123 through PR #140 | ADR-111 through ADR-121 and their strict contracts govern delivery-only discovery, preparation, exact binding, result production, revalidation, shutdown, and bounded operational failure. |
+| CP10 Production Worker and Ordering Correction | Merged, PR #141 through PR #143 | Bounded application service, non-blocking poll-result publication, sticky shutdown admission close, and zero-residue drain. |
+| CP10 PostgreSQL Shutdown/Crash-Window Acceptance | Merged, PR #144 | Concurrent claim serialization, exact replay, durable `DELIVERING` exclusion, committed-claim preservation, and bounded drain evidence. |
+| CP10 closeout | Merged | Combined CP8/CP9/CP10 regression and authoritative Sprint 15 completion state. |
+| CP10 Workers | Merged | Delivery-only persisted-work consumer complete within the governed Sprint 15 boundary. |
 
 The current runtime has immutable Authority, Planning, State, Registry, Audit, and Ports contracts;
 governed Orchestration; deterministic fake and dry-run Adapters; PostgreSQL Persistence; CP8 local
-delivery; and the CP9 production Runtime API. CP9 governance, contracts, migrations, application
-integration, production routes, and combined acceptance are merged through PR #121. Migration head
-is `20260808_0024`. No real external adapter, Worker, queue, polling loop, scheduler, live credential
-resolution, or external business effect is introduced.
+delivery; the CP9 production Runtime API; and the CP10 delivery-only production Worker. CP10
+governance, contracts, production composition, ordering correction, and PostgreSQL acceptance are
+merged through PR #144. The migration head is `20260808_0024`. Real external adapters, queue
+infrastructure, autonomous scheduling, live credential resolution, and external business-effect
+exactly-once remain outside Sprint 15.
 
 ## 5. Program work structure
 
@@ -1356,5 +1357,17 @@ Status: Implemented / Validated, Pending Review. PostgreSQL 16 evidence covers c
 serialization and exact replay, durable `DELIVERING` non-redelivery after a process crash, and
 deadline drain that cancels only admitted work while preserving committed `CLAIMED` evidence and
 task residue zero. The exact test-only gate changes no production/public surface, persistence
-ownership, schema, or migration `20260808_0025`. Combined CP8/CP9/CP10 regression and Sprint 15
-closeout remain separate checkpoints.
+ownership, schema, or migration `20260808_0025`.
+
+### CP10 and Sprint 15 closeout
+
+CP10 is complete within its approved delivery-only Worker boundary. PR #123 through PR #140 merge
+the governance and contract sequence, PR #141 through PR #143 merge production composition and its
+ordering correction, and PR #144 merges PostgreSQL shutdown/crash-window acceptance. The combined
+regression retains CP8 lifecycle safety, CP9 Runtime API exactness, CP10 Worker sequencing, and the
+single Alembic head `20260808_0024`.
+
+Sprint 15 is complete within these approved boundaries. The closeout changes only the three
+authoritative program/security documents and their architecture guard. It creates no authority,
+production behavior, public contract, model, repository, schema, migration `20260808_0025`, tag,
+release, external adapter, queue, scheduler, automatic redrive, or external exactly-once claim.
