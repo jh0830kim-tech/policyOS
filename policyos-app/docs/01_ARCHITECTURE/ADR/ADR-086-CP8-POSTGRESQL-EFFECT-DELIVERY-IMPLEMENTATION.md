@@ -315,3 +315,15 @@ independently queryable connector enablement, lease-use fact, external operation
 reconciliation work identity must stop before implementation for a separate schema-ownership and
 migration gate. Existing CP8 rows cannot be normalized, deduplicated, rewritten, or populated
 from opaque provider evidence.
+
+## ADR-124 connector evidence persistence clarification
+
+The provider-issued operation or resource identity is stored only as the bounded
+`acknowledgement_reference`; its validated acknowledgement evidence digest is stored as
+`acknowledgement_digest_reference`. The existing lifecycle payload can retain that complete pair
+on an `AMBIGUOUS` result so later reconciliation uses the exact provider identity without a latest
+row or provider search. Logical connector result references remain a distinct pair.
+
+This mapping creates no independently queryable provider-operation aggregate, connector
+provisioning table, or credential-use ledger. The four CP8 tables remain sufficient and no
+migration `20260808_0025`, backfill, normalization, or deduplication is approved.

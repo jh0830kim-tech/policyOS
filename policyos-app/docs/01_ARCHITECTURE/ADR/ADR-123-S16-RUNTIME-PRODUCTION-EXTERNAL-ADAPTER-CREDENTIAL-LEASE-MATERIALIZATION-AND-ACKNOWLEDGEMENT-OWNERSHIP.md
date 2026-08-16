@@ -230,3 +230,19 @@ facts while permitting a concrete connector to authenticate for one exact invoca
 The design deliberately treats many transport failures as ambiguous and may stop instead of
 retrying. Provider enablement, contract implementation, persistence sufficiency, production I/O,
 and deployment remain separate review units.
+
+## ADR-124 evidence-mapping and lease-binding clarification
+
+ADR-124 maps the stable provider-issued operation or resource identity to
+`acknowledgement_reference` and the validated canonical bounded acknowledgement evidence digest
+to `acknowledgement_digest_reference`. `result_reference` and `result_digest_reference` retain the
+separate logical connector-result meaning. An ambiguous result may preserve a complete
+acknowledgement pair for exact observation; the identity alone never proves delivery.
+
+The additive credential contract must bind adapter contract version, connector provisioning,
+destination, delivery envelope identity and digest, stable effect and idempotency identity,
+canonical permits, scope, attempt, classification, credential purpose, and caller-supplied
+lifetime. Provider validation precedes managed cleanup: cleanup after a validated outcome cannot
+rewrite certainty, while uncertainty before validation after possible transmission remains
+`AMBIGUOUS`. Existing CP8 payload persistence remains sufficient, so no migration
+`20260808_0025` is introduced.

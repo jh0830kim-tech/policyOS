@@ -430,3 +430,16 @@ remains `AMBIGUOUS`.
 ADR-123 adds no production call, schema, or migration `20260808_0025`. If provider-specific exact
 evidence requires a new durable relational identity, implementation stops for a separate
 persistence-governance gate.
+
+## ADR-124 connector evidence-mapping clarification
+
+ADR-124 assigns the stable provider-issued operation or resource identity to the existing
+`acknowledgement_reference` and its validated canonical bounded evidence digest to
+`acknowledgement_digest_reference`. The logical connector result remains the separate
+`result_reference` and `result_digest_reference` pair. An ambiguous result may preserve a complete
+acknowledgement pair for exact reconciliation but cannot treat that identity alone as delivery.
+
+Credential lease contracts must bind the exact connector, destination, adapter contract,
+envelope, effect idempotency identity, permits, scope, attempt, classification, and lifetime
+without secret material or inference. Existing lifecycle payload evidence remains sufficient;
+ADR-124 adds no provider-operation table or migration `20260808_0025`.
