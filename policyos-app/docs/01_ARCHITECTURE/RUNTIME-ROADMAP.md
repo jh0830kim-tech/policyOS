@@ -1100,3 +1100,15 @@ poll result; durable claim, lease, attempt, lifecycle, receipt, and effect evide
 recovery authority. Sticky shutdown is observed while admitted tasks may remain active and drains
 only that set to the exact supplied deadline. Cancellation and credential reads remain exclusively
 inside pre-invocation revalidation. No schema or migration `20260808_0025` is introduced.
+
+### CP10 Worker poll-result and sticky-drain production correction
+
+Status: **Implemented / Validated, Pending Review**.
+
+The production Worker now publishes iteration and cycle discovery/admission results without
+awaiting candidate completion or translating candidate operational markers into poll failures.
+It observes sticky shutdown immediately after each cycle result, closes admission before drain,
+prevents queued candidates from starting, and drains only already-admitted tasks to the exact
+trusted deadline. Cancellation and credential leaf factories are no longer entered by the Worker;
+pre-invocation revalidation remains their sole application owner. PostgreSQL acceptance, combined
+regression, and closeout remain separate gates, and migration `20260808_0025` remains absent.

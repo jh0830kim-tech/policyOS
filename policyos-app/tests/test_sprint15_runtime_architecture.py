@@ -3252,3 +3252,28 @@ def test_cp10_worker_poll_result_candidate_failure_and_drain_ordering_is_governe
     ):
         assert required in related
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_worker_implements_non_blocking_poll_results_and_sticky_drain_ordering() -> None:
+    worker = (ROOT / "app/services/runtime_worker.py").read_text(encoding="utf-8")
+
+    for required in (
+        "completed: set[asyncio.Task[None]]",
+        "stopping = False",
+        "if stopping:",
+        "task.add_done_callback(candidate_completed)",
+        "self._raise_completed_failures(completed)",
+    ):
+        assert required in worker
+    for forbidden in (
+        "cycle_tasks",
+        "candidate_stages",
+        "self.dependencies.cancellation_factory()",
+        "self.dependencies.credential_factory()",
+    ):
+        assert forbidden not in worker
+    cycle_result = worker.index("await self._produce_cycle(", worker.index("async def run("))
+    sticky_observation = worker.index("shutdown = await self._observe_shutdown", cycle_result)
+    poll_wait = worker.index("await self.dependencies.interruptible_wait_factory().wait")
+    assert cycle_result < sticky_observation < poll_wait
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
