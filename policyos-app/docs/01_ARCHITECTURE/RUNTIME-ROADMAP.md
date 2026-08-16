@@ -1185,3 +1185,20 @@ results may retain a complete provider acknowledgement pair for exact observatio
 non-delivery prohibits acknowledgement evidence. Reconciliation preserves the connector,
 destination, idempotency, lineage, and provider-operation identity exactly. This contract-only
 gate performs no external I/O and adds no schema or migration `20260808_0025`.
+
+### Sprint 16 connector persistence sufficiency
+
+Status: **Implemented / Validated, Pending Review**.
+
+Existing CP8 storage is sufficient for the approved connector contract. The authoritative
+logical delivery result remains in lifecycle revision `result_payload`, the exact provider
+observation remains in reconciliation `observation_payload`, and the closed reconciliation
+request remains in registry `request_payload`. Strict allowlisted serialization revalidates each
+bounded payload, while existing tenant, organization, classification, lineage, effect, attempt,
+revision, and request relationships provide exact relational scope.
+
+The gate proves acknowledgement identity and digest round-trip without selecting a latest
+provider operation or inferring identity from an opaque reference. It does not persist credential
+secret material, add a provider-operation table, create lease-use history, backfill connector
+evidence, or add migration `20260808_0025`. Production connector I/O and provider-sandbox
+acceptance remain later gates.

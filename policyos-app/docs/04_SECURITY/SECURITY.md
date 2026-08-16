@@ -1087,6 +1087,21 @@ deadline cancellation is limited to application-admitted pending tasks with clea
 zero residue. The service imports no SQLAlchemy or framework transport and creates no schema or
 migration `20260808_0025`.
 
+### Sprint 16 connector persistence sufficiency
+
+Existing append-only Runtime records preserve only bounded, secret-free connector evidence.
+Lifecycle `result_payload`, reconciliation `observation_payload`, and closed request
+`request_payload` use strict allowlisted serialization and retain the exact acknowledgement pair,
+destination, stable effect idempotency identity, classification, lineage, and relational scope.
+The persisted revision `record_digest_reference` remains integrity evidence for its owning record;
+it is never reinterpreted as a provider acknowledgement or external-operation identity.
+
+Missing, stale, substituted, cross-tenant, cross-organization, cross-classification,
+cross-lineage, cross-attempt, or mismatched acknowledgement facts fail closed. The system does not
+choose a provider operation by recency, infer acknowledgement identity, persist credential secret
+material, backfill connector evidence, or introduce a provider-operation table or migration
+`20260808_0025` in this gate.
+
 ### CP10 and Sprint 15 closeout security boundary
 
 CP10 is complete only within the governed delivery-only Worker boundary merged through PR #144.

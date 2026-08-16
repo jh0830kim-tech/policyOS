@@ -49,6 +49,52 @@ def test_adr123_governs_initial_connector_credentials_and_acknowledgement() -> N
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_connector_persistence_sufficiency_gate_reuses_exact_cp8_payloads() -> None:
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+    serialization = (ROOT / "app/runtime/persistence/serialization.py").read_text(encoding="utf-8")
+    registry_serialization = (ROOT / "app/runtime/persistence/registry_serialization.py").read_text(
+        encoding="utf-8"
+    )
+    models = (ROOT / "app/runtime/persistence/models.py").read_text(encoding="utf-8")
+    registry_models = (ROOT / "app/models/runtime_registry.py").read_text(encoding="utf-8")
+    combined = "\n".join(
+        (
+            roadmap,
+            program,
+            security,
+            serialization,
+            registry_serialization,
+            models,
+            registry_models,
+        )
+    )
+
+    for required in (
+        "Sprint 16 connector persistence sufficiency",
+        "`result_payload`",
+        "`observation_payload`",
+        "`request_payload`",
+        "strict allowlisted serialization",
+        "exact relational scope",
+        "provider-operation table",
+        "migration `20260808_0025`",
+        "record_digest_reference",
+    ):
+        assert required in combined
+
+    for prohibited in (
+        "select the latest provider operation",
+        "may persist credential secret",
+        "may infer acknowledgement identity",
+        "must backfill connector evidence",
+    ):
+        assert prohibited not in combined
+
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_adr124_governs_connector_evidence_mapping_and_exact_lease_binding() -> None:
     adr = (
         ROOT

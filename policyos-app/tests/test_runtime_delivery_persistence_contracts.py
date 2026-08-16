@@ -9,7 +9,12 @@ import pytest
 from pydantic import ValidationError
 
 from app.ai.privacy import DataClassification
-from app.runtime.persistence import SQLAlchemyRuntimeEffectLifecycleTransaction
+from app.runtime.persistence import (
+    RuntimePersistenceSerializationError,
+    SQLAlchemyRuntimeEffectLifecycleTransaction,
+    deserialize_delivery_model,
+    serialize_delivery_model,
+)
 from app.runtime.ports import (
     RuntimeAtomicWriteSet,
     RuntimeEffectAtomicCommitResult,
@@ -18,6 +23,8 @@ from app.runtime.ports import (
     RuntimeEffectClaimRequest,
     RuntimeEffectCommitDisposition,
     RuntimeEffectDefinitelyNotInvoked,
+    RuntimeEffectDeliveryCertainty,
+    RuntimeEffectDeliveryResult,
     RuntimeEffectDueCandidate,
     RuntimeEffectDueReason,
     RuntimeEffectDueRepository,
@@ -33,6 +40,7 @@ from app.runtime.ports import (
     RuntimeEffectNotInvokedReason,
     RuntimeEffectReceipt,
     RuntimeEffectReceiptFact,
+    RuntimeEffectReconciliationObservation,
     RuntimeInitialEffectEnqueue,
     RuntimeOutboxEnqueueRecord,
     RuntimePortClaimError,
@@ -62,8 +70,10 @@ from tests.test_runtime_delivery_contracts import (
     attempt,
     claim,
     delivery_envelope,
+    delivery_result,
     effect_identity,
     lifecycle,
+    observation,
     port_contract,
     retry_decision,
 )
@@ -73,6 +83,33 @@ from tests.test_runtime_orchestration_domain import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_connector_evidence_round_trips_without_schema_inference() -> None:
+    delivered = delivery_result()
+    ambiguous = delivery_result(
+        RuntimeEffectDeliveryCertainty.AMBIGUOUS,
+        acknowledgement_reference="provider.operation",
+        acknowledgement_digest_reference="digest.provider-acknowledgement",
+    )
+    observed = observation().model_copy(
+        update={
+            "acknowledgement_reference": ambiguous.acknowledgement_reference,
+            "acknowledgement_digest_reference": (ambiguous.acknowledgement_digest_reference),
+        }
+    )
+    for model, value in (
+        (RuntimeEffectDeliveryResult, delivered),
+        (RuntimeEffectDeliveryResult, ambiguous),
+        (RuntimeEffectReconciliationObservation, observed),
+    ):
+        payload = serialize_delivery_model(value)
+        assert deserialize_delivery_model(model, payload) == value
+
+        substituted = dict(payload)
+        substituted["unknown_connector_fact"] = "forbidden"
+        with pytest.raises(RuntimePersistenceSerializationError):
+            deserialize_delivery_model(model, substituted)
 
 
 async def effect_write_set() -> RuntimeEffectAtomicWriteSet:
@@ -657,10 +694,7 @@ def test_new_protocols_are_structural_and_nonconforming_fakes_fail() -> None:
     assert not hasattr(concrete, "append_lifecycle")
     signature = inspect.signature(type(concrete).append)
     assert tuple(signature.parameters) == ("self", "request")
-    assert (
-        signature.parameters["request"].annotation
-        is RuntimeEffectLifecycleAppendRequest
-    )
+    assert signature.parameters["request"].annotation is RuntimeEffectLifecycleAppendRequest
     assert signature.return_annotation is RuntimeEffectLifecycleCommitResult
     assert not isinstance(Missing(), RuntimeEffectAtomicTransactionPort)
     assert not isinstance(Missing(), RuntimeEffectDueRepository)
