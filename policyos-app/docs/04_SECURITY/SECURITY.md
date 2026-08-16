@@ -1101,6 +1101,31 @@ repository, schema, migration `20260808_0025`, external adapter, queue, schedule
 redrive, tag, or release. Real provider execution and external business-effect exactly-once remain
 outside the completed Sprint 15 scope.
 
+### Sprint 16 production connector governance boundary
+
+ADR-123 permits governance of only the `CONNECTOR` family and one explicitly provisioned HTTPS
+destination class. Dynamic or caller-supplied URLs, redirects, wildcard hosts, fallback, mutable
+service location, and environment-selected destinations are prohibited. Existing authority,
+permit, admission, Registry, tenant, organization, classification, lineage, lease, deadline,
+cancellation, and effect bindings remain mandatory immediately before invocation.
+
+Credential material exists only inside a request-local managed connector capability bound to the
+exact issued opaque lease. It is absent from envelopes, callback and domain results, persistence,
+audit, logs, metrics, repr, serialization, errors, and test snapshots. The capability permits one
+invocation and performs exactly-once cleanup; cross-request, substituted, stale, expired,
+cross-scope, and post-exit use fails closed.
+
+A stable provider-issued operation or resource identifier and validated bounded acknowledgement
+evidence are both required for delivered certainty. HTTP `2xx`, response absence, locally invented
+references, timeout, disconnect, redirect, or unknown destination state cannot establish success.
+Only proof that no request bytes were transmitted permits definitely-not-delivered; uncertainty is
+recorded as ambiguous and never retries blindly.
+
+Provider-specific reconciliation is confined to the same connector and exact destination.
+Missing records, lookup `404`, credential failure, unavailable observation, or provider error
+never implies delivered or not delivered. This governance gate stores no secret or provider body,
+creates no production adapter, and adds no schema or migration `20260808_0025`.
+
 ### CP10 Worker PostgreSQL shutdown/crash-window acceptance
 
 PostgreSQL 16 tests prove that concurrent Worker claims cannot create two authoritative revisions,
