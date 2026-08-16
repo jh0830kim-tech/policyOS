@@ -47,3 +47,62 @@ def test_adr123_governs_initial_connector_credentials_and_acknowledgement() -> N
         assert prohibited not in combined
 
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr124_governs_connector_evidence_mapping_and_exact_lease_binding() -> None:
+    adr = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-124-S16-RUNTIME-CONNECTOR-ACKNOWLEDGEMENT-EVIDENCE-MAPPING-"
+            "AND-CREDENTIAL-LEASE-EXACT-BINDING.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr85 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / "ADR-085-CP8-OUTBOX-PACKAGE-PLACEMENT-AND-EFFECT-DELIVERY-SEMANTICS.md"
+    ).read_text(encoding="utf-8")
+    adr86 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / "ADR-086-CP8-POSTGRESQL-EFFECT-DELIVERY-IMPLEMENTATION.md"
+    ).read_text(encoding="utf-8")
+    adr123 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-123-S16-RUNTIME-PRODUCTION-EXTERNAL-ADAPTER-CREDENTIAL-LEASE-"
+            "MATERIALIZATION-AND-ACKNOWLEDGEMENT-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((adr, adr85, adr86, adr123, roadmap, program, security))
+
+    for required in (
+        "`acknowledgement_reference` is the stable provider-issued operation",
+        "`acknowledgement_digest_reference` is the digest of canonical, bounded",
+        "`result_reference` is the caller-supplied bounded logical connector-result reference",
+        "`AMBIGUOUS` requires bounded failure evidence and may",
+        "acknowledgement pair when a provider identity was observed",
+        "adapter family `CONNECTOR`, adapter reference, and adapter contract version",
+        "connector provisioning reference and exact destination reference",
+        "delivery-envelope identity and envelope digest reference",
+        "stable effect identity and unchanged effect idempotency key",
+        "cleanup failure cannot rewrite its",
+        "delivery certainty",
+        "No new table, column, uniqueness constraint",
+    ):
+        assert required in combined
+
+    for prohibited in (
+        "provider identity alone proves delivery",
+        "select the latest provider operation",
+        "store raw acknowledgement body",
+        "infer the destination from the credential",
+    ):
+        assert prohibited not in combined
+
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

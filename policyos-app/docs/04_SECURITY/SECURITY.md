@@ -1126,6 +1126,22 @@ Missing records, lookup `404`, credential failure, unavailable observation, or p
 never implies delivered or not delivered. This governance gate stores no secret or provider body,
 creates no production adapter, and adds no schema or migration `20260808_0025`.
 
+### Sprint 16 connector acknowledgement mapping and lease binding
+
+ADR-124 confines the provider-issued operation or resource ID to the bounded acknowledgement
+reference and binds its canonical validated evidence digest as the acknowledgement digest. The
+logical connector result remains a separate pair. An ambiguous result may retain a complete
+acknowledgement pair solely for exact provider-specific reconciliation; provider identity,
+HTTP status, response absence, or lookup absence cannot establish delivery or non-delivery.
+
+Opaque credential lease contracts must bind the exact tenant, organization, attempt, actor,
+adapter contract, connector, destination, credential purpose, classification, permits, envelope,
+effect idempotency identity, issuance, and expiry. They expose no secret material. Missing, stale,
+substituted, cross-scope, cross-attempt, cross-destination, or changed-idempotency facts fail
+closed. Cleanup after a validated outcome cannot rewrite certainty or disclose a secret; possible
+transmission before validation remains ambiguous. Existing CP8 payload evidence is sufficient,
+and no provider-operation table, backfill, or migration `20260808_0025` is approved.
+
 ### CP10 Worker PostgreSQL shutdown/crash-window acceptance
 
 PostgreSQL 16 tests prove that concurrent Worker claims cannot create two authoritative revisions,

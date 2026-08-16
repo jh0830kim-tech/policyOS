@@ -1158,3 +1158,16 @@ acknowledgement remains ambiguous. Existing CP8 bounded evidence is the default 
 so this governance gate adds no migration `20260808_0025`. Public contracts, persistence
 sufficiency, production connector implementation, provider-sandbox acceptance, and enablement
 remain separate checkpoints.
+
+### Sprint 16 connector evidence-mapping correction
+
+ADR-124 fixes the existing CP8 field meanings before connector contracts are implemented. The
+provider-issued operation or resource ID is `acknowledgement_reference`; its canonical validated
+evidence digest is `acknowledgement_digest_reference`. The logical connector result occupies the
+separate result pair. Ambiguous delivery may preserve a complete acknowledgement pair for exact
+reconciliation but never promotes identity presence to success.
+
+Credential leases must carry exact connector, destination, adapter-contract, envelope,
+idempotency, permit, scope, attempt, classification, and lifetime binding without secret content.
+Existing lifecycle payloads preserve these bounded outcome references, so no provider-operation
+table, backfill, or migration `20260808_0025` is approved.

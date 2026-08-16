@@ -82,3 +82,17 @@ cross-tenant existence may enter Runtime facts, persistence, audit, logs, metric
 Sprint 16 does not authorize another adapter family, queue, autonomous scheduler, generalized
 retry, automatic redrive, cross-tenant execution, external business-effect exactly-once,
 production deployment, tag, or release.
+
+## 9. ADR-124 contract correction
+
+Before managed connector contracts, ADR-124 fixes the evidence mapping. The provider-issued
+operation or resource identity is the acknowledgement reference and the canonical validated
+evidence digest is its acknowledgement digest. Logical result references remain separate.
+Ambiguous results retain a complete acknowledgement pair when available so reconciliation never
+selects a latest provider operation or invents an identity.
+
+Credential lease requests and references must bind the exact connector, destination, adapter
+contract, envelope and digest, stable effect idempotency key, permits, tenant, organization,
+attempt, classification, credential purpose, and lifetime. Validation precedes cleanup; cleanup
+after a validated provider outcome cannot rewrite certainty. The correction adds no production
+I/O, provider-operation table, backfill, or migration `20260808_0025`.
