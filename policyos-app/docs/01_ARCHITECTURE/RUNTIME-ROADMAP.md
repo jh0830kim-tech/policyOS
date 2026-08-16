@@ -1112,3 +1112,13 @@ prevents queued candidates from starting, and drains only already-admitted tasks
 trusted deadline. Cancellation and credential leaf factories are no longer entered by the Worker;
 pre-invocation revalidation remains their sole application owner. PostgreSQL acceptance, combined
 regression, and closeout remain separate gates, and migration `20260808_0025` remains absent.
+
+### CP10 Worker PostgreSQL shutdown/crash-window acceptance
+
+Status: **Implemented / Validated, Pending Review**.
+
+PostgreSQL 16 acceptance proves concurrent claim serialization with exact replay, durable
+`DELIVERING` exclusion from blind redelivery after a crash window, and bounded shutdown drain
+that preserves an already committed `CLAIMED` revision while reaching task residue zero. The gate
+is test-only, reuses existing lifecycle persistence, introduces no production/public contract,
+schema, or migration `20260808_0025`, and leaves combined regression and Sprint closeout separate.

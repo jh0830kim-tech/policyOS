@@ -1349,3 +1349,12 @@ queued work cannot begin after shutdown, and admitted work is drained to the exa
 deadline with residue zero. Programmer defects remain observable after structured cleanup.
 Cancellation and credential reads stay inside pre-invocation revalidation. PostgreSQL acceptance,
 combined regression, and closeout remain separate; migration `20260808_0025` is absent.
+
+### CP10 Worker PostgreSQL shutdown/crash-window acceptance
+
+Status: Implemented / Validated, Pending Review. PostgreSQL 16 evidence covers concurrent claim
+serialization and exact replay, durable `DELIVERING` non-redelivery after a process crash, and
+deadline drain that cancels only admitted work while preserving committed `CLAIMED` evidence and
+task residue zero. The exact test-only gate changes no production/public surface, persistence
+ownership, schema, or migration `20260808_0025`. Combined CP8/CP9/CP10 regression and Sprint 15
+closeout remain separate checkpoints.

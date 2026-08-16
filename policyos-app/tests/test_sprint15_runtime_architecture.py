@@ -3277,3 +3277,31 @@ def test_cp10_worker_implements_non_blocking_poll_results_and_sticky_drain_order
     poll_wait = worker.index("await self.dependencies.interruptible_wait_factory().wait")
     assert cycle_result < sticky_observation < poll_wait
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_worker_postgresql_acceptance_is_test_only_and_exact() -> None:
+    acceptance = (ROOT / "tests/test_runtime_worker_postgresql_acceptance.py").read_text(
+        encoding="utf-8"
+    )
+    support = (ROOT / "tests/runtime_worker_acceptance_test_support.py").read_text(encoding="utf-8")
+    related = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            ROOT / "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+
+    for required in (
+        "test_concurrent_worker_claim_has_one_append_and_exact_replay",
+        "test_delivering_crash_window_is_not_selected_for_blind_redelivery",
+        "test_shutdown_drain_preserves_committed_claim_and_leaves_task_residue_zero",
+        "SQLAlchemyRuntimeEffectLifecycleTransaction",
+        "SQLAlchemyRuntimeEffectDueRepository",
+    ):
+        assert required in acceptance
+    assert "POLICYOS_TEST_DATABASE_URL" in support
+    assert "runtime_delivery_session_factory" in support
+    assert "CP10 Worker PostgreSQL shutdown/crash-window acceptance" in related
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
