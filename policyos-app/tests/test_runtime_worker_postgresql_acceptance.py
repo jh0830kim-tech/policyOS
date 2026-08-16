@@ -22,7 +22,6 @@ from app.runtime.persistence import (
     SQLAlchemyRuntimeEffectDueRepository,
     SQLAlchemyRuntimeEffectLifecycleTransaction,
 )
-from app.runtime.persistence.errors import RuntimePersistenceConflictError
 from app.runtime.ports import (
     RuntimeEffectLifecycleCommitDisposition,
     RuntimeEffectLifecycleCommitResult,
@@ -55,10 +54,13 @@ async def test_concurrent_worker_claim_has_one_append_and_exact_replay(
 
     outcomes = await asyncio.gather(commit(), commit(), return_exceptions=True)
     committed = [item for item in outcomes if isinstance(item, RuntimeEffectLifecycleCommitResult)]
-    conflicts = [item for item in outcomes if isinstance(item, RuntimePersistenceConflictError)]
-    assert len(committed) == 1
-    assert committed[0].disposition is RuntimeEffectLifecycleCommitDisposition.APPENDED
-    assert len(conflicts) == 1
+    assert len(committed) == 2
+    assert [item.disposition for item in committed].count(
+        RuntimeEffectLifecycleCommitDisposition.APPENDED
+    ) == 1
+    assert [item.disposition for item in committed].count(
+        RuntimeEffectLifecycleCommitDisposition.EXACT_REPLAY
+    ) == 1
 
     async with worker_sessions() as session:
         replay = await SQLAlchemyRuntimeEffectLifecycleTransaction(session).claim(request)
