@@ -89,3 +89,10 @@ one-shot factory, fifteen-field bundle, ordering, non-disclosure, and absence of
 The Worker can request final authoritative revalidation without gaining persistence or clock
 authority. Shutdown after `DELIVERING` remains honestly ambiguous, and only caller-supplied definite
 non-invocation evidence can create its governed lifecycle append.
+
+## ADR-122 leaf-capability clarification
+
+The composition root may use cancellation and credential factories when constructing the sole
+pre-invocation revalidation capability. The Worker service does not independently enter, call,
+select, or reinterpret either capability around Adapter delivery. Candidate-task failures remain
+separate from poll results and preserve existing durable recovery evidence.

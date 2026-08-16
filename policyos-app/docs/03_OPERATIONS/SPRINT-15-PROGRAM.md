@@ -1200,6 +1200,17 @@ and immutable exports. No existing request contract or validator changed. Produc
 PostgreSQL acceptance, combined regression, and closeout remain separate; migration
 `20260808_0025` remains absent.
 
+### CP10 Worker poll-result and shutdown-drain ordering governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-122 fixes the production correction order before PostgreSQL acceptance: iteration results are
+produced after ordered admission, cycle results after the visited prefix, and neither waits for
+candidate completion. Candidate failures remain outside poll-result cardinality and preserve
+durable recovery evidence. Shutdown observation can therefore occur with active admitted tasks and
+drain only those tasks to the supplied deadline. Production correction, PostgreSQL acceptance,
+combined regression, and closeout remain separate gates; migration `20260808_0025` remains absent.
+
 ### CP10 production Worker application service
 
 Status: Implemented / Validated, Pending Review. One explicitly constructed production service

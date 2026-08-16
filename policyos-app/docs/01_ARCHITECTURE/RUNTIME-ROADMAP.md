@@ -1089,3 +1089,14 @@ translated. Sticky shutdown prevents new work and cancels only still-pending adm
 the exact supplied drain deadline, awaiting residue zero without creating Runtime authority.
 PostgreSQL acceptance, combined regression, and closeout remain separate gates. Migration
 `20260808_0025` remains absent.
+
+### CP10 Worker poll-result, candidate-failure, and shutdown-drain ordering governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-122 makes iteration and cycle results immutable discovery/admission facts that are produced
+without awaiting admitted candidate tasks. Candidate-task failures cannot amend or reclassify a
+poll result; durable claim, lease, attempt, lifecycle, receipt, and effect evidence remains the
+recovery authority. Sticky shutdown is observed while admitted tasks may remain active and drains
+only that set to the exact supplied deadline. Cancellation and credential reads remain exclusively
+inside pre-invocation revalidation. No schema or migration `20260808_0025` is introduced.
