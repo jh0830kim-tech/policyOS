@@ -165,7 +165,7 @@ def test_cp9_runtime_api_governance_precedes_production_routes() -> None:
     assert "## Sprint 15 CP9 Runtime API transport" in security
     assert "| CP8 | Merged |" in roadmap
     assert "| CP9 | Merged |" in roadmap
-    assert "| CP10 | Planned |" in roadmap
+    assert "| CP10 | Merged |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
 
 
@@ -232,7 +232,7 @@ def test_cp9_api_contract_gate_has_no_production_implementation() -> None:
     assert "CP9-Gate-Runtime-Grant-Provisioning | Merged, PR #67" in roadmap
     assert "external business-effect exactly-once" in roadmap
     assert "| CP9 | Merged |" in roadmap
-    assert "| CP10 | Planned |" in roadmap
+    assert "| CP10 | Merged |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "workers").exists()
     assert not (ROOT / "app" / "runtime" / "scheduler").exists()
@@ -311,7 +311,7 @@ def test_cp9_auth_claims_gate_is_typed_and_documented_without_runtime_routes() -
     assert "CP9-Gate-Auth-Claims | Merged, PR #62" in roadmap
     assert "CP9-Gate-Auth-Claims | Merged, PR #62" in program
     assert "| CP9 | Merged |" in roadmap
-    assert "| CP10 | Planned |" in roadmap
+    assert "| CP10 | Merged |" in roadmap
     assert not (ROOT / "app" / "runtime" / "api").exists()
     assert not (ROOT / "app" / "runtime" / "outbox").exists()
 
@@ -338,7 +338,7 @@ def test_cp9_tenant_organization_binding_gate_is_implemented_without_runtime_rou
     assert "lifetime one-to-one" in program
     assert "lifetime one-to-one" in security
     assert "| CP9 | Merged |" in roadmap
-    assert "| CP10 | Planned |" in roadmap
+    assert "| CP10 | Merged |" in roadmap
 
     assert not (ROOT / "app" / "models" / "tenant_organization_binding.py").exists()
     assert (ROOT / "app" / "services" / "runtime_tenant_binding.py").is_file()
@@ -573,7 +573,7 @@ def test_cp9_transport_idempotency_contracts_gate_is_additive_only() -> None:
     assert "Merged, PR #72" in combined
     assert "CP9 Production Transport Idempotency | Merged, PR #74" in combined
     assert "CP9 Runtime API | Merged" in combined
-    assert "CP10 Workers | Planned" in combined
+    assert "CP10 Workers | Merged" in combined
     assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "models" / "runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "services" / "runtime_api_idempotency.py").is_file()
@@ -593,7 +593,7 @@ def test_cp9_atomic_commit_contract_correction_is_merged_before_persistence() ->
     assert "Merged, PR #73" in combined
     assert "CP9 Production Transport Idempotency | Merged, PR #74" in combined
     assert "CP9 Runtime API | Merged" in combined
-    assert "CP10 Workers | Planned" in combined
+    assert "CP10 Workers | Merged" in combined
     assert (ROOT / "alembic" / "versions" / "20260808_0021_runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "models" / "runtime_api_idempotency.py").is_file()
     assert (ROOT / "app" / "services" / "runtime_api_idempotency.py").is_file()
@@ -642,7 +642,7 @@ def test_cp9_trusted_application_facade_governance_precedes_routes() -> None:
         "20260808_0021",
         "facade contract amendment",
         "CP9 Runtime API | Merged",
-        "CP10 Workers | Planned",
+        "CP10 Workers | Merged",
         "Merged, PR #75",
         "Trusted Application Facade Contracts | Merged, PR #76",
         "Fact-Binding Contracts | Merged, PR #77",
@@ -716,7 +716,7 @@ def test_cp9_local_fact_binding_governance_precedes_concrete_integration() -> No
         in combined
     )
     assert "CP9 Runtime API | Merged" in combined
-    assert "CP10 Workers | Planned" in combined
+    assert "CP10 Workers | Merged" in combined
     assert "additive binding and active-transaction Persistence contracts" in combined
     assert (ROOT / "app" / "services" / "runtime_api_facade.py").is_file()
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
@@ -765,7 +765,7 @@ def test_cp9_registry_snapshot_persistence_governance_precedes_implementation() 
     )
     assert "Registry Resolution and Admission Exactness Contracts Gate | Merged, PR #81" in combined
     assert "CP9 Runtime API | Merged" in combined
-    assert "CP10 Workers | Planned" in combined
+    assert "CP10 Workers | Merged" in combined
     assert MIGRATION_0022.is_file()
     assert not (ROOT / "app" / "runtime" / "persistence" / "registry.py").exists()
     assert not (ROOT / "app" / "services" / "runtime_api_fact_binding.py").exists()
@@ -802,7 +802,7 @@ def test_cp9_active_transaction_write_set_governance_precedes_contracts() -> Non
     assert "CP9 Registry/Active-Transaction Governance and Persistence" in combined
     assert "Merged in PR #82 through PR #86" in combined
     assert "CP9 Runtime API | Merged" in combined
-    assert "CP10 Workers | Planned" in combined
+    assert "CP10 Workers | Merged" in combined
     assert MIGRATION_0022.is_file()
 
 
@@ -2389,10 +2389,10 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
     assert "CP10 worker operating-model clarification" in adr085
     assert "CP10 worker operating-model clarification" in adr086
     for phrase in (
-        "CP10 Worker Operating Model Governance",
-        "Governed / Validated, Pending Review",
-        "CP10 Worker operating-model governance",
-        "production CP10 remains Planned",
+        "CP10 Worker Governance and Public Contracts",
+        "Merged, PR #123 through PR #140",
+        "CP10 and Sprint 15 closeout",
+        "| CP10 | Merged |",
         "migration `20260808_0025`",
     ):
         assert phrase in combined
@@ -2757,12 +2757,12 @@ def test_cp10_worker_contract_semantics_are_governed_before_public_contracts() -
     assert "ADR-112 delivery-only Worker clarification" in adr085
     assert "ADR-112 due-selection and reconciliation clarification" in adr086
     for phrase in (
-        "CP10 Worker Contract Semantics Governance",
-        "Governed / Validated, Pending Review",
+        "CP10 Worker Governance and Public Contracts",
+        "Merged, PR #123 through PR #140",
         "CP10 Worker contract-semantics governance",
         "Reconciliation remains an explicit authorized application service",
         "No schema or migration `20260808_0025`",
-        "production CP10 remains Planned",
+        "| CP10 | Merged |",
     ):
         assert phrase in combined
     assert (ROOT / "app/services/runtime_worker_contracts.py").is_file()
@@ -3304,4 +3304,29 @@ def test_cp10_worker_postgresql_acceptance_is_test_only_and_exact() -> None:
     assert "POLICYOS_TEST_DATABASE_URL" in support
     assert "runtime_delivery_session_factory" in support
     assert "CP10 Worker PostgreSQL shutdown/crash-window acceptance" in related
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_and_sprint15_closeout_is_complete_and_bounded() -> None:
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((roadmap, program, security))
+
+    for required in (
+        "| CP10 | Merged |",
+        "| CP10 Workers | Merged |",
+        "CP10 and Sprint 15 closeout",
+        "CP10 and Sprint 15 closeout security boundary",
+        "PR #123 through PR #140",
+        "PR #141 through PR #143",
+        "PR #144",
+        "combined CP8/CP9/CP10 regression",
+        "Sprint 15 is complete",
+        "single Alembic head `20260808_0024`",
+        "external business-effect exactly-once",
+    ):
+        assert required in combined
+    assert "| CP10 | Planned |" not in roadmap
+    assert "| CP10 Workers | Planned |" not in program
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
