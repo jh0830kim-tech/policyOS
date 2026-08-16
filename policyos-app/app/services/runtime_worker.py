@@ -86,13 +86,13 @@ class RuntimeWorkerService:
                 prepared = await source.prepare(request)
             validate_runtime_worker_prepared_delivery(request, prepared)
         except RuntimeWorkerOperationalCapabilityFailure:
-            return RuntimeWorkerOperationalFailureStage.CANDIDATE_PREPARATION
+            return None
 
         try:
             async with self.dependencies.claim_factory() as capability:
                 claim_result = await capability.claim(prepared.claim_request)
         except RuntimeWorkerOperationalCapabilityFailure:
-            return RuntimeWorkerOperationalFailureStage.CLAIM
+            return None
         validate_runtime_effect_lifecycle_commit_result(prepared.claim_request, claim_result)
         if claim_result.disposition is not RuntimeEffectLifecycleCommitDisposition.APPENDED:
             return None
@@ -101,7 +101,7 @@ class RuntimeWorkerService:
             async with self.dependencies.lifecycle_append_factory() as capability:
                 delivering_result = await capability.append(prepared.delivering_append_request)
         except RuntimeWorkerOperationalCapabilityFailure:
-            return RuntimeWorkerOperationalFailureStage.DELIVERING_APPEND
+            return None
         validate_runtime_effect_lifecycle_commit_result(
             prepared.delivering_append_request, delivering_result
         )
@@ -119,7 +119,7 @@ class RuntimeWorkerService:
                 revalidation_request, revalidation
             )
         except RuntimeWorkerOperationalCapabilityFailure:
-            return RuntimeWorkerOperationalFailureStage.PRE_INVOCATION_REVALIDATION
+            return None
         if revalidation.disposition is RuntimeWorkerPreInvocationDisposition.SHUTDOWN_BLOCKED:
             return None
         if revalidation.disposition is RuntimeWorkerPreInvocationDisposition.DEFINITELY_NOT_INVOKED:
@@ -130,28 +130,33 @@ class RuntimeWorkerService:
                     revalidation.append_request, append_result
                 )
             except RuntimeWorkerOperationalCapabilityFailure:
-                return RuntimeWorkerOperationalFailureStage.LIFECYCLE_APPEND
+                return None
             return None
 
         try:
-            async with self.dependencies.cancellation_factory():
-                async with self.dependencies.credential_factory():
-                    async with self.dependencies.delivery_factory() as delivery:
-                        result = await delivery.deliver(prepared.invocation)
+            async with self.dependencies.delivery_factory() as delivery:
+                result = await delivery.deliver(prepared.invocation)
         except RuntimeWorkerOperationalCapabilityFailure:
-            return RuntimeWorkerOperationalFailureStage.ADAPTER_INVOCATION
+            return None
         try:
             append_request = await prepared.result_completion.complete(result)
             validate_runtime_worker_result_completion(prepared, result, append_request)
         except RuntimeWorkerOperationalCapabilityFailure:
-            return RuntimeWorkerOperationalFailureStage.RESULT_COMPLETION
+            return None
         try:
             async with self.dependencies.lifecycle_append_factory() as capability:
                 append_result = await capability.append(append_request)
             validate_runtime_effect_lifecycle_commit_result(append_request, append_result)
         except RuntimeWorkerOperationalCapabilityFailure:
-            return RuntimeWorkerOperationalFailureStage.LIFECYCLE_APPEND
+            return None
         return None
+
+    @staticmethod
+    def _raise_completed_failures(completed: set[asyncio.Task[None]]) -> None:
+        while completed:
+            task = completed.pop()
+            if not task.cancelled():
+                task.result()
 
     async def _drain(self, tasks, shutdown) -> None:
         pending = {task for task in tasks if not task.done()}
@@ -175,14 +180,22 @@ class RuntimeWorkerService:
         validate_runtime_worker_configuration_binding(configuration, configuration_binding)
         semaphore = asyncio.Semaphore(configuration.maximum_concurrency)
         admitted: set[asyncio.Task[None]] = set()
+        completed: set[asyncio.Task[None]] = set()
+        stopping = False
 
         async def admitted_candidate(iteration, candidate):
             async with semaphore:
-                return await self._run_candidate(iteration, candidate)
+                if stopping:
+                    return None
+                await self._run_candidate(iteration, candidate)
+                return None
+
+        def candidate_completed(task: asyncio.Task[None]) -> None:
+            admitted.discard(task)
+            completed.add(task)
 
         try:
             while True:
-                cycle_tasks = []
                 try:
                     async with self.dependencies.poll_cycle_request_preparation_factory() as source:
                         cycle = await source.prepare(configuration, configuration_binding)
@@ -202,7 +215,9 @@ class RuntimeWorkerService:
                     )
                     continue
                 if shutdown.disposition is RuntimeWorkerShutdownDisposition.SHUTDOWN_REQUESTED:
+                    stopping = True
                     await self._drain(admitted, shutdown)
+                    self._raise_completed_failures(completed)
                     return
 
                 visited = 0
@@ -245,17 +260,7 @@ class RuntimeWorkerService:
                     for candidate in candidates:
                         task = asyncio.create_task(admitted_candidate(iteration, candidate))
                         admitted.add(task)
-                        cycle_tasks.append(task)
-                        task.add_done_callback(admitted.discard)
-
-                if cycle_tasks:
-                    candidate_stages = await asyncio.gather(*cycle_tasks)
-                    candidate_stage = next(
-                        (stage for stage in candidate_stages if stage is not None), None
-                    )
-                    if candidate_stage is not None:
-                        cycle_disposition = RuntimeWorkerPollCycleDisposition.OPERATIONAL_FAILURE
-                        cycle_stage = candidate_stage
+                        task.add_done_callback(candidate_completed)
 
                 await self._produce_cycle(
                     cycle,
@@ -264,23 +269,35 @@ class RuntimeWorkerService:
                     selected_count,
                     cycle_stage,
                 )
-                if cycle_disposition is RuntimeWorkerPollCycleDisposition.OPERATIONAL_FAILURE:
-                    continue
+                self._raise_completed_failures(completed)
+                shutdown = await self._observe_shutdown(configuration, configuration_binding)
+                if shutdown.disposition is RuntimeWorkerShutdownDisposition.SHUTDOWN_REQUESTED:
+                    stopping = True
+                    await self._drain(admitted, shutdown)
+                    self._raise_completed_failures(completed)
+                    return
                 wait_request = RuntimeWorkerInterruptibleWaitRequest(
                     configuration_binding=configuration_binding,
                     poll_interval_milliseconds=configuration.poll_interval_milliseconds,
                 )
                 await self.dependencies.interruptible_wait_factory().wait(wait_request)
+                self._raise_completed_failures(completed)
                 shutdown = await self._observe_shutdown(configuration, configuration_binding)
                 if shutdown.disposition is RuntimeWorkerShutdownDisposition.SHUTDOWN_REQUESTED:
+                    stopping = True
                     await self._drain(admitted, shutdown)
+                    self._raise_completed_failures(completed)
                     return
+                self._raise_completed_failures(completed)
         finally:
             pending = {task for task in admitted if not task.done()}
             for task in pending:
                 task.cancel()
             if pending:
                 await asyncio.gather(*pending, return_exceptions=True)
+            for task in completed:
+                if not task.cancelled():
+                    task.exception()
 
 
 __all__ = ("RuntimeWorkerService",)

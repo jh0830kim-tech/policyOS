@@ -1101,3 +1101,14 @@ cleanup to zero residue without disclosing exceptions or backend detail. Cancell
 credential capabilities remain composition inputs to pre-invocation revalidation and are not
 independently entered by the Worker. No task persistence, schema, or migration
 `20260808_0025` is approved.
+
+### CP10 Worker poll-result and sticky-drain production correction
+
+Candidate operational inability cannot rewrite discovery/admission facts or disclose a synthetic
+poll failure. The Worker publishes the cycle result first, observes sticky shutdown while admitted
+tasks may still run, then atomically closes its process-local admission gate before bounded drain.
+Queued tasks cannot enter preparation, claim, or Adapter delivery after shutdown. Programmer
+defects are retrieved and propagated after structured child cleanup; host cancellation preserves
+its primary meaning. Cancellation and credential capabilities remain confined to authoritative
+pre-invocation revalidation, with no independent Worker entry, hidden time, new persistence, or
+migration `20260808_0025`.

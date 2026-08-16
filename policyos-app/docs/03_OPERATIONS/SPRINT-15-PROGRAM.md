@@ -1339,3 +1339,13 @@ caller-supplied message or backend detail. Existing capability, factory, depende
 application-service signatures are unchanged. Production Worker composition, PostgreSQL
 acceptance, combined regression, and closeout remain separate gates; migration
 `20260808_0025` remains absent.
+
+### CP10 Worker poll-result and sticky-drain production correction
+
+Status: Implemented / Validated, Pending Review. The Worker no longer waits for candidate tasks
+before producing immutable poll results and no longer folds candidate operational markers into a
+cycle result. Immediate post-cycle shutdown observation closes the process-local admission gate;
+queued work cannot begin after shutdown, and admitted work is drained to the exact supplied
+deadline with residue zero. Programmer defects remain observable after structured cleanup.
+Cancellation and credential reads stay inside pre-invocation revalidation. PostgreSQL acceptance,
+combined regression, and closeout remain separate; migration `20260808_0025` is absent.
