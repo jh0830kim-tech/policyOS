@@ -77,11 +77,17 @@ def reconciliation_stage() -> RuntimeApiLocalWriteSetStage:
 
 def test_registry_payloads_round_trip_through_strict_allowlist() -> None:
     facts = binding().registry_resolution_admission
+    reconciliation = reconciliation_write_set().model_copy(
+        update={
+            "acknowledgement_reference": "provider.operation",
+            "acknowledgement_digest_reference": "digest.provider-acknowledgement",
+        }
+    )
     cases = (
         (RuntimeRegistryPayloadType.SNAPSHOT, facts.snapshot),
         (RuntimeRegistryPayloadType.RESOLUTION_REQUEST, facts.resolution_request),
         (RuntimeRegistryPayloadType.RESOLUTION_DECISION, facts.resolution_decision),
-        (RuntimeRegistryPayloadType.RECONCILIATION_REQUEST, reconciliation_write_set()),
+        (RuntimeRegistryPayloadType.RECONCILIATION_REQUEST, reconciliation),
     )
     for payload_type, value in cases:
         assert (
@@ -129,6 +135,13 @@ async def test_reconciliation_stage_is_one_append_only_request() -> None:
     )
     assert record.local_write_set_id == stage.local_write_set_id
     assert record.transport_receipt_id == stage.transport_receipt_id
+    assert (
+        deserialize_registry_payload(
+            RuntimeRegistryPayloadType.RECONCILIATION_REQUEST,
+            record.request_payload,
+        )
+        == stage.reconciliation_request
+    )
 
 
 @pytest.mark.asyncio

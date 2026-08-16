@@ -108,3 +108,17 @@ classification mismatches before capability use.
 The gate validates the three closed delivery certainties and exact reconciliation binding without
 networking or secret material. PostgreSQL and provider-sandbox execution remain later gates;
 existing payload persistence remains unchanged and Alembic stays at `20260808_0024`.
+
+## 11. Connector persistence sufficiency gate
+
+The existing CP8 revision graph is the authoritative connector evidence owner. Delivery outcome
+facts round-trip through lifecycle revision `result_payload`; provider-specific observations
+round-trip through reconciliation `observation_payload`; and the exact closed reconciliation
+request round-trips through registry `request_payload`. Strict allowlisted serialization rejects
+extra, unknown, and substituted facts, and exact relational scope continues to bind tenant,
+organization, classification, lineage, effect, attempt, revision, request, and digest identity.
+
+PostgreSQL 16 acceptance must prove append-only storage, exact replay, conflict rejection,
+rollback residue zero, and cross-scope substitution rejection. No provider-operation table,
+credential-secret storage, connector evidence backfill, normalization, deduplication, or migration
+`20260808_0025` is authorized. Production connector behavior remains the next independent gate.
