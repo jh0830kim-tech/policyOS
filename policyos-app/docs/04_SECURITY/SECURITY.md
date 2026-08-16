@@ -1086,3 +1086,18 @@ shutdown preserve Adapter-call count zero. Each candidate owns fresh request cap
 deadline cancellation is limited to application-admitted pending tasks with cleanup awaited to
 zero residue. The service imports no SQLAlchemy or framework transport and creates no schema or
 migration `20260808_0025`.
+
+### CP10 Worker poll-result and shutdown-drain ordering security boundary
+
+ADR-122 prevents candidate execution from rewriting synchronous poll facts. Iteration and cycle
+results contain only governed discovery/admission outcomes and do not wait for Adapter completion.
+Candidate marker failures produce no synthetic poll result, retry, cancellation, reconciliation,
+dead letter, or lifecycle evidence; existing durable claim, lease, attempt, lifecycle, receipt,
+and effect facts remain authoritative.
+
+Sticky shutdown is observed while admitted tasks may still run. The service starts no new work
+after shutdown, drains only its admitted task set to the exact caller-supplied deadline, and awaits
+cleanup to zero residue without disclosing exceptions or backend detail. Cancellation and
+credential capabilities remain composition inputs to pre-invocation revalidation and are not
+independently entered by the Worker. No task persistence, schema, or migration
+`20260808_0025` is approved.

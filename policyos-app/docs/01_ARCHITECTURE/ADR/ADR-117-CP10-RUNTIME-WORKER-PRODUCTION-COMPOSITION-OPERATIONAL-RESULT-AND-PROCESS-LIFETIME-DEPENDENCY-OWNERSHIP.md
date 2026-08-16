@@ -257,3 +257,11 @@ owned by the result producer. Contract failures, programmer defects, and host ca
 propagate. At the exact sticky shutdown deadline, the service cancels only candidate tasks it
 admitted, awaits reverse-order cleanup to task residue zero, and writes no invented Runtime
 outcome. This process cleanup is not effect cancellation or lifecycle authority.
+
+## ADR-122 poll-result and drain-ordering clarification
+
+Iteration and cycle results describe synchronous discovery and candidate admission only. They are
+produced without awaiting admitted candidate tasks, and a candidate-task failure cannot amend or
+reclassify either poll result. Sticky shutdown is observed while admitted tasks may remain active;
+only those tasks drain to the exact supplied deadline. Durable claim, lease, attempt, lifecycle,
+and receipt evidence remains the recovery authority for candidate failures.

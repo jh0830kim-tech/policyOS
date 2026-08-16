@@ -127,3 +127,12 @@ Rejected. Existing durable lifecycle evidence already owns recovery facts.
 Production code gains one exact, non-disclosing operational failure boundary and one executable
 bounded-drain rule without gaining Runtime authority. Defects and host cancellation remain
 visible, task residue is zero, and no schema change is introduced.
+
+## ADR-122 result-cardinality clarification
+
+The iteration result follows due selection and ordered candidate admission, and the cycle result
+follows the visited assignment prefix; neither waits for admitted candidate execution. A marker
+raised inside an admitted candidate task is not converted into either poll result. Sticky shutdown
+observation proceeds while admitted tasks may remain active, then drains only that admitted set to
+the exact supplied deadline. Durable Runtime evidence, not a synthetic poll failure, owns later
+recovery.

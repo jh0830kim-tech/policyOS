@@ -3205,3 +3205,50 @@ def test_cp10_production_worker_is_bounded_to_governed_application_sequencing() 
     assert "create_runtime_worker_application_service" in production
     assert "CP10 production Worker application service" in related
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_cp10_worker_poll_result_candidate_failure_and_drain_ordering_is_governed() -> None:
+    adr = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-122-CP10-RUNTIME-WORKER-POLL-RESULT-CANDIDATE-FAILURE-AND-"
+            "SHUTDOWN-DRAIN-ORDERING.md"
+        )
+    ).read_text(encoding="utf-8")
+    related = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+            ROOT / "docs/03_OPERATIONS/SPRINT-15-PROGRAM.md",
+            ROOT / "docs/04_SECURITY/SECURITY.md",
+        )
+    )
+
+    for required in (
+        "Poll results describe discovery and admission only",
+        "does not await any admitted candidate task",
+        "not a poll failure",
+        "owns no public operational result",
+        "authoritative recovery facts",
+        "observes sticky shutdown while admitted candidate",
+        "never waits for all candidate tasks before it can observe shutdown",
+        "independently enter, call, select, or reinterpret cancellation or credential",
+        "migration\n`20260808_0025` is required or approved",
+    ):
+        assert required in adr
+    for rejected in (
+        "Await every candidate and translate its failure into the cycle result",
+        "Produce a second asynchronous candidate operational result",
+        "Poll shutdown on a new hidden cadence",
+        "Persist task and candidate failure state",
+    ):
+        assert rejected in adr
+    for required in (
+        "poll-result, candidate-failure, and shutdown-drain ordering governance",
+        "Governed / Validated, Pending Review",
+        "durable recovery evidence",
+        "zero residue",
+    ):
+        assert required in related
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
