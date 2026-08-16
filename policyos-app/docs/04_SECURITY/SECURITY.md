@@ -1087,6 +1087,15 @@ deadline cancellation is limited to application-admitted pending tasks with clea
 zero residue. The service imports no SQLAlchemy or framework transport and creates no schema or
 migration `20260808_0025`.
 
+### CP10 Worker PostgreSQL shutdown/crash-window acceptance
+
+PostgreSQL 16 tests prove that concurrent Worker claims cannot create two authoritative revisions,
+exact replay does not duplicate mutation, and durable `DELIVERING` evidence cannot be selected for
+blind Adapter redelivery. Shutdown cleanup cancels only process-admitted tasks at the supplied
+deadline, preserves committed lifecycle facts, and reaches task residue zero without inventing a
+retry, cancellation, reconciliation, or outcome. The acceptance gate is test-only and adds no
+schema or migration `20260808_0025`.
+
 ### CP10 Worker poll-result and shutdown-drain ordering security boundary
 
 ADR-122 prevents candidate execution from rewriting synchronous poll facts. Iteration and cycle
