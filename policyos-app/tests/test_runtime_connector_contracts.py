@@ -10,7 +10,11 @@ from pydantic import ValidationError
 
 from app.ai.privacy import DataClassification
 from app.runtime.ports import (
+    RUNTIME_CONNECTOR_PROTOCOL_VERSION,
     RuntimeAdapterFamily,
+    RuntimeConnectorDeliveryAcknowledgement,
+    RuntimeConnectorDeliveryWireRequest,
+    RuntimeConnectorDeliveryWireResponse,
     RuntimeConnectorInvocationCapability,
     RuntimeConnectorInvocationCapabilityFactory,
     RuntimeConnectorMaterializationRequest,
@@ -18,6 +22,7 @@ from app.runtime.ports import (
     RuntimeConnectorObservationCapabilityFactory,
     RuntimeConnectorObservationInvocation,
     RuntimeConnectorObservationMaterializationRequest,
+    RuntimeConnectorOutcomeFactsProvider,
     RuntimeCredentialLeaseReference,
     RuntimeCredentialLeaseRequest,
     RuntimeEffectClaim,
@@ -37,7 +42,12 @@ from app.runtime.ports import (
     RuntimePortErrorCode,
     RuntimePortReconciliationError,
     RuntimePortScope,
+    encode_runtime_connector_wire_request,
+    parse_runtime_connector_delivery_response,
+    runtime_connector_canonical_digest,
+    validate_runtime_connector_delivery_acknowledgement,
     validate_runtime_connector_delivery_result,
+    validate_runtime_connector_delivery_wire_request,
     validate_runtime_connector_materialization_request,
     validate_runtime_connector_observation,
     validate_runtime_connector_observation_invocation,
@@ -83,6 +93,8 @@ def identity() -> RuntimeEffectIdentity:
         runtime_execution_request_id=uid(1),
         execution_plan_id=uid(4),
         execution_plan_step_id=uid(5),
+        payload_reference="payload.reference",
+        payload_digest_reference="payload.digest",
         destination_reference="destination.approved",
         effect_idempotency_key="effect.idempotency",
         classification=DataClassification.CONFIDENTIAL,
@@ -502,3 +514,115 @@ def test_connector_result_binding_rejects_adapter_substitution() -> None:
     substituted = result.model_copy(update={"adapter_reference": "adapter.other"})
     with pytest.raises(RuntimePortContractError):
         validate_runtime_connector_delivery_result(materialization(), substituted)
+
+
+def delivery_wire_request() -> RuntimeConnectorDeliveryWireRequest:
+    source = materialization()
+    invocation = source.invocation
+    envelope = invocation.envelope
+    identity = envelope.effect_identity
+    return RuntimeConnectorDeliveryWireRequest(
+        protocol_version=RUNTIME_CONNECTOR_PROTOCOL_VERSION,
+        operation="deliver",
+        runtime_effect_id=identity.runtime_effect_id,
+        runtime_execution_request_id=identity.runtime_execution_request_id,
+        runtime_effect_delivery_attempt_id=invocation.attempt.runtime_effect_delivery_attempt_id,
+        runtime_effect_delivery_invocation_id=invocation.runtime_effect_delivery_invocation_id,
+        runtime_effect_delivery_envelope_id=envelope.runtime_effect_delivery_envelope_id,
+        payload_reference=identity.payload_reference,
+        payload_digest_reference=identity.payload_digest_reference,
+        destination_reference=identity.destination_reference,
+        connector_provisioning_reference=(
+            source.credential_lease_request.connector_provisioning_reference
+        ),
+        adapter_reference=envelope.adapter_reference,
+        adapter_contract_version=envelope.adapter_contract_version,
+        effect_idempotency_key=identity.effect_idempotency_key,
+        tenant_id=identity.tenant_id,
+        organization_id=identity.organization_id,
+        classification=identity.classification,
+        root_lineage_id=identity.root_lineage_id,
+        root_lineage_digest_reference=identity.root_lineage_digest_reference,
+        permit_reference_ids=invocation.attempt.permit_reference_ids,
+    )
+
+
+def test_connector_wire_request_is_exact_and_canonically_encoded() -> None:
+    request = delivery_wire_request()
+    assert validate_runtime_connector_delivery_wire_request(materialization(), request) is request
+    body = encode_runtime_connector_wire_request(request)
+    assert body.startswith(b'{"protocol_version":"policyos-runtime-connector-v1"')
+    assert b"credential" not in body and b"Authorization" not in body
+    assert runtime_connector_canonical_digest((uid(1), NOW, 1, (uid(2),))) == (
+        runtime_connector_canonical_digest((uid(1), NOW, 1, (uid(2),)))
+    )
+    with pytest.raises(RuntimePortContractError):
+        validate_runtime_connector_delivery_wire_request(
+            materialization(), request.model_copy(update={"destination_reference": "other"})
+        )
+
+
+def test_connector_acknowledgement_requires_exact_200_identity_time_and_digest() -> None:
+    request = delivery_wire_request()
+    acknowledgement = RuntimeConnectorDeliveryAcknowledgement(
+        protocol_version=RUNTIME_CONNECTOR_PROTOCOL_VERSION,
+        operation_reference="provider.operation.1",
+        runtime_effect_id=request.runtime_effect_id,
+        runtime_effect_delivery_attempt_id=request.runtime_effect_delivery_attempt_id,
+        destination_reference=request.destination_reference,
+        effect_idempotency_key=request.effect_idempotency_key,
+        accepted_at=NOW + timedelta(seconds=1),
+        acknowledgement_digest_reference="digest.placeholder",
+    )
+    projection = tuple(
+        getattr(acknowledgement, name) for name in tuple(type(acknowledgement).model_fields)[:-1]
+    )
+    acknowledgement = acknowledgement.model_copy(
+        update={"acknowledgement_digest_reference": runtime_connector_canonical_digest(projection)}
+    )
+    response = RuntimeConnectorDeliveryWireResponse(delivery_acknowledgement=acknowledgement)
+    assert (
+        parse_runtime_connector_delivery_response(response.model_dump_json().encode("utf-8"))
+        == response
+    )
+    assert (
+        validate_runtime_connector_delivery_acknowledgement(
+            request,
+            response,
+            http_status=200,
+            trusted_started_at=NOW,
+            trusted_completed_at=NOW + timedelta(seconds=2),
+        )
+        is acknowledgement
+    )
+    with pytest.raises(RuntimePortContractError):
+        validate_runtime_connector_delivery_acknowledgement(
+            request,
+            response,
+            http_status=201,
+            trusted_started_at=NOW,
+            trusted_completed_at=NOW + timedelta(seconds=2),
+        )
+
+
+def test_connector_response_parser_rejects_duplicate_unknown_bom_and_oversize() -> None:
+    duplicate = b'{"delivery_acknowledgement":{},"delivery_acknowledgement":{}}'
+    with pytest.raises(RuntimePortContractError):
+        parse_runtime_connector_delivery_response(duplicate)
+    with pytest.raises(RuntimePortContractError):
+        parse_runtime_connector_delivery_response(b"\xef\xbb\xbf{}")
+    with pytest.raises(RuntimePortContractError):
+        parse_runtime_connector_delivery_response(b"{" + b" " * 16_384 + b"}")
+
+
+def test_outcome_facts_provider_is_runtime_checkable_without_secret_surface() -> None:
+    class Provider:
+        def delivery_facts(self, request):
+            raise NotImplementedError
+
+        def observation_facts(self, request):
+            raise NotImplementedError
+
+    assert isinstance(Provider(), RuntimeConnectorOutcomeFactsProvider)
+    fields = set(RuntimeConnectorDeliveryWireRequest.model_fields)
+    assert not fields.intersection({"credential", "secret", "authorization", "token"})

@@ -1,9 +1,26 @@
 """Pure exact-binding validation for managed connector contracts."""
 
+import hashlib
+import json
+from datetime import UTC, datetime
+from enum import Enum
+from typing import Any
+from uuid import UUID
+
+from pydantic import ValidationError
+
 from app.runtime.ports.connector import (
+    RUNTIME_CONNECTOR_REQUEST_BODY_MAX_BYTES,
+    RUNTIME_CONNECTOR_RESPONSE_BODY_MAX_BYTES,
+    RuntimeConnectorDeliveryAcknowledgement,
+    RuntimeConnectorDeliveryObservation,
+    RuntimeConnectorDeliveryWireRequest,
+    RuntimeConnectorDeliveryWireResponse,
     RuntimeConnectorMaterializationRequest,
     RuntimeConnectorObservationInvocation,
     RuntimeConnectorObservationMaterializationRequest,
+    RuntimeConnectorObservationWireRequest,
+    RuntimeConnectorObservationWireResponse,
 )
 from app.runtime.ports.delivery import (
     RuntimeEffectDeliveryCertainty,
@@ -21,6 +38,280 @@ from app.runtime.ports.errors import (
     RuntimePortReconciliationError,
 )
 from app.runtime.ports.validation import validate_runtime_credential_lease_reference
+
+
+def _canonical_datetime(value: datetime) -> str:
+    if value.tzinfo is None or value.utcoffset() is None or value.utcoffset().total_seconds() != 0:
+        raise RuntimePortContractError("connector canonical datetime must already be UTC")
+    return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def _canonical_scalar(value: object) -> bytes:
+    if value is None:
+        return b""
+    if isinstance(value, bool):
+        raise RuntimePortContractError("connector canonical value cannot be boolean")
+    if isinstance(value, Enum):
+        value = value.value
+    if isinstance(value, UUID):
+        return str(value).encode("utf-8")
+    if isinstance(value, datetime):
+        return _canonical_datetime(value).encode("utf-8")
+    if isinstance(value, int):
+        return str(value).encode("ascii")
+    if isinstance(value, str):
+        if not value:
+            raise RuntimePortContractError("connector canonical string cannot be empty")
+        return value.encode("utf-8")
+    raise RuntimePortContractError("unsupported connector canonical value")
+
+
+def _component(value: object) -> bytes:
+    raw = _canonical_scalar(value)
+    return str(len(raw)).encode("ascii") + b":" + raw
+
+
+def runtime_connector_canonical_digest(values: tuple[object, ...]) -> str:
+    encoded = bytearray()
+    for value in values:
+        if isinstance(value, tuple):
+            encoded.extend(_component(len(value)))
+            for item in value:
+                encoded.extend(_component(item))
+        else:
+            encoded.extend(_component(value))
+    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+def _delivery_request_projection(
+    request: RuntimeConnectorDeliveryWireRequest,
+) -> tuple[object, ...]:
+    return tuple(getattr(request, name) for name in type(request).model_fields)
+
+
+def _delivery_acknowledgement_projection(
+    acknowledgement: RuntimeConnectorDeliveryAcknowledgement,
+) -> tuple[object, ...]:
+    return tuple(
+        getattr(acknowledgement, name) for name in tuple(type(acknowledgement).model_fields)[:-1]
+    )
+
+
+def _observation_request_projection(
+    request: RuntimeConnectorObservationWireRequest,
+) -> tuple[object, ...]:
+    return tuple(getattr(request, name) for name in type(request).model_fields)
+
+
+def _observation_projection(
+    observation: RuntimeConnectorDeliveryObservation,
+) -> tuple[object, ...]:
+    return tuple(getattr(observation, name) for name in tuple(type(observation).model_fields)[:-1])
+
+
+def validate_runtime_connector_delivery_wire_request(
+    source: RuntimeConnectorMaterializationRequest,
+    request: RuntimeConnectorDeliveryWireRequest,
+) -> RuntimeConnectorDeliveryWireRequest:
+    validate_runtime_connector_materialization_request(source)
+    invocation = source.invocation
+    envelope = invocation.envelope
+    identity = envelope.effect_identity
+    expected = (
+        identity.runtime_effect_id,
+        identity.runtime_execution_request_id,
+        invocation.attempt.runtime_effect_delivery_attempt_id,
+        invocation.runtime_effect_delivery_invocation_id,
+        envelope.runtime_effect_delivery_envelope_id,
+        identity.payload_reference,
+        identity.payload_digest_reference,
+        identity.destination_reference,
+        source.credential_lease_request.connector_provisioning_reference,
+        envelope.adapter_reference,
+        envelope.adapter_contract_version,
+        identity.effect_idempotency_key,
+        identity.tenant_id,
+        identity.organization_id,
+        identity.classification,
+        identity.root_lineage_id,
+        identity.root_lineage_digest_reference,
+        invocation.attempt.permit_reference_ids,
+    )
+    actual = tuple(_delivery_request_projection(request)[2:])
+    if actual != expected:
+        raise RuntimePortContractError("connector delivery wire request binding differs")
+    runtime_connector_canonical_digest(_delivery_request_projection(request))
+    return request
+
+
+def validate_runtime_connector_delivery_acknowledgement(
+    request: RuntimeConnectorDeliveryWireRequest,
+    response: RuntimeConnectorDeliveryWireResponse,
+    *,
+    http_status: int,
+    trusted_started_at: datetime,
+    trusted_completed_at: datetime,
+) -> RuntimeConnectorDeliveryAcknowledgement:
+    acknowledgement = response.delivery_acknowledgement
+    if http_status != 200:
+        raise RuntimePortContractError("connector acknowledgement requires exact HTTP 200")
+    expected = (
+        request.runtime_effect_id,
+        request.runtime_effect_delivery_attempt_id,
+        request.destination_reference,
+        request.effect_idempotency_key,
+    )
+    actual = (
+        acknowledgement.runtime_effect_id,
+        acknowledgement.runtime_effect_delivery_attempt_id,
+        acknowledgement.destination_reference,
+        acknowledgement.effect_idempotency_key,
+    )
+    if actual != expected:
+        raise RuntimePortContractError("connector acknowledgement identity differs")
+    if not (trusted_started_at <= acknowledgement.accepted_at <= trusted_completed_at):
+        raise RuntimePortContractError("connector acknowledgement time is outside trusted window")
+    digest = runtime_connector_canonical_digest(
+        _delivery_acknowledgement_projection(acknowledgement)
+    )
+    if acknowledgement.acknowledgement_digest_reference != digest:
+        raise RuntimePortContractError("connector acknowledgement digest differs")
+    return acknowledgement
+
+
+def validate_runtime_connector_observation_wire_request(
+    source: RuntimeConnectorObservationMaterializationRequest,
+    request: RuntimeConnectorObservationWireRequest,
+) -> RuntimeConnectorObservationWireRequest:
+    validate_runtime_connector_observation_materialization_request(source)
+    invocation = source.invocation
+    envelope = invocation.envelope
+    identity = envelope.effect_identity
+    reconciliation = invocation.reconciliation_request
+    expected = (
+        invocation.runtime_connector_observation_invocation_id,
+        identity.runtime_effect_id,
+        reconciliation.ambiguous_attempt_id,
+        reconciliation.acknowledgement_reference,
+        reconciliation.acknowledgement_digest_reference,
+        identity.destination_reference,
+        source.connector_provisioning_reference,
+        identity.effect_idempotency_key,
+        identity.tenant_id,
+        identity.organization_id,
+        identity.classification,
+        identity.root_lineage_id,
+        identity.root_lineage_digest_reference,
+        reconciliation.runtime_authority_bundle_id,
+        reconciliation.runtime_admission_decision_id,
+        reconciliation.permit_reference_ids,
+        invocation.requested_at,
+    )
+    actual = tuple(_observation_request_projection(request)[2:])
+    if actual != expected:
+        raise RuntimePortContractError("connector observation wire request binding differs")
+    runtime_connector_canonical_digest(_observation_request_projection(request))
+    return request
+
+
+def validate_runtime_connector_delivery_observation(
+    request: RuntimeConnectorObservationWireRequest,
+    response: RuntimeConnectorObservationWireResponse,
+    *,
+    http_status: int,
+    trusted_completed_at: datetime,
+) -> RuntimeConnectorDeliveryObservation:
+    observation = response.delivery_observation
+    if http_status != 200:
+        raise RuntimePortContractError("connector observation requires exact HTTP 200")
+    expected = (
+        request.operation_reference,
+        request.runtime_effect_id,
+        request.runtime_effect_delivery_attempt_id,
+        request.destination_reference,
+        request.effect_idempotency_key,
+    )
+    actual = (
+        observation.operation_reference,
+        observation.runtime_effect_id,
+        observation.runtime_effect_delivery_attempt_id,
+        observation.destination_reference,
+        observation.effect_idempotency_key,
+    )
+    if actual != expected or observation.observed_at > trusted_completed_at:
+        raise RuntimePortContractError("connector observation binding differs")
+    digest = runtime_connector_canonical_digest(_observation_projection(observation))
+    if observation.observation_digest_reference != digest:
+        raise RuntimePortContractError("connector observation digest differs")
+    return observation
+
+
+def _reject_duplicate_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise RuntimePortContractError("connector JSON contains a duplicate field")
+        result[key] = value
+    return result
+
+
+def _parse_closed_json(body: bytes, *, maximum_bytes: int) -> dict[str, Any]:
+    if not body or len(body) > maximum_bytes or body.startswith(b"\xef\xbb\xbf"):
+        raise RuntimePortContractError("connector JSON body is empty, BOM-prefixed, or oversized")
+    try:
+        text = body.decode("utf-8", errors="strict")
+        value = json.loads(
+            text,
+            object_pairs_hook=_reject_duplicate_pairs,
+            parse_constant=lambda _value: (_ for _ in ()).throw(
+                RuntimePortContractError("connector JSON contains a non-finite number")
+            ),
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimePortContractError("connector JSON is malformed") from exc
+    if not isinstance(value, dict):
+        raise RuntimePortContractError("connector JSON top-level value must be an object")
+    return value
+
+
+def parse_runtime_connector_delivery_response(
+    body: bytes,
+) -> RuntimeConnectorDeliveryWireResponse:
+    try:
+        value = _parse_closed_json(body, maximum_bytes=RUNTIME_CONNECTOR_RESPONSE_BODY_MAX_BYTES)
+        return RuntimeConnectorDeliveryWireResponse.model_validate_json(
+            json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+        )
+    except ValidationError as exc:
+        raise RuntimePortContractError("connector delivery response contract is invalid") from exc
+
+
+def parse_runtime_connector_observation_response(
+    body: bytes,
+) -> RuntimeConnectorObservationWireResponse:
+    try:
+        value = _parse_closed_json(body, maximum_bytes=RUNTIME_CONNECTOR_RESPONSE_BODY_MAX_BYTES)
+        return RuntimeConnectorObservationWireResponse.model_validate_json(
+            json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+        )
+    except ValidationError as exc:
+        raise RuntimePortContractError(
+            "connector observation response contract is invalid"
+        ) from exc
+
+
+def encode_runtime_connector_wire_request(
+    request: RuntimeConnectorDeliveryWireRequest | RuntimeConnectorObservationWireRequest,
+) -> bytes:
+    body = json.dumps(
+        request.model_dump(mode="json"),
+        ensure_ascii=False,
+        allow_nan=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    if len(body) > RUNTIME_CONNECTOR_REQUEST_BODY_MAX_BYTES:
+        raise RuntimePortContractError("connector request body exceeds the exact byte bound")
+    return body
 
 
 def validate_runtime_connector_materialization_request(

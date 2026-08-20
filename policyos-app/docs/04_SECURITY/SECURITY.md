@@ -1257,3 +1257,12 @@ Only exact status `200` plus verified bounded evidence is authoritative. Strict 
 canonical typed digest inputs, response limits, TLS certificate and hostname verification,
 redirect prohibition and trusted deadline binding prevent parser differentials, credential leaks,
 destination substitution and transport-status inference.
+### Sprint 16 connector canonical-wire public-contract boundary
+
+Strict frozen delivery and observation wire values expose only reference identities and bounded
+provider evidence. Canonical digest validation is deterministic and rejects non-UTC time,
+duplicate or unknown fields, malformed UTF-8, BOM, non-finite values, identity substitution and
+oversized bodies. The one-shot outcome-facts provider owns PolicyOS result identities, trusted
+times and bounded references; provider evidence cannot manufacture them. Authorization headers,
+bearer values, secret buffers, clients and sessions are absent from public contracts. This gate
+performs no provider I/O and adds no migration `20260808_0025`.

@@ -167,3 +167,11 @@ strict byte limits, exact status `200`, verified TLS, no redirects and caller-ow
 Governance performs no provider call or credential enablement. The next gate adds secret-free
 public contracts; private transport, provider-sandbox acceptance and operator enablement remain
 separate. No migration `20260808_0025` is introduced.
+
+## 10. Connector canonical-wire public contracts
+
+The public-contract gate adds strict secret-free delivery and observation wire values, exact
+identity and trusted-time validation, duplicate and unknown-field rejection, deterministic
+canonical digests, byte bounds, and the one-shot outcome-facts provider. It performs no network
+call and does not enable a credential or destination. Private transport, provider-sandbox and
+operator enablement remain later gates; there is no migration `20260808_0025`.

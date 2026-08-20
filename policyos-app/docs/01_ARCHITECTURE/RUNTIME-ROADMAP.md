@@ -1245,3 +1245,12 @@ JSON, digest, byte-bound, TLS, status and deadline meanings required before publ
 preserves private secret ownership and existing CP8 persistence, with no migration
 `20260808_0025`. Public-contract, production/provider-sandbox acceptance and operator enablement
 remain separate checkpoints.
+## Sprint 16 connector canonical-wire public contracts
+
+The connector wire public-contract gate implements ADR-127 with strict frozen delivery and
+observation request/evidence values, deterministic length-prefixed UTF-8 SHA-256 validation,
+exact request and response byte bounds, and a one-shot server-owned
+`RuntimeConnectorOutcomeFactsProvider`. Public contracts expose no bearer value, authorization
+header, secret buffer, HTTP client, session, or provider SDK object. Exact HTTP `200` remains
+insufficient without validated evidence. Production transport, provider-sandbox acceptance and
+operator enablement remain separate, and this gate adds no migration `20260808_0025`.

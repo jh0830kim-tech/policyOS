@@ -476,10 +476,11 @@ def test_bundle_rejects_orphan_admission_reference() -> None:
 
 def test_production_boundary_has_no_runtime_or_issuance_implementation() -> None:
     root = ROOT / "app" / "runtime"
-    sources = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in root.rglob("*.py")
-        if "persistence" not in path.parts
+    approved_digest_source = root / "ports" / "connector_validation.py"
+    source_paths = tuple(path for path in root.rglob("*.py") if "persistence" not in path.parts)
+    sources = "\n".join(path.read_text(encoding="utf-8") for path in source_paths)
+    sources_without_approved_digest = "\n".join(
+        path.read_text(encoding="utf-8") for path in source_paths if path != approved_digest_source
     )
     forbidden = (
         "datetime.now",
@@ -487,7 +488,6 @@ def test_production_boundary_has_no_runtime_or_issuance_implementation() -> None
         "time.time",
         "uuid4",
         "random.",
-        "hashlib",
         "subprocess",
         "httpx",
         "requests",
@@ -501,6 +501,7 @@ def test_production_boundary_has_no_runtime_or_issuance_implementation() -> None
         "issue_runtime_authorization",
     )
     assert all(term not in sources for term in forbidden)
+    assert "hashlib" not in sources_without_approved_digest
     assert not any(
         (root / name).exists()
         for name in (
