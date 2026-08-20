@@ -175,3 +175,21 @@ identity and trusted-time validation, duplicate and unknown-field rejection, det
 canonical digests, byte bounds, and the one-shot outcome-facts provider. It performs no network
 call and does not enable a credential or destination. Private transport, provider-sandbox and
 operator enablement remain later gates; there is no migration `20260808_0025`.
+
+## 11. Connector production composition and materialization-facts governance
+
+ADR-128 closes the production construction graph before provider I/O. One request-scoped one-shot
+facts provider supplies delivery or observation materialization IDs, fresh credential lease
+request IDs, the exact provisioning and credential references, and caller-supplied request and
+expiry times. Production code does not generate, repair or infer them.
+
+Pre-invocation revalidation or observation preparation performs exact immutable catalog lookup,
+calls one request-scoped broker once, and constructs one secret-free request only from an exact
+issued lease. The Worker passes the invokable request once to the managed delivery factory;
+blocked paths call it zero times. Observation uses separate facts and a fresh lease.
+
+The process bundle contains only immutable configuration and factories. Secret materialization,
+Bearer construction, HTTPS transport, response validation and outcome-facts production remain
+inside one managed request capability and clean up exactly once in reverse order. No transaction
+spans those operations. The next gate adds materialization-facts and production-bundle contracts;
+production transport and acceptance remain separate, with no migration `20260808_0025`.

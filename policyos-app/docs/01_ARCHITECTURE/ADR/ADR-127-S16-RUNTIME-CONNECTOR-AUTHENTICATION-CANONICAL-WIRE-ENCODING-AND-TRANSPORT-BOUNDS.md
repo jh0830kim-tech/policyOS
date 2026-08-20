@@ -216,3 +216,12 @@ The initial connector now has one deterministic and testable wire protocol witho
 material in public contracts or treating transport success as delivery authority. Strict bounds
 and conservative ambiguity may reject permissive providers, but they preserve exact identity,
 scope, classification, lineage, credential, time, and evidence ownership.
+
+## ADR-128 lifetime and outcome clarification
+
+The Bearer header and HTTP client exist only inside a managed request capability created after the
+closed materialization request is available. Construction failure before the governed call
+boundary is definitely not delivered; any possible transmission remains ambiguous. Outcome facts
+are caller-supplied by a request-scoped one-shot provider and cannot be derived from HTTP status,
+provider identity, transport time or cleanup. Exactly-once reverse cleanup preserves the primary
+validated outcome and never changes delivery certainty.

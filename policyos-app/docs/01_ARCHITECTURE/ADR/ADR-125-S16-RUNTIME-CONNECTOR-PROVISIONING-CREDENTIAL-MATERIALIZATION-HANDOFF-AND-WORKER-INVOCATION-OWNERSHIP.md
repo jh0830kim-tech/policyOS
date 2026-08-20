@@ -203,3 +203,17 @@ environment fallback and caller-supplied endpoints are prohibited. Provider resp
 owns only the external operation identity and bounded acknowledgement. PolicyOS logical result
 identity, trusted time and references remain owned by the one-shot
 `RuntimeConnectorOutcomeFactsProvider`.
+
+## ADR-128 materialization-facts and factory-graph clarification
+
+The immutable catalog is selected only by the provider-supplied non-reusable provisioning
+reference plus the exact prepared connector, adapter contract, destination, tenant, organization
+and classification ceiling. Production code cannot select by endpoint, recency, credential alone
+or partial scope.
+
+A request-scoped one-shot materialization-facts provider supplies delivery and observation
+materialization IDs, fresh credential lease request IDs, provisioning and credential references,
+and caller-supplied requested/expiry times. Pre-invocation revalidation and observation
+preparation each combine those facts with exactly one broker outcome. The process bundle contains
+only immutable configuration and factories; request capabilities, private secret buffers,
+transports and provider responses never become process-lifetime fields.

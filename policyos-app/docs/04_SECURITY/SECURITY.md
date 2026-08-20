@@ -1266,3 +1266,22 @@ oversized bodies. The one-shot outcome-facts provider owns PolicyOS result ident
 times and bounded references; provider evidence cannot manufacture them. Authorization headers,
 bearer values, secret buffers, clients and sessions are absent from public contracts. This gate
 performs no provider I/O and adds no migration `20260808_0025`.
+
+### Sprint 16 connector production-composition security boundary
+
+ADR-128 prohibits hidden materialization UUIDs, lease request IDs, provisioning selection,
+credential references, clocks and expiry. One request-scoped server-owned facts provider supplies
+those exact caller-owned values. Missing, repeated, stale, substituted, cross-attempt,
+cross-destination, cross-tenant, cross-organization or cross-classification facts fail before
+catalog lookup, credential acquisition, secret materialization or network I/O.
+
+The immutable process bundle stores only a validated catalog and factories. It contains no secret,
+Bearer header, mutable buffer, HTTP client, provider response, session, transaction or
+request-local capability. Delivery and observation use separate facts and purpose-bound leases;
+the delivery lease cannot be reused for reconciliation.
+
+Private secret and transport resources are created only after exact request validation, cleaned up
+exactly once in reverse order and never disclosed through public models, persistence, audit, logs,
+metrics, exceptions or snapshots. No database transaction spans broker, secret, transport,
+response or cleanup work. Cleanup cannot rewrite certainty, and possible transmission always
+remains ambiguous. This governance gate adds no schema or migration `20260808_0025`.

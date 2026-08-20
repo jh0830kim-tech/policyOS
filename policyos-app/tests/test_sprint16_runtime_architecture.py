@@ -433,3 +433,71 @@ def test_connector_wire_public_contract_gate_is_secret_free_and_bounded() -> Non
         assert prohibited not in connector.lower()
 
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr128_connector_production_composition_and_materialization_facts_governance() -> None:
+    adr_root = ROOT / "docs/01_ARCHITECTURE/ADR"
+    adr128 = (
+        adr_root
+        / (
+            "ADR-128-S16-RUNTIME-CONNECTOR-PRODUCTION-COMPOSITION-AND-"
+            "MATERIALIZATION-FACTS-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr119 = (
+        adr_root
+        / "ADR-119-CP10-RUNTIME-WORKER-PRE-INVOCATION-AUTHORITATIVE-REVALIDATION-OWNERSHIP.md"
+    ).read_text(encoding="utf-8")
+    adr125 = (
+        adr_root
+        / (
+            "ADR-125-S16-RUNTIME-CONNECTOR-PROVISIONING-CREDENTIAL-MATERIALIZATION-"
+            "HANDOFF-AND-WORKER-INVOCATION-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr126 = (
+        adr_root
+        / (
+            "ADR-126-S16-RUNTIME-CONNECTOR-WIRE-CONTRACT-PAYLOAD-MATERIALIZATION-"
+            "PROVIDER-EVIDENCE-AND-BACKEND-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr127 = (
+        adr_root
+        / (
+            "ADR-127-S16-RUNTIME-CONNECTOR-AUTHENTICATION-CANONICAL-WIRE-ENCODING-"
+            "AND-TRANSPORT-BOUNDS.md"
+        )
+    ).read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((adr128, adr119, adr125, adr126, adr127, roadmap, program, security))
+
+    for required in (
+        "RuntimeConnectorMaterializationFactsProvider",
+        "runtime_connector_materialization_request_id",
+        "runtime_connector_observation_materialization_request_id",
+        "runtime_credential_lease_request_id",
+        "credential_purpose_reference",
+        "caller-supplied `requested_at`",
+        "caller-supplied `expires_at`",
+        "delivery_factory(revalidation.materialization_request)",
+        "exactly once in reverse construction order",
+        "No database transaction is open",
+        "fresh observation-specific lease",
+        "migration `20260808_0025`",
+    ):
+        assert required in combined
+
+    for prohibited in (
+        "latest provisioning entry,",
+        "read an environment credential",
+        "Store request-local preparation state globally",
+        "Reuse the delivery lease for observation",
+        "Generate request IDs and times inside production composition",
+    ):
+        assert prohibited in adr128
+
+    assert "Production/public Python" not in adr128
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

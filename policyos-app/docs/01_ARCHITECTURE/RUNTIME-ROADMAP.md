@@ -1254,3 +1254,19 @@ exact request and response byte bounds, and a one-shot server-owned
 header, secret buffer, HTTP client, session, or provider SDK object. Exact HTTP `200` remains
 insufficient without validated evidence. Production transport, provider-sandbox acceptance and
 operator enablement remain separate, and this gate adds no migration `20260808_0025`.
+
+## Sprint 16 connector production composition governance
+
+**Status: Governed / Validated, Pending Review.** ADR-128 assigns caller-supplied delivery and
+observation materialization IDs, provisioning and credential references, and request/expiry times
+to a request-scoped one-shot facts provider. Exact catalog lookup and one broker call precede each
+closed materialization request. The immutable process bundle contains factories only; private
+secret buffers, transports and provider responses remain request-local and are cleaned up exactly
+once in reverse order.
+
+The Worker passes the exact invokable request once to
+`delivery_factory(revalidation.materialization_request)`. Observation preparation obtains fresh
+facts and a fresh purpose-bound lease. No transaction spans external I/O, existing CP8 evidence
+remains authoritative, and migration `20260808_0025` is neither needed nor approved. Public
+contract correction, production connector implementation and provider/PostgreSQL acceptance
+remain separate gates.
