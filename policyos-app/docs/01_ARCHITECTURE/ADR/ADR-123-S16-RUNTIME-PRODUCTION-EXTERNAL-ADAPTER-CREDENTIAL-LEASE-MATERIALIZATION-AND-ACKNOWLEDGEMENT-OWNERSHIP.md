@@ -277,3 +277,10 @@ Secrets come only from the deployment-owned secret manager through the private m
 materialization source. PolicyOS result identity, trusted times and references come from the
 server-owned one-shot `RuntimeConnectorOutcomeFactsProvider`, never from the provider response.
 Existing CP8 records remain authoritative; no migration `20260808_0025` is introduced.
+## ADR-127 authentication and transport clarification
+
+The initial receiver uses only `Authorization: Bearer <opaque-secret>` inside the private managed
+transport capability. Public contracts contain no secret or header value. The exact protocol is
+`policyos-runtime-connector-v1`, exact status `200` and fully verified closed evidence are both
+required, and TLS verification, redirect prohibition, caller-supplied deadlines, and strict body
+bounds follow ADR-127. These choices add no migration `20260808_0025`.

@@ -185,3 +185,10 @@ The same provisioned endpoint handles observation with operation `observe`. Prov
 `CONFIRMED_NOT_DELIVERED`, and `pending` to `STILL_AMBIGUOUS`. Timeout, denial, redirect,
 malformed evidence, identity mismatch and provider unavailability map to
 `OBSERVATION_UNAVAILABLE`; they do not authorize inference from HTTP or transport state.
+## ADR-127 canonical encoding clarification
+
+Acknowledgement and observation evidence use ADR-127's explicit declaration order and semantic
+length-prefixed UTF-8 SHA-256 projection. Raw or normalized JSON is never acknowledgement
+authority. UUIDs, UTC microsecond timestamps, tuples, optional absence, operation identity and all
+scope echoes must already be canonical; serialization cannot repair or infer them. HTTP status
+`200` remains necessary but never sufficient.

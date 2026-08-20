@@ -1246,3 +1246,14 @@ request-local buffer. The managed capability overwrites and releases the buffer 
 Secret material is forbidden from public models, representations, errors, logs, persistence,
 audit, metrics, evidence and test snapshots. Once the network transport call begins, incomplete
 or unverified evidence is always ambiguous; a transport signal cannot prove non-delivery.
+## Sprint 16 connector authentication and canonical-wire boundary
+
+The initial connector authenticates only with a request-local
+`Authorization: Bearer <opaque-secret>` header assembled inside the private managed capability.
+The entire header is excluded or redacted from logs, traces, errors, audit, metrics and tests, and
+the mutable secret buffer is overwritten and released exactly once.
+
+Only exact status `200` plus verified bounded evidence is authoritative. Strict UTF-8 JSON,
+canonical typed digest inputs, response limits, TLS certificate and hostname verification,
+redirect prohibition and trusted deadline binding prevent parser differentials, credential leaks,
+destination substitution and transport-status inference.
