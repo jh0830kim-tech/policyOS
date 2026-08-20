@@ -49,6 +49,47 @@ def test_adr123_governs_initial_connector_credentials_and_acknowledgement() -> N
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_connector_worker_materialization_handoff_contract_gate_is_bounded() -> None:
+    connector = (ROOT / "app/runtime/ports/connector.py").read_text(encoding="utf-8")
+    connector_validation = (ROOT / "app/runtime/ports/connector_validation.py").read_text(
+        encoding="utf-8"
+    )
+    worker = (ROOT / "app/services/runtime_worker_protocols.py").read_text(encoding="utf-8")
+    worker_validation = (ROOT / "app/services/runtime_worker_validation.py").read_text(
+        encoding="utf-8"
+    )
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join(
+        (connector, connector_validation, worker, worker_validation, roadmap, program, security)
+    )
+
+    for required in (
+        "RuntimeConnectorObservationMaterializationRequest",
+        "materialization_request: RuntimeConnectorMaterializationRequest | None",
+        "self, request: RuntimeConnectorMaterializationRequest",
+        "connector observation lease request time differs",
+        "connector observation predates reconciliation request",
+        "scope.attempt_id",
+        "exactly one secret-free connector materialization",
+        "fresh observation-specific lease",
+        "no schema or migration `20260808_0025`",
+    ):
+        assert required in combined
+
+    for prohibited in (
+        "credential_secret:",
+        "authorization_header:",
+        "import fastapi",
+        "import sqlalchemy",
+        "select the latest credential",
+    ):
+        assert prohibited not in connector.lower()
+
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_adr125_governs_connector_provisioning_and_worker_handoff() -> None:
     adr = (
         ROOT

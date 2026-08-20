@@ -3,6 +3,7 @@
 from app.runtime.ports.connector import (
     RuntimeConnectorMaterializationRequest,
     RuntimeConnectorObservationInvocation,
+    RuntimeConnectorObservationMaterializationRequest,
 )
 from app.runtime.ports.delivery import (
     RuntimeEffectDeliveryCertainty,
@@ -38,6 +39,7 @@ def validate_runtime_connector_materialization_request(
     if lease_request.adapter_family is not RuntimeAdapterFamily.CONNECTOR:
         raise RuntimePortCredentialError("connector materialization requires connector family")
     expected = (
+        envelope.adapter_family,
         envelope.adapter_reference,
         envelope.adapter_contract_version,
         identity.destination_reference,
@@ -55,6 +57,7 @@ def validate_runtime_connector_materialization_request(
         identity.classification,
     )
     actual = (
+        lease_request.adapter_family,
         lease_request.adapter_reference,
         lease_request.adapter_contract_version,
         lease_request.destination_reference,
@@ -144,11 +147,86 @@ def validate_runtime_connector_observation_invocation(
     return invocation
 
 
+def validate_runtime_connector_observation_materialization_request(
+    request: RuntimeConnectorObservationMaterializationRequest,
+) -> RuntimeConnectorObservationMaterializationRequest:
+    invocation = validate_runtime_connector_observation_invocation(request.invocation)
+    lease_request = request.credential_lease_request
+    lease = validate_runtime_credential_lease_reference(
+        lease_request, request.credential_lease_reference
+    )
+    envelope = invocation.envelope
+    identity = envelope.effect_identity
+    reconciliation = invocation.reconciliation_request
+    scope = lease_request.scope
+
+    if lease_request.adapter_family is not RuntimeAdapterFamily.CONNECTOR:
+        raise RuntimePortCredentialError("connector observation requires connector family")
+    expected = (
+        request.connector_provisioning_reference,
+        request.connector_provisioning_reference,
+        envelope.adapter_reference,
+        envelope.adapter_contract_version,
+        identity.destination_reference,
+        envelope.runtime_effect_delivery_envelope_id,
+        envelope.envelope_digest_reference,
+        identity.runtime_effect_id,
+        identity.effect_idempotency_key,
+        reconciliation.permit_reference_ids,
+        identity.runtime_execution_request_id,
+        reconciliation.ambiguous_attempt_id,
+        envelope.actor_id,
+        envelope.agent_instance_id,
+        identity.tenant_id,
+        identity.organization_id,
+        identity.classification,
+        identity.root_lineage_id,
+        identity.root_lineage_digest_reference,
+        reconciliation.runtime_authority_bundle_id,
+        reconciliation.runtime_admission_decision_id,
+    )
+    actual = (
+        lease_request.connector_provisioning_reference,
+        lease.connector_provisioning_reference,
+        lease_request.adapter_reference,
+        lease_request.adapter_contract_version,
+        lease_request.destination_reference,
+        lease_request.runtime_effect_delivery_envelope_id,
+        lease_request.envelope_digest_reference,
+        lease_request.runtime_effect_id,
+        lease_request.effect_idempotency_key,
+        lease_request.permit_reference_ids,
+        scope.runtime_execution_request_id,
+        scope.attempt_id,
+        scope.actor_id,
+        scope.agent_instance_id,
+        scope.tenant_id,
+        scope.organization_id,
+        scope.classification,
+        scope.root_lineage_id,
+        scope.root_lineage_digest_reference,
+        scope.runtime_authority_bundle_id,
+        scope.runtime_admission_decision_id,
+    )
+    if actual != expected:
+        raise RuntimePortCredentialError("connector observation materialization binding differs")
+    if request.connector_provisioning_reference != reconciliation.connector_provisioning_reference:
+        raise RuntimePortCredentialError("connector observation provisioning differs")
+    if lease_request.requested_at != request.requested_at:
+        raise RuntimePortCredentialError("connector observation lease request time differs")
+    if request.requested_at < reconciliation.requested_at:
+        raise RuntimePortCredentialError("connector observation predates reconciliation request")
+    if request.requested_at < lease.issued_at or request.requested_at >= lease.expires_at:
+        raise RuntimePortCredentialError("connector observation lease is not active")
+    return request
+
+
 def validate_runtime_connector_observation(
-    invocation: RuntimeConnectorObservationInvocation,
+    request: RuntimeConnectorObservationMaterializationRequest,
     observation: RuntimeEffectReconciliationObservation,
 ) -> RuntimeEffectReconciliationObservation:
-    validate_runtime_connector_observation_invocation(invocation)
+    validate_runtime_connector_observation_materialization_request(request)
+    invocation = request.invocation
     validate_runtime_effect_reconciliation(
         invocation.reconciliation_request,
         observation,

@@ -15,6 +15,7 @@ from app.runtime.ports.connector import (
     RuntimeConnectorObservationCapability,
     RuntimeConnectorObservationCapabilityFactory,
     RuntimeConnectorObservationInvocation,
+    RuntimeConnectorObservationMaterializationRequest,
     RuntimeManagedConnectorInvocationCapability,
     RuntimeManagedConnectorObservationCapability,
 )
@@ -23,6 +24,7 @@ from app.runtime.ports.connector_validation import (
     validate_runtime_connector_materialization_request,
     validate_runtime_connector_observation,
     validate_runtime_connector_observation_invocation,
+    validate_runtime_connector_observation_materialization_request,
 )
 from app.runtime.ports.credentials import (
     RuntimeCredentialBrokerPort,
@@ -260,6 +262,7 @@ __all__ = (
     "RuntimeConnectorObservationCapability",
     "RuntimeConnectorObservationCapabilityFactory",
     "RuntimeConnectorObservationInvocation",
+    "RuntimeConnectorObservationMaterializationRequest",
     "RuntimeCredentialBrokerPort",
     "RuntimeCredentialLeaseOutcome",
     "RuntimeCredentialLeaseReference",
@@ -382,6 +385,7 @@ __all__ = (
     "validate_runtime_connector_materialization_request",
     "validate_runtime_connector_observation",
     "validate_runtime_connector_observation_invocation",
+    "validate_runtime_connector_observation_materialization_request",
     "validate_runtime_credential_lease_outcome",
     "validate_runtime_credential_lease_reference",
     "validate_runtime_effect_claim",

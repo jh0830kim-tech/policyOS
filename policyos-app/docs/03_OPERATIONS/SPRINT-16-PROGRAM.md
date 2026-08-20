@@ -136,3 +136,16 @@ materialization request only when invocation remains authorized. The Worker pass
 managed delivery factory. Observation preparation obtains a fresh lease for the same immutable
 destination. The next contract gate amends these signatures; production I/O and provider
 acceptance remain later gates, with no schema or migration `20260808_0025`.
+
+## 13. Connector Worker materialization handoff contracts
+
+The pre-invocation result has a closed disposition-dependent shape: `INVOKABLE` contains exactly
+one validated connector materialization request, while `DEFINITELY_NOT_INVOKED` and
+`SHUTDOWN_BLOCKED` contain none. The Worker delivery factory accepts only that request and cannot
+reacquire a lease or infer connector facts.
+
+Observation preparation produces a separate materialization request and fresh
+observation-specific lease. Its caller-supplied request time is exact and cannot predate the
+reconciliation request, preventing reuse of the earlier delivery lease request. Production
+broker, secret materialization, provider I/O, PostgreSQL acceptance, and provider-sandbox
+acceptance remain later gates. This gate adds no schema or migration `20260808_0025`.

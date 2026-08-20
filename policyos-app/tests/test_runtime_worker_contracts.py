@@ -28,7 +28,11 @@ from test_runtime_delivery_persistence_contracts import (
 
 from app.ai.privacy import DataClassification
 from app.runtime.ports import (
+    RuntimeAdapterFamily,
     RuntimeClockReading,
+    RuntimeConnectorMaterializationRequest,
+    RuntimeCredentialLeaseReference,
+    RuntimeCredentialLeaseRequest,
     RuntimeEffectDeliveryInvocation,
     RuntimeEffectDueSelectionRequest,
     RuntimeEffectLifecycleAppend,
@@ -37,6 +41,7 @@ from app.runtime.ports import (
     RuntimeEffectLifecycleCommitResult,
     RuntimeEffectLifecycleReceipt,
     RuntimeEffectLifecycleStatus,
+    RuntimePortScope,
 )
 from app.runtime.ports.domain import RuntimePortContractVersion
 from app.services.runtime_worker_contracts import (
@@ -265,14 +270,30 @@ def result_append(result=None, prepared=None):
 
 
 def prepared_delivery(**updates) -> RuntimeWorkerPreparedDelivery:
-    request = prepared_request()
+    base_request = prepared_request()
+    connector_envelope = base_request.candidate.delivery_envelope.model_copy(
+        update={"adapter_family": RuntimeAdapterFamily.CONNECTOR}
+    )
+    request = base_request.model_copy(
+        update={
+            "candidate": base_request.candidate.model_copy(
+                update={"delivery_envelope": connector_envelope}
+            )
+        }
+    )
     claim_fact = claim_request().model_copy(
         update={
             "effect_identity": request.candidate.effect_identity,
             "previous_lifecycle_record": request.candidate.current_lifecycle_record,
         }
     )
-    delivery = delivery_request().model_copy(update={"claim": claim_fact.claim})
+    base_delivery = delivery_request()
+    delivery = base_delivery.model_copy(
+        update={
+            "claim": claim_fact.claim,
+            "envelope": connector_envelope,
+        }
+    )
     delivering = delivering_request().model_copy(
         update={
             "append": delivering_request().append.model_copy(
@@ -302,6 +323,88 @@ def prepared_delivery(**updates) -> RuntimeWorkerPreparedDelivery:
     }
     values.update(updates)
     return RuntimeWorkerPreparedDelivery(**values)
+
+
+def worker_materialization(
+    prepared: RuntimeWorkerPreparedDelivery,
+    requested_at: datetime,
+) -> RuntimeConnectorMaterializationRequest:
+    invocation = prepared.invocation
+    envelope = invocation.envelope
+    identity = envelope.effect_identity
+    attempt_fact = invocation.attempt
+    scope = RuntimePortScope.model_construct(
+        runtime_execution_request_id=identity.runtime_execution_request_id,
+        runtime_authority_bundle_id=attempt_fact.runtime_authority_bundle_id,
+        runtime_admission_decision_id=attempt_fact.runtime_admission_decision_id,
+        execution_plan_id=identity.execution_plan_id,
+        execution_plan_step_id=identity.execution_plan_step_id,
+        attempt_id=attempt_fact.runtime_effect_delivery_attempt_id,
+        actor_id=envelope.actor_id,
+        agent_instance_id=envelope.agent_instance_id,
+        on_behalf_of_user_id=envelope.on_behalf_of_user_id,
+        tenant_id=identity.tenant_id,
+        organization_id=identity.organization_id,
+        classification=identity.classification,
+        root_lineage_id=identity.root_lineage_id,
+        root_lineage_digest_reference=identity.root_lineage_digest_reference,
+        provenance_reference_ids=(),
+        policy_revision=attempt_fact.policy_revision,
+        authorization_revision=attempt_fact.authorization_revision,
+        registry_revision=attempt_fact.registry_revision,
+        state_revision=attempt_fact.state_revision,
+    )
+    lease_request = RuntimeCredentialLeaseRequest(
+        runtime_credential_lease_request_id=uid(600),
+        scope=scope,
+        adapter_family=envelope.adapter_family,
+        adapter_reference=envelope.adapter_reference,
+        adapter_contract_version=envelope.adapter_contract_version,
+        connector_provisioning_reference="connector.provisioning",
+        destination_reference=identity.destination_reference,
+        credential_reference="credential.reference",
+        credential_purpose_reference="connector.invoke",
+        permit_reference_ids=attempt_fact.permit_reference_ids,
+        runtime_effect_delivery_envelope_id=envelope.runtime_effect_delivery_envelope_id,
+        envelope_digest_reference=envelope.envelope_digest_reference,
+        runtime_effect_id=identity.runtime_effect_id,
+        effect_idempotency_key=identity.effect_idempotency_key,
+        requested_at=requested_at - timedelta(seconds=1),
+        expires_at=requested_at + timedelta(minutes=1),
+    )
+    lease_reference = RuntimeCredentialLeaseReference(
+        runtime_credential_lease_reference_id=uid(601),
+        runtime_credential_lease_request_id=lease_request.runtime_credential_lease_request_id,
+        broker_reference="broker.production",
+        runtime_execution_request_id=identity.runtime_execution_request_id,
+        adapter_family=envelope.adapter_family,
+        adapter_reference=envelope.adapter_reference,
+        adapter_contract_version=envelope.adapter_contract_version,
+        connector_provisioning_reference="connector.provisioning",
+        destination_reference=identity.destination_reference,
+        credential_reference="credential.reference",
+        credential_purpose_reference="connector.invoke",
+        permit_reference_ids=attempt_fact.permit_reference_ids,
+        runtime_effect_delivery_envelope_id=envelope.runtime_effect_delivery_envelope_id,
+        envelope_digest_reference=envelope.envelope_digest_reference,
+        runtime_effect_id=identity.runtime_effect_id,
+        effect_idempotency_key=identity.effect_idempotency_key,
+        tenant_id=identity.tenant_id,
+        organization_id=identity.organization_id,
+        actor_id=envelope.actor_id,
+        agent_instance_id=envelope.agent_instance_id,
+        attempt_id=attempt_fact.runtime_effect_delivery_attempt_id,
+        classification=identity.classification,
+        issued_at=requested_at - timedelta(seconds=1),
+        expires_at=requested_at + timedelta(minutes=1),
+    )
+    return RuntimeConnectorMaterializationRequest(
+        runtime_connector_materialization_request_id=uid(602),
+        credential_lease_request=lease_request,
+        credential_lease_reference=lease_reference,
+        invocation=invocation,
+        requested_at=requested_at,
+    )
 
 
 def test_worker_contracts_are_closed_strict_frozen_and_extra_forbidden():
@@ -444,15 +547,32 @@ def test_pre_invocation_revalidation_contract_is_exact():
         ),
     )
     assert validate_runtime_worker_pre_invocation_revalidation_request(request) is request
+    observed_at = prepared.invocation.attempt.requested_at + timedelta(seconds=2)
+    materialization = worker_materialization(prepared, observed_at)
     result = RuntimeWorkerPreInvocationRevalidationResult(
         request=request,
         disposition=RuntimeWorkerPreInvocationDisposition.INVOKABLE,
         clock_reading=RuntimeClockReading(
             clock_reference="clock.delivery",
-            observed_at=NOW + timedelta(seconds=2),
+            observed_at=observed_at,
         ),
+        materialization_request=materialization,
     )
     assert validate_runtime_worker_pre_invocation_revalidation_result(request, result) is result
+    with pytest.raises(RuntimeWorkerContractConflict):
+        validate_runtime_worker_pre_invocation_revalidation_result(
+            request,
+            result.model_copy(update={"materialization_request": None}),
+        )
+    with pytest.raises(RuntimeWorkerContractConflict):
+        validate_runtime_worker_pre_invocation_revalidation_result(
+            request,
+            result.model_copy(
+                update={
+                    "disposition": RuntimeWorkerPreInvocationDisposition.SHUTDOWN_BLOCKED,
+                }
+            ),
+        )
     with pytest.raises(RuntimeWorkerContractConflict):
         validate_runtime_worker_poll_cycle_result_production_request(
             RuntimeWorkerPollCycleResultProductionRequest(

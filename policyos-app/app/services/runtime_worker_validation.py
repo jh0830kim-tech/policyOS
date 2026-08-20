@@ -16,6 +16,9 @@ from app.runtime.ports import (
     validate_runtime_effect_lifecycle_append_request,
     validate_runtime_effect_lifecycle_commit_result,
 )
+from app.runtime.ports.connector_validation import (
+    validate_runtime_connector_materialization_request,
+)
 from app.services.runtime_worker_contracts import (
     RuntimeWorkerConfiguration,
     RuntimeWorkerConfigurationBinding,
@@ -339,11 +342,18 @@ def validate_runtime_worker_pre_invocation_revalidation_result(
     ):
         raise RuntimeWorkerContractConflict("pre-invocation clock differs")
     append = result.append_request
+    materialization = result.materialization_request
     if result.disposition is RuntimeWorkerPreInvocationDisposition.DEFINITELY_NOT_INVOKED:
         valid = append == request.prepared_delivery.definitely_not_invoked_append_request
-        valid = valid and append is not None
+        valid = valid and append is not None and materialization is None
+    elif result.disposition is RuntimeWorkerPreInvocationDisposition.INVOKABLE:
+        valid = append is None and materialization is not None
+        if materialization is not None:
+            validate_runtime_connector_materialization_request(materialization)
+            valid = valid and materialization.invocation == request.prepared_delivery.invocation
+            valid = valid and materialization.requested_at == result.clock_reading.observed_at
     else:
-        valid = append is None
+        valid = append is None and materialization is None
     if not valid:
         raise RuntimeWorkerContractConflict("pre-invocation disposition differs")
     return result

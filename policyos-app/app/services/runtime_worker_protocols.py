@@ -10,6 +10,7 @@ from app.runtime.orchestration import RuntimeOrchestrationDeliveryRequest
 from app.runtime.ports import (
     RuntimeCancellationPort,
     RuntimeClockReading,
+    RuntimeConnectorMaterializationRequest,
     RuntimeCredentialBrokerPort,
     RuntimeEffectClaimRequest,
     RuntimeEffectDeliveryInvocation,
@@ -154,6 +155,7 @@ class RuntimeWorkerPreInvocationRevalidationResult(RuntimeWorkerModel):
     disposition: RuntimeWorkerPreInvocationDisposition
     clock_reading: RuntimeClockReading
     append_request: RuntimeEffectLifecycleAppendRequest | None = None
+    materialization_request: RuntimeConnectorMaterializationRequest | None = None
 
 
 @runtime_checkable
@@ -246,7 +248,7 @@ class RuntimeWorkerLifecycleAppendCapabilityFactory(Protocol):
 @runtime_checkable
 class RuntimeWorkerDeliveryCapabilityFactory(Protocol):
     def __call__(
-        self,
+        self, request: RuntimeConnectorMaterializationRequest
     ) -> RuntimeWorkerManagedRequestCapability[RuntimeEffectDeliveryPort]: ...
 
 

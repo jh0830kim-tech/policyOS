@@ -17,6 +17,7 @@ from app.runtime.ports import (
     RuntimeConnectorObservationCapability,
     RuntimeConnectorObservationCapabilityFactory,
     RuntimeConnectorObservationInvocation,
+    RuntimeConnectorObservationMaterializationRequest,
     RuntimeCredentialLeaseReference,
     RuntimeCredentialLeaseRequest,
     RuntimeEffectClaim,
@@ -40,6 +41,7 @@ from app.runtime.ports import (
     validate_runtime_connector_materialization_request,
     validate_runtime_connector_observation,
     validate_runtime_connector_observation_invocation,
+    validate_runtime_connector_observation_materialization_request,
 )
 
 NOW = datetime(2026, 8, 16, 4, 0, tzinfo=UTC)
@@ -275,6 +277,40 @@ def observation_invocation() -> RuntimeConnectorObservationInvocation:
     )
 
 
+def observation_lease_request() -> RuntimeCredentialLeaseRequest:
+    return lease_request().model_copy(
+        update={
+            "runtime_credential_lease_request_id": uid(63),
+            "credential_purpose_reference": "connector.observe",
+            "requested_at": NOW + timedelta(seconds=4),
+            "expires_at": NOW + timedelta(minutes=4),
+        }
+    )
+
+
+def observation_lease_reference() -> RuntimeCredentialLeaseReference:
+    return lease_reference().model_copy(
+        update={
+            "runtime_credential_lease_reference_id": uid(64),
+            "runtime_credential_lease_request_id": uid(63),
+            "credential_purpose_reference": "connector.observe",
+            "issued_at": NOW + timedelta(seconds=4),
+            "expires_at": NOW + timedelta(minutes=4),
+        }
+    )
+
+
+def observation_materialization() -> RuntimeConnectorObservationMaterializationRequest:
+    return RuntimeConnectorObservationMaterializationRequest(
+        runtime_connector_observation_materialization_request_id=uid(65),
+        credential_lease_request=observation_lease_request(),
+        credential_lease_reference=observation_lease_reference(),
+        connector_provisioning_reference="connector.provisioning",
+        invocation=observation_invocation(),
+        requested_at=NOW + timedelta(seconds=4),
+    )
+
+
 def observation() -> RuntimeEffectReconciliationObservation:
     request = reconciliation_request()
     return RuntimeEffectReconciliationObservation.model_construct(
@@ -345,8 +381,13 @@ def test_connector_result_mapping_preserves_ambiguity_and_rejects_false_certaint
 def test_connector_observation_requires_exact_ambiguous_identity() -> None:
     invocation_fact = observation_invocation()
     assert validate_runtime_connector_observation_invocation(invocation_fact) is invocation_fact
+    materialization_request = observation_materialization()
+    assert (
+        validate_runtime_connector_observation_materialization_request(materialization_request)
+        is materialization_request
+    )
     observed = observation()
-    assert validate_runtime_connector_observation(invocation_fact, observed) is observed
+    assert validate_runtime_connector_observation(materialization_request, observed) is observed
 
     substituted = invocation_fact.model_copy(
         update={
@@ -357,6 +398,28 @@ def test_connector_observation_requires_exact_ambiguous_identity() -> None:
     )
     with pytest.raises(RuntimePortReconciliationError):
         validate_runtime_connector_observation_invocation(substituted)
+
+
+def test_connector_observation_rejects_provisioning_time_and_delivery_lease_reuse() -> None:
+    request = observation_materialization()
+    with pytest.raises(RuntimePortCredentialError):
+        validate_runtime_connector_observation_materialization_request(
+            request.model_copy(update={"connector_provisioning_reference": "connector.other"})
+        )
+    with pytest.raises(RuntimePortCredentialError):
+        validate_runtime_connector_observation_materialization_request(
+            request.model_copy(update={"requested_at": NOW + timedelta(seconds=3)})
+        )
+    with pytest.raises(RuntimePortCredentialError):
+        validate_runtime_connector_observation_materialization_request(
+            request.model_copy(
+                update={
+                    "credential_lease_request": lease_request(),
+                    "credential_lease_reference": lease_reference(),
+                    "requested_at": NOW,
+                }
+            )
+        )
 
 
 def test_managed_protocols_are_runtime_checkable_and_have_closed_exit() -> None:
@@ -394,7 +457,7 @@ def test_managed_protocols_are_runtime_checkable_and_have_closed_exit() -> None:
             return False
 
     class ObservationFactory:
-        def create(self, invocation):
+        def create(self, request):
             return ManagedObservation()
 
     assert isinstance(InvocationCapability(), RuntimeConnectorInvocationCapability)
@@ -423,6 +486,13 @@ def test_connector_contracts_are_strict_and_extra_forbidden() -> None:
             **{
                 **lease_request().model_dump(),
                 "adapter_family": RuntimeAdapterFamily.PROVIDER,
+            }
+        )
+    with pytest.raises(ValidationError):
+        RuntimeConnectorObservationMaterializationRequest(
+            **{
+                **observation_materialization().model_dump(),
+                "credential_secret": "forbidden",
             }
         )
 
