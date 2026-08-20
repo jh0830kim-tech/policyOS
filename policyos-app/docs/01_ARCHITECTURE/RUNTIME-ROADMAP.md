@@ -1231,3 +1231,10 @@ Reconciliation uses a distinct observation materialization request with a fresh
 observation-specific lease requested no earlier than the exact reconciliation request. Existing
 delivery lease facts therefore cannot be reused as the closed observation handoff. This
 contract-only gate performs no provider I/O and adds no schema or migration `20260808_0025`.
+## Sprint 16 connector wire and backend governance
+
+**Status: Governed / Validated, Pending Review.** ADR-126 fixes the initial HTTPS receiver,
+reference-notification wire projection, canonical acknowledgement digest, conservative pre-send
+boundary, provider-specific observation mapping, private secret backend and trusted PolicyOS
+outcome-facts source. It adds no schema or migration `20260808_0025`. Public contracts,
+production implementation and provider/PostgreSQL acceptance remain separate checkpoints.

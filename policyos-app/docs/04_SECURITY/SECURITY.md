@@ -1234,3 +1234,15 @@ defects are retrieved and propagated after structured child cleanup; host cancel
 its primary meaning. Cancellation and credential capabilities remain confined to authoritative
 pre-invocation revalidation, with no independent Worker entry, hidden time, new persistence, or
 migration `20260808_0025`.
+## Sprint 16 connector wire and secret-material boundary
+
+The first Runtime connector is a closed reference-notification protocol. It never dereferences or
+transmits the underlying payload bytes, follows redirects, constructs destinations dynamically or
+uses caller/environment fallback. Only the exact pre-provisioned HTTPS receiver and canonical
+bounded request and evidence projections are permitted.
+
+Credential material is obtained from the deployment-owned secret manager into a private mutable
+request-local buffer. The managed capability overwrites and releases the buffer exactly once.
+Secret material is forbidden from public models, representations, errors, logs, persistence,
+audit, metrics, evidence and test snapshots. Once the network transport call begins, incomplete
+or unverified evidence is always ambiguous; a transport signal cannot prove non-delivery.

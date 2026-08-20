@@ -49,6 +49,74 @@ def test_adr123_governs_initial_connector_credentials_and_acknowledgement() -> N
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_adr126_connector_wire_evidence_and_backend_governance() -> None:
+    adr123 = (
+        ROOT
+        / (
+            "docs/01_ARCHITECTURE/ADR/ADR-123-S16-RUNTIME-PRODUCTION-EXTERNAL-"
+            "ADAPTER-CREDENTIAL-LEASE-MATERIALIZATION-AND-ACKNOWLEDGEMENT-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr124 = (
+        ROOT
+        / (
+            "docs/01_ARCHITECTURE/ADR/ADR-124-S16-RUNTIME-CONNECTOR-"
+            "ACKNOWLEDGEMENT-EVIDENCE-MAPPING-AND-CREDENTIAL-LEASE-EXACT-BINDING.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr125 = (
+        ROOT
+        / (
+            "docs/01_ARCHITECTURE/ADR/ADR-125-S16-RUNTIME-CONNECTOR-PROVISIONING-"
+            "CREDENTIAL-MATERIALIZATION-HANDOFF-AND-WORKER-INVOCATION-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr126 = (
+        ROOT
+        / (
+            "docs/01_ARCHITECTURE/ADR/ADR-126-S16-RUNTIME-CONNECTOR-WIRE-"
+            "CONTRACT-PAYLOAD-MATERIALIZATION-PROVIDER-EVIDENCE-AND-BACKEND-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+
+    for phrase in (
+        "PolicyOS Governed HTTPS Connector Receiver v1",
+        "POLICYOS_REFERENCE_NOTIFICATION_V1",
+        "/v1/runtime/connector",
+        "`deliver` or `observe`",
+        "does not dereference or transmit the",
+        "fixed field order",
+        "length-prefixed UTF-8",
+        "bare HTTP",
+        "before the network",
+        "fully validated acknowledgement",
+        "RuntimeConnectorOutcomeFactsProvider",
+        "20260808_0025",
+    ):
+        assert phrase in adr126
+
+    assert "deployment-owned secret manager" in adr123
+    assert "CONFIRMED_DELIVERED" in adr124
+    assert "OBSERVATION_UNAVAILABLE" in adr124
+    assert "delivery_factory(revalidation.materialization_request)" in adr125
+    assert "Governed / Validated, Pending Review" in roadmap
+    assert "POST /v1/runtime/connector" in program
+    assert "private mutable" in security
+
+    forbidden = (
+        "dynamic destination discovery",
+        "follow redirects",
+        "HTTP 2xx proves delivery",
+        "environment credential fallback",
+        "migration 20260808_0025 is required",
+    )
+    for phrase in forbidden:
+        assert phrase not in adr126
+
+
 def test_connector_worker_materialization_handoff_contract_gate_is_bounded() -> None:
     connector = (ROOT / "app/runtime/ports/connector.py").read_text(encoding="utf-8")
     connector_validation = (ROOT / "app/runtime/ports/connector_validation.py").read_text(

@@ -172,3 +172,16 @@ request produced by authoritative pre-invocation revalidation. The managed conne
 accepts that request once and validates the identical invocation before network I/O. Provider
 observation uses a separate fresh lease and preserves the original acknowledgement identity,
 destination, idempotency, and lineage without latest-row or credential inference.
+## ADR-126 canonical evidence clarification
+
+For the first receiver, acknowledgement evidence is the closed ADR-126 projection, not arbitrary
+provider JSON. The provider must echo the exact effect, attempt, destination and unchanged effect
+idempotency key, return a stable operation reference and accepted time, and return the canonical
+digest. PolicyOS recomputes that digest from the fixed field order and length-prefixed UTF-8
+encoding and accepts `sha256:<lowercase hex>` only.
+
+The same provisioned endpoint handles observation with operation `observe`. Provider state
+`delivered` maps to `CONFIRMED_DELIVERED`, `not_delivered` to
+`CONFIRMED_NOT_DELIVERED`, and `pending` to `STILL_AMBIGUOUS`. Timeout, denial, redirect,
+malformed evidence, identity mismatch and provider unavailability map to
+`OBSERVATION_UNAVAILABLE`; they do not authorize inference from HTTP or transport state.
