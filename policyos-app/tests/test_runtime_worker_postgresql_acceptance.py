@@ -53,7 +53,9 @@ async def test_concurrent_worker_claim_has_one_append_and_exact_replay(
             return await SQLAlchemyRuntimeEffectLifecycleTransaction(session).claim(request)
 
     outcomes = await asyncio.gather(commit(), commit(), return_exceptions=True)
+    errors = [item for item in outcomes if isinstance(item, BaseException)]
     committed = [item for item in outcomes if isinstance(item, RuntimeEffectLifecycleCommitResult)]
+    assert errors == []
     assert len(committed) == 2
     assert [item.disposition for item in committed].count(
         RuntimeEffectLifecycleCommitDisposition.APPENDED

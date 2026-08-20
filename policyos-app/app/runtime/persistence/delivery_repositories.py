@@ -67,6 +67,22 @@ async def _existing(session, request_id, *, claim):
     ).scalar_one_or_none()
 
 
+def _exact_replay(existing, request, *, claim):
+    stored = deserialize_delivery_model(
+        RuntimeEffectClaimRequest if claim else RuntimeEffectLifecycleAppendRequest,
+        existing.write_request_payload,
+    )
+    if claim:
+        if stored != request:
+            raise RuntimePortEffectConflictError("claim replay immutable facts differ")
+    else:
+        validate_runtime_effect_lifecycle_replay(stored, request)
+    return RuntimeEffectLifecycleCommitResult(
+        disposition=RuntimeEffectLifecycleCommitDisposition.EXACT_REPLAY,
+        receipt=_receipt(existing),
+    )
+
+
 def _revision(request, *, stored_at):
     claim_request = isinstance(request, RuntimeEffectClaimRequest)
     append = None if claim_request else request.append
@@ -270,19 +286,7 @@ class SQLAlchemyRuntimeEffectLifecycleTransaction:
         async with self._session.begin():
             existing = await _existing(self._session, request_id, claim=claim)
         if existing is not None:
-            stored = deserialize_delivery_model(
-                RuntimeEffectClaimRequest if claim else RuntimeEffectLifecycleAppendRequest,
-                existing.write_request_payload,
-            )
-            if claim:
-                if stored != request:
-                    raise RuntimePortEffectConflictError("claim replay immutable facts differ")
-            else:
-                validate_runtime_effect_lifecycle_replay(stored, request)
-            return RuntimeEffectLifecycleCommitResult(
-                disposition=RuntimeEffectLifecycleCommitDisposition.EXACT_REPLAY,
-                receipt=_receipt(existing),
-            )
+            return _exact_replay(existing, request, claim=claim)
         identity = request.effect_identity if claim else request.append.effect_identity
         previous = (
             request.previous_lifecycle_record if claim else request.append.previous_lifecycle_record
@@ -297,6 +301,9 @@ class SQLAlchemyRuntimeEffectLifecycleTransaction:
                         .with_for_update()
                     )
                 ).scalar_one_or_none()
+                existing = await _existing(self._session, request_id, claim=claim)
+                if existing is not None:
+                    return _exact_replay(existing, request, claim=claim)
                 if head is None:
                     raise RuntimePersistenceConflictError(
                         "effect lifecycle optimistic revision conflicted"
@@ -363,9 +370,7 @@ class SQLAlchemyRuntimeEffectLifecycleTransaction:
                 head.active_lease_id = None if new_claim is None else new_claim.lease_id
                 head.claim_expires_at = None if new_claim is None else new_claim.expires_at
                 head.active_claim_payload = (
-                    null()
-                    if new_claim is None
-                    else serialize_delivery_model(new_claim)
+                    null() if new_claim is None else serialize_delivery_model(new_claim)
                 )
                 head.current_retry_decision_payload = (
                     null() if retry is None else serialize_delivery_model(retry)
