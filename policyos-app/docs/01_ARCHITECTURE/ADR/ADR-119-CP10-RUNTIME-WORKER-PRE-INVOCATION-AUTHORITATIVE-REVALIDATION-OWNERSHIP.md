@@ -96,3 +96,11 @@ The composition root may use cancellation and credential factories when construc
 pre-invocation revalidation capability. The Worker service does not independently enter, call,
 select, or reinterpret either capability around Adapter delivery. Candidate-task failures remain
 separate from poll results and preserve existing durable recovery evidence.
+
+## ADR-125 connector handoff clarification
+
+The revalidation capability performs the sole authoritative delivery credential acquisition and,
+only for a closed invokable connector result, returns the exact secret-free connector
+materialization request. It returns no materialization request for shutdown, cancellation,
+deadline, credential, provisioning, authority, or binding rejection. No later layer reacquires a
+lease or infers one from the attempt, envelope, or opaque reference.

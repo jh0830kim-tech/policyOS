@@ -1202,3 +1202,18 @@ provider operation or inferring identity from an opaque reference. It does not p
 secret material, add a provider-operation table, create lease-use history, backfill connector
 evidence, or add migration `20260808_0025`. Production connector I/O and provider-sandbox
 acceptance remain later gates.
+
+### Sprint 16 connector provisioning and Worker handoff governance
+
+Status: **Governed / Validated, Pending Review**.
+
+ADR-125 assigns the initial endpoint to one immutable process-lifetime provisioning entry with a
+globally non-reusable version reference. Production composition injects that catalog, the
+credential broker, and the private secret source; the Adapter cannot select an endpoint or read
+environment credentials.
+
+Authoritative pre-invocation revalidation returns one exact secret-free materialization request
+only for an invokable connector result. The Worker passes it once to a request-accepting managed
+delivery factory and never reconstructs or reacquires the lease. Reconciliation receives a fresh
+observation-specific lease and materialization request. Public-contract correction, production
+implementation, and provider acceptance remain separate; migration `20260808_0025` is absent.

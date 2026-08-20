@@ -289,3 +289,10 @@ Final authoritative revalidation belongs to one fresh managed capability after d
 `DELIVERING`. It owns the trusted clock and exact current authority, Registry, admission, state,
 audit, cancellation, credential, lease, deadline, destination, and shutdown reads. The Worker acts
 only on its closed invokable, definitely-not-invoked, or shutdown-blocked result.
+
+## ADR-125 connector materialization handoff clarification
+
+For the Sprint 16 connector, the closed invokable revalidation result owns one exact secret-free
+connector materialization request containing the prepared invocation and the exact issued opaque
+credential lease facts. The Worker neither reconstructs nor reacquires them. Its managed delivery
+factory accepts that request exactly once; blocked results contain no request and enter no Adapter.

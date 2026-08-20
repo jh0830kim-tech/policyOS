@@ -246,3 +246,16 @@ lifetime. Provider validation precedes managed cleanup: cleanup after a validate
 rewrite certainty, while uncertainty before validation after possible transmission remains
 `AMBIGUOUS`. Existing CP8 payload persistence remains sufficient, so no migration
 `20260808_0025` is introduced.
+
+## ADR-125 provisioning and Worker handoff clarification
+
+The initial destination is owned by one immutable process-lifetime provisioning entry whose
+globally non-reusable provisioning reference is its version identity. Endpoint, credential,
+scope, classification, connector, or adapter replacement requires a new reference. Production
+composition injects the catalog, broker, and private secret materialization source; the Adapter
+cannot read environment or mutable global state.
+
+The pre-invocation owner returns one exact secret-free connector materialization request only for
+an invokable result. The Worker passes it once to a request-accepting managed delivery factory.
+Reconciliation uses a fresh observation-specific lease and materialization request and never
+reuses the delivery capability.
