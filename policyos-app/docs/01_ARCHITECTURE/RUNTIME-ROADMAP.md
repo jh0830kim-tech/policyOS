@@ -1270,3 +1270,15 @@ facts and a fresh purpose-bound lease. No transaction spans external I/O, existi
 remains authoritative, and migration `20260808_0025` is neither needed nor approved. Public
 contract correction, production connector implementation and provider/PostgreSQL acceptance
 remain separate gates.
+
+## Sprint 16 connector materialization-facts and production-bundle signature governance
+
+**Status: Governed / Validated, Pending Review.** ADR-129 fixes two closed facts values, one
+covariant managed provider with an exact `facts()` method, two operation-specific leaf factories,
+an immutable provisioning catalog, observation preparation, an outcome-facts factory and one
+frozen connector production bundle with exactly nine fields.
+
+The public bundle reuses the existing broker factory and excludes private secret and HTTPS
+transport factories. Identity, reference and time remain caller-supplied; CP8 persistence remains
+authoritative and migration `20260808_0025` is absent. Public contracts, production composition
+and provider/PostgreSQL acceptance remain separate gates.

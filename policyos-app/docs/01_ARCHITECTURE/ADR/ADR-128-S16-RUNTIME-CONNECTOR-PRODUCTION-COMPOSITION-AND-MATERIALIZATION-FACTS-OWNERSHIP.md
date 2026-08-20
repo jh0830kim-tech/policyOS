@@ -215,3 +215,8 @@ Sprint 16 gains a complete construction and sequencing authority for the first p
 connector without granting the Worker secret, network, clock or identity-generation powers. The
 additional provider and factory layers are explicit, but they make cross-request reuse, hidden
 generation, destination substitution and outcome rewriting independently testable.
+
+ADR-129 fixes the exact public signatures deferred here. It uses separate delivery and observation
+facts and leaf factories, one covariant managed provider, the exact provisioning catalog and a
+nine-field secret-free public bundle. Private secret and HTTPS transport factories remain
+composition inputs captured behind managed delivery and observation factories.

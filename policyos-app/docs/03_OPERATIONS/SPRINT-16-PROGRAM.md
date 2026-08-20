@@ -193,3 +193,14 @@ Bearer construction, HTTPS transport, response validation and outcome-facts prod
 inside one managed request capability and clean up exactly once in reverse order. No transaction
 spans those operations. The next gate adds materialization-facts and production-bundle contracts;
 production transport and acceptance remain separate, with no migration `20260808_0025`.
+
+## 12. Connector materialization-facts and production-bundle signature governance
+
+ADR-129 closes exact public signatures before implementation. Delivery and observation use
+separate strict facts and leaf factories over one covariant managed provider. The provider exposes
+one `facts()` method, performs no I/O and is consumed once inside one request scope.
+
+The immutable provisioning catalog rejects partial, latest, aliased and credential-only
+selection. The frozen connector production bundle has exactly nine secret-free fields, reuses the
+existing managed broker factory and keeps secret and HTTPS transport factories behind concrete
+managed delivery and observation factories. Migration `20260808_0025` is not approved.

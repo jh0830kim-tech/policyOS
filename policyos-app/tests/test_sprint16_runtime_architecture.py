@@ -130,7 +130,15 @@ def test_connector_worker_materialization_handoff_contract_gate_is_bounded() -> 
     program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
     security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
     combined = "\n".join(
-        (connector, connector_validation, worker, worker_validation, roadmap, program, security)
+        (
+            connector,
+            connector_validation,
+            worker,
+            worker_validation,
+            roadmap,
+            program,
+            security,
+        )
     )
 
     for required in (
@@ -500,4 +508,54 @@ def test_adr128_connector_production_composition_and_materialization_facts_gover
         assert prohibited in adr128
 
     assert "Production/public Python" not in adr128
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr129_connector_materialization_provider_and_bundle_signature_governance() -> None:
+    adr129 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-129-S16-RUNTIME-CONNECTOR-MATERIALIZATION-FACTS-PROVIDER-AND-"
+            "PRODUCTION-BUNDLE-PUBLIC-SIGNATURE.md"
+        )
+    ).read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((adr129, roadmap, program, security))
+
+    for required in (
+        "RuntimeConnectorDeliveryMaterializationFacts",
+        "RuntimeConnectorObservationMaterializationFacts",
+        "MaterializationFactsT_co",
+        "def facts(self) -> MaterializationFactsT_co",
+        "RuntimeManagedConnectorMaterializationFactsProvider",
+        "RuntimeConnectorDeliveryMaterializationFactsProviderFactory",
+        "RuntimeConnectorObservationMaterializationFactsProviderFactory",
+        "RuntimeConnectorProvisioningEntry",
+        "RuntimeConnectorProvisioningCatalog",
+        "select_runtime_connector_provisioning_entry",
+        "RuntimeConnectorObservationPreparationCapability.prepare",
+        "RuntimeConnectorOutcomeFactsProviderFactory",
+        "RuntimeConnectorProductionDependencyBundle",
+        "exactly nine fields",
+        "migration `20260808_0025`",
+    ):
+        assert required in combined
+
+    for required in (
+        "Private secret-materialization and HTTPS transport factories are deliberately not public",
+        "Neither factory has a zero-argument",
+        "operation-matched facts method once",
+    ):
+        assert required in adr129
+
+    for prohibited in (
+        "select by URL, recency, partial scope or credential alone",
+        "Let the catalog or provider construct missing values",
+        "Put private secret and transport factories in the public bundle",
+    ):
+        assert prohibited in adr129
+
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

@@ -1285,3 +1285,16 @@ exactly once in reverse order and never disclosed through public models, persist
 metrics, exceptions or snapshots. No database transaction spans broker, secret, transport,
 response or cleanup work. Cleanup cannot rewrite certainty, and possible transmission always
 remains ambiguous. This governance gate adds no schema or migration `20260808_0025`.
+
+### Sprint 16 connector materialization-facts and production-bundle signature boundary
+
+ADR-129 prevents production from selecting provider methods, factory lifetimes or bundle fields.
+Delivery and observation facts are separate strict values with caller-supplied identities,
+credential and provisioning references, and exact request/expiry times. One covariant managed
+provider permits one `facts()` call and one exit; leaf factories prevent operation substitution.
+
+The immutable catalog rejects duplicate, disabled, aliased, partial, credential-only and latest
+selection. The nine-field public bundle reuses the managed broker factory and excludes secret
+buffers, Bearer values, private secret-source and HTTPS transport interfaces, clients, sessions
+and responses. No transaction spans provider, broker, secret, transport, outcome or cleanup work,
+and no migration `20260808_0025` is introduced.

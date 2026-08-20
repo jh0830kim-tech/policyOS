@@ -227,3 +227,7 @@ one transport call, use a fresh purpose-bound lease, obtain PolicyOS identities 
 one-shot outcome-facts provider, and clean up private resources exactly once in reverse order.
 No database transaction spans broker acquisition, secret materialization, transport, evidence
 validation, outcome-facts production or cleanup.
+
+ADR-129 keeps secret materialization and HTTPS transport factories outside Runtime Ports and the
+public production bundle. Concrete delivery and observation factories capture those private
+dependencies while their public signatures remain secret-free and request-bound.
