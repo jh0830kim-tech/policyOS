@@ -190,3 +190,16 @@ unable to select a provider, endpoint, credential, or result.
 This governance requires a separately reviewed additive public-contract correction before
 production implementation. It does not enable a connector, provision a credential, perform
 external I/O, deploy, tag, or release.
+## ADR-126 production seam clarification
+
+The production Worker calls `delivery_factory(revalidation.materialization_request)` exactly once
+only for an `INVOKABLE` result and never for replay, conflict, shutdown-blocked or definitely-not-
+invoked outcomes. The resulting managed capability owns the private request-local secret buffer
+and releases and overwrites it exactly once. No database transaction spans provider I/O.
+
+The provisioned destination remains an exact pre-approved absolute HTTPS endpoint for
+`POLICYOS_REFERENCE_NOTIFICATION_V1`; URL joining, redirects, query-selected destinations,
+environment fallback and caller-supplied endpoints are prohibited. Provider response evidence
+owns only the external operation identity and bounded acknowledgement. PolicyOS logical result
+identity, trusted time and references remain owned by the one-shot
+`RuntimeConnectorOutcomeFactsProvider`.

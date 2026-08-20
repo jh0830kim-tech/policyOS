@@ -149,3 +149,14 @@ observation-specific lease. Its caller-supplied request time is exact and cannot
 reconciliation request, preventing reuse of the earlier delivery lease request. Production
 broker, secret materialization, provider I/O, PostgreSQL acceptance, and provider-sandbox
 acceptance remain later gates. This gate adds no schema or migration `20260808_0025`.
+## 8. Connector wire, evidence and backend governance
+
+ADR-126 governs `PolicyOS Governed HTTPS Connector Receiver v1` as the first production receiver.
+It accepts only the pre-provisioned `POLICYOS_REFERENCE_NOTIFICATION_V1` HTTPS endpoint, exact
+`POST /v1/runtime/connector` requests and closed `deliver`/`observe` operations. Operator
+enablement, the secret-manager backend and real provider credentials remain deployment-owned and
+are not enabled by this governance change.
+
+The implementation sequence is governance, public contract, production adapter, provider and
+PostgreSQL acceptance, then explicit operator enablement. No migration `20260808_0025`, provider
+call or production configuration is part of this gate.

@@ -259,3 +259,21 @@ The pre-invocation owner returns one exact secret-free connector materialization
 an invokable result. The Worker passes it once to a request-accepting managed delivery factory.
 Reconciliation uses a fresh observation-specific lease and materialization request and never
 reuses the delivery capability.
+## ADR-126 wire and backend clarification
+
+ADR-126 fixes the first production provider as `PolicyOS Governed HTTPS Connector Receiver v1`
+for the sole destination class `POLICYOS_REFERENCE_NOTIFICATION_V1`. The provisioned absolute
+HTTPS endpoint is called with `POST` at the exact path `/v1/runtime/connector`; its closed
+operation discriminator is `deliver` or `observe`. The connector transmits a reference
+notification and does not dereference or transmit underlying payload bytes.
+
+Delivery is authoritative only when the provider returns its stable operation reference and the
+complete bounded acknowledgement whose exact echoes and fixed-order, length-prefixed UTF-8
+SHA-256 digest are recomputed successfully. Bare HTTP `2xx` remains insufficient. A local
+rejection before the network transport call begins is `DEFINITELY_NOT_DELIVERED`; after that
+boundary every outcome other than a fully validated acknowledgement is `AMBIGUOUS`.
+
+Secrets come only from the deployment-owned secret manager through the private managed
+materialization source. PolicyOS result identity, trusted times and references come from the
+server-owned one-shot `RuntimeConnectorOutcomeFactsProvider`, never from the provider response.
+Existing CP8 records remain authoritative; no migration `20260808_0025` is introduced.
