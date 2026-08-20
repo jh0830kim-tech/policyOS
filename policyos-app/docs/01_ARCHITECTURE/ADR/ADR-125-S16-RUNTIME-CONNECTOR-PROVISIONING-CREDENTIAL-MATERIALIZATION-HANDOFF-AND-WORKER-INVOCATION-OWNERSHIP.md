@@ -217,3 +217,7 @@ and caller-supplied requested/expiry times. Pre-invocation revalidation and obse
 preparation each combine those facts with exactly one broker outcome. The process bundle contains
 only immutable configuration and factories; request capabilities, private secret buffers,
 transports and provider responses never become process-lifetime fields.
+
+ADR-129 fixes the additive public signatures for operation-specific materialization-facts
+factories, the managed generic provider, observation preparation and the immutable connector
+production bundle. It does not alter this ADR's request cardinality or Worker handoff.

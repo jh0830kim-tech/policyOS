@@ -225,3 +225,7 @@ boundary is definitely not delivered; any possible transmission remains ambiguou
 are caller-supplied by a request-scoped one-shot provider and cannot be derived from HTTP status,
 provider identity, transport time or cleanup. Exactly-once reverse cleanup preserves the primary
 validated outcome and never changes delivery certainty.
+
+ADR-129 adds only an operation-bound factory for the existing outcome-facts provider. Provider
+methods, caller-owned identities, trusted times, canonical digest validation and private Bearer
+construction remain unchanged.
