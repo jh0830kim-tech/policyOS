@@ -49,6 +49,61 @@ def test_adr123_governs_initial_connector_credentials_and_acknowledgement() -> N
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_adr125_governs_connector_provisioning_and_worker_handoff() -> None:
+    adr = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-125-S16-RUNTIME-CONNECTOR-PROVISIONING-CREDENTIAL-"
+            "MATERIALIZATION-HANDOFF-AND-WORKER-INVOCATION-OWNERSHIP.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr114 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-114-CP10-RUNTIME-WORKER-PREPARED-DELIVERY-OWNERSHIP-"
+            "EXACT-BINDING-AND-OUTCOME-SEQUENCING.md"
+        )
+    ).read_text(encoding="utf-8")
+    adr119 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / ("ADR-119-CP10-RUNTIME-WORKER-PRE-INVOCATION-AUTHORITATIVE-REVALIDATION-OWNERSHIP.md")
+    ).read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((adr, adr114, adr119, roadmap, program, security))
+
+    for required in (
+        "globally non-reusable `connector_provisioning_reference`",
+        "exactly one enabled entry",
+        "one canonical HTTPS endpoint",
+        "change requires a new reference",
+        "private materialization source",
+        "`RuntimeConnectorMaterializationRequest`",
+        "only for a closed invokable connector result",
+        "accepts the exact `RuntimeConnectorMaterializationRequest`",
+        "fresh observation-specific credential lease",
+        "No database transaction is open",
+        "replay/conflict call count zero",
+        "no durable provisioning table",
+        "migration `20260808_0025`",
+    ):
+        assert required in combined
+
+    for prohibited in (
+        "adapter may read production environment credentials",
+        "delivery lease may be reused for reconciliation",
+        "handoff may use mutable process state",
+        "endpoint replacement may reuse its provisioning reference",
+    ):
+        assert prohibited not in combined.lower()
+
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_connector_persistence_sufficiency_gate_reuses_exact_cp8_payloads() -> None:
     roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
     program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")

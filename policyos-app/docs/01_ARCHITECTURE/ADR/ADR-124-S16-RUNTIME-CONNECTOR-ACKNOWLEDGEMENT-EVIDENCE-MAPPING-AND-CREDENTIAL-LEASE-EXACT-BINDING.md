@@ -164,3 +164,11 @@ exists, while absence remains explicit and non-delivery is never inferred.
 
 The mapping deliberately creates no provider-operation lookup, automatic retry, production
 enablement, credentials, external calls, deployment, tag, or release.
+
+## ADR-125 materialization clarification
+
+Exact lease binding crosses the Worker boundary only inside a strict secret-free materialization
+request produced by authoritative pre-invocation revalidation. The managed connector factory
+accepts that request once and validates the identical invocation before network I/O. Provider
+observation uses a separate fresh lease and preserves the original acknowledgement identity,
+destination, idempotency, and lineage without latest-row or credential inference.

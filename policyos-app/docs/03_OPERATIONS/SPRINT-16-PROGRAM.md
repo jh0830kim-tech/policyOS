@@ -122,3 +122,17 @@ PostgreSQL 16 acceptance must prove append-only storage, exact replay, conflict 
 rollback residue zero, and cross-scope substitution rejection. No provider-operation table,
 credential-secret storage, connector evidence backfill, normalization, deduplication, or migration
 `20260808_0025` is authorized. Production connector behavior remains the next independent gate.
+
+## 12. Connector provisioning and Worker handoff governance
+
+ADR-125 fixes the production composition seam before connector implementation. One immutable
+server-owned provisioning entry binds the non-reusable provisioning version reference to the
+exact HTTPS endpoint, connector, adapter contract, destination, credential references, scope, and
+classification ceiling. Partial, duplicate, disabled, substituted, redirecting, or ambiguous
+configuration fails application construction closed.
+
+Pre-invocation revalidation is the sole delivery lease owner and returns a closed secret-free
+materialization request only when invocation remains authorized. The Worker passes it once to the
+managed delivery factory. Observation preparation obtains a fresh lease for the same immutable
+destination. The next contract gate amends these signatures; production I/O and provider
+acceptance remain later gates, with no schema or migration `20260808_0025`.

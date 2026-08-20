@@ -1087,6 +1087,21 @@ deadline cancellation is limited to application-admitted pending tasks with clea
 zero residue. The service imports no SQLAlchemy or framework transport and creates no schema or
 migration `20260808_0025`.
 
+### Sprint 16 connector provisioning and credential handoff
+
+The production connector cannot select an endpoint, environment credential, global provider, or
+mutable application state. One immutable injected provisioning entry owns the exact HTTPS
+endpoint and non-reusable provisioning version reference. The injected broker issues the opaque
+lease; a private source materializes secret bytes only after exact request, lease, provisioning,
+scope, classification, permit, destination, attempt, envelope, and expiry validation.
+
+Only an invokable pre-invocation result contains the strict secret-free materialization request.
+Blocked results contain none, and replay/conflict performs no acquisition, materialization, or
+external call. Reconciliation obtains a fresh observation-specific lease. Secret material never
+crosses a public fact or survives exactly-once managed cleanup. This governance introduces no
+durable provisioning, lease-use ledger, provider-operation aggregate, or migration
+`20260808_0025`.
+
 ### Sprint 16 connector persistence sufficiency
 
 Existing append-only Runtime records preserve only bounded, secret-free connector evidence.
