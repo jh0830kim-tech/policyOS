@@ -217,3 +217,13 @@ field declarations, canonical scalar and sequence encoding, delivery and observa
 32,768-byte request and 16,384-byte response limits, exact status `200`, TLS 1.2 or newer,
 certificate and hostname verification, no redirects, and caller-supplied deadline bounds. Secret
 injection remains private and the public-contract gate exposes no credential material.
+
+## ADR-128 production construction clarification
+
+Private secret materialization and HTTPS transport are created only from request-scoped factories
+after exact materialization facts, provisioning and credential lease validation. The immutable
+process bundle contains neither secret nor client. Delivery and observation each perform at most
+one transport call, use a fresh purpose-bound lease, obtain PolicyOS identities and times from the
+one-shot outcome-facts provider, and clean up private resources exactly once in reverse order.
+No database transaction spans broker acquisition, secret materialization, transport, evidence
+validation, outcome-facts production or cleanup.

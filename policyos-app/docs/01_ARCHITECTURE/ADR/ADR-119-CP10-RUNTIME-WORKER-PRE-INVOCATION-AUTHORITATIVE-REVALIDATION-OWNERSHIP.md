@@ -104,3 +104,13 @@ only for a closed invokable connector result, returns the exact secret-free conn
 materialization request. It returns no materialization request for shutdown, cancellation,
 deadline, credential, provisioning, authority, or binding rejection. No later layer reacquires a
 lease or infers one from the attempt, envelope, or opaque reference.
+
+## ADR-128 production composition clarification
+
+Revalidation does not generate the materialization request ID, credential lease request ID,
+provisioning reference, credential references, request time or expiry. A request-scoped one-shot
+materialization-facts provider supplies those caller-owned values. Revalidation performs an exact
+immutable catalog lookup and calls the credential broker once before constructing the closed
+request. The Worker passes that request unchanged to
+`delivery_factory(revalidation.materialization_request)` and never enters the facts provider,
+catalog or broker independently.
