@@ -5,6 +5,7 @@ from typing import Literal, get_args, get_origin, get_type_hints
 from app.runtime.ports import (
     RuntimeCancellationPort,
     RuntimeClockPort,
+    RuntimeConnectorMaterializationRequest,
     RuntimeCredentialBrokerPort,
     RuntimeEffectDeliveryPort,
     RuntimeEffectDeliveryResult,
@@ -257,7 +258,6 @@ def test_persistence_and_adapter_factories_return_exact_managed_capabilities():
             RuntimeWorkerLifecycleAppendCapabilityFactory,
             RuntimeWorkerLifecycleAppendCapability,
         ),
-        (RuntimeWorkerDeliveryCapabilityFactory, RuntimeEffectDeliveryPort),
         (RuntimeWorkerCancellationCapabilityFactory, RuntimeCancellationPort),
         (RuntimeWorkerCredentialCapabilityFactory, RuntimeCredentialBrokerPort),
     )
@@ -267,6 +267,12 @@ def test_persistence_and_adapter_factories_return_exact_managed_capabilities():
         factory_return = get_type_hints(factory.__call__)["return"]
         assert get_origin(factory_return) is RuntimeWorkerManagedRequestCapability
         assert get_args(factory_return) == (capability,)
+    delivery_signature = inspect.signature(RuntimeWorkerDeliveryCapabilityFactory.__call__)
+    assert tuple(delivery_signature.parameters) == ("self", "request")
+    assert get_type_hints(RuntimeWorkerDeliveryCapabilityFactory.__call__) == {
+        "request": RuntimeConnectorMaterializationRequest,
+        "return": RuntimeWorkerManagedRequestCapability[RuntimeEffectDeliveryPort],
+    }
 
 
 def test_request_preparation_capability_signatures_and_factories_are_exact():

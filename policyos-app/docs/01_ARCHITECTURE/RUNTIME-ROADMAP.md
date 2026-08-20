@@ -1217,3 +1217,17 @@ only for an invokable connector result. The Worker passes it once to a request-a
 delivery factory and never reconstructs or reacquires the lease. Reconciliation receives a fresh
 observation-specific lease and materialization request. Public-contract correction, production
 implementation, and provider acceptance remain separate; migration `20260808_0025` is absent.
+
+### Sprint 16 connector Worker materialization handoff contracts
+
+Status: **Implemented / Validated, Pending Review**.
+
+The Worker pre-invocation result now carries exactly one secret-free connector materialization
+request only for `INVOKABLE`. Blocked and definitely-not-invoked results carry none. The managed
+delivery factory accepts that exact request instead of selecting or reconstructing credential,
+provisioning, destination, attempt, envelope, permit, idempotency, classification, or time facts.
+
+Reconciliation uses a distinct observation materialization request with a fresh
+observation-specific lease requested no earlier than the exact reconciliation request. Existing
+delivery lease facts therefore cannot be reused as the closed observation handoff. This
+contract-only gate performs no provider I/O and adds no schema or migration `20260808_0025`.

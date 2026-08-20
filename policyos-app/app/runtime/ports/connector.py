@@ -47,6 +47,20 @@ class RuntimeConnectorObservationInvocation(RuntimePortModel):
         return aware(value, "requested_at")
 
 
+class RuntimeConnectorObservationMaterializationRequest(RuntimePortModel):
+    runtime_connector_observation_materialization_request_id: UUID
+    credential_lease_request: RuntimeCredentialLeaseRequest
+    credential_lease_reference: RuntimeCredentialLeaseReference
+    connector_provisioning_reference: BoundedId
+    invocation: RuntimeConnectorObservationInvocation
+    requested_at: datetime
+
+    @field_validator("requested_at")
+    @classmethod
+    def timestamp(cls, value: datetime) -> datetime:
+        return aware(value, "requested_at")
+
+
 @runtime_checkable
 class RuntimeConnectorInvocationCapability(Protocol):
     @property
@@ -110,5 +124,5 @@ class RuntimeManagedConnectorObservationCapability(Protocol):
 @runtime_checkable
 class RuntimeConnectorObservationCapabilityFactory(Protocol):
     def create(
-        self, invocation: RuntimeConnectorObservationInvocation
+        self, request: RuntimeConnectorObservationMaterializationRequest
     ) -> RuntimeManagedConnectorObservationCapability: ...

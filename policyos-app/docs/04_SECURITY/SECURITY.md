@@ -1087,6 +1087,19 @@ deadline cancellation is limited to application-admitted pending tasks with clea
 zero residue. The service imports no SQLAlchemy or framework transport and creates no schema or
 migration `20260808_0025`.
 
+### Sprint 16 connector Worker materialization handoff boundary
+
+An invokable pre-invocation result carries exactly one immutable, secret-free materialization
+request. Every non-invokable disposition carries none. The Worker passes the request unchanged to
+the managed delivery factory; mutable process state, lease reacquisition, endpoint selection, and
+credential reconstruction remain prohibited.
+
+Reconciliation uses a separate request with a fresh observation-specific lease whose request time
+cannot predate the exact reconciliation request. Provisioning, destination, adapter contract,
+scope, lineage, classification, permit, envelope, attempt, idempotency, and lease facts are
+compared exactly before capability use. No secret, provider body, schema, or migration
+`20260808_0025` is introduced.
+
 ### Sprint 16 connector provisioning and credential handoff
 
 The production connector cannot select an endpoint, environment credential, global provider, or
