@@ -1282,3 +1282,12 @@ The public bundle reuses the existing broker factory and excludes private secret
 transport factories. Identity, reference and time remain caller-supplied; CP8 persistence remains
 authoritative and migration `20260808_0025` is absent. Public contracts, production composition
 and provider/PostgreSQL acceptance remain separate gates.
+
+## Sprint 16 connector materialization-facts and production-bundle public contracts
+
+**Status: Implemented / Validated, Pending Review.** The public-contract gate implements ADR-129's
+two strict operation-specific materialization facts, covariant one-shot managed provider, exact
+leaf factories, immutable single-entry provisioning catalog, pure exact selector, observation
+preparation capability, outcome-facts provider factory and frozen nine-field production bundle.
+Private credential material, HTTPS transport and provider I/O remain deferred. No schema or
+migration `20260808_0025` is introduced.

@@ -7,6 +7,10 @@ from app.runtime.orchestration.delivery_validation import (
     validate_runtime_orchestration_candidate_claim,
 )
 from app.runtime.ports import (
+    RuntimeConnectorDeliveryMaterializationFacts,
+    RuntimeConnectorObservationMaterializationFacts,
+    RuntimeConnectorProvisioningCatalog,
+    RuntimeConnectorProvisioningEntry,
     RuntimeEffectDeliveryResult,
     RuntimeEffectLifecycleAppendRequest,
     RuntimeEffectLifecycleCommitDisposition,
@@ -18,6 +22,7 @@ from app.runtime.ports import (
 )
 from app.runtime.ports.connector_validation import (
     validate_runtime_connector_materialization_request,
+    validate_runtime_connector_provisioning_catalog,
 )
 from app.services.runtime_worker_contracts import (
     RuntimeWorkerConfiguration,
@@ -47,6 +52,45 @@ from app.services.runtime_worker_protocols import (
 
 class RuntimeWorkerContractConflict(ValueError):
     """Raised when caller-supplied Worker facts do not bind exactly."""
+
+
+def select_runtime_connector_provisioning_entry(
+    catalog: RuntimeConnectorProvisioningCatalog,
+    prepared_delivery: RuntimeWorkerPreparedDelivery,
+    facts: RuntimeConnectorDeliveryMaterializationFacts
+    | RuntimeConnectorObservationMaterializationFacts,
+) -> RuntimeConnectorProvisioningEntry:
+    entry = validate_runtime_connector_provisioning_catalog(catalog).entries[0]
+    envelope = prepared_delivery.invocation.envelope
+    identity = envelope.effect_identity
+    classification_order = ("public", "internal", "confidential", "restricted")
+    if classification_order.index(identity.classification.value) > classification_order.index(
+        entry.classification_ceiling.value
+    ):
+        raise RuntimeWorkerContractConflict("connector provisioning classification differs")
+    expected = (
+        envelope.adapter_reference,
+        envelope.adapter_contract_version,
+        identity.destination_reference,
+        identity.tenant_id,
+        identity.organization_id,
+        facts.connector_provisioning_reference,
+        facts.credential_reference,
+        facts.credential_purpose_reference,
+    )
+    actual = (
+        entry.adapter_reference,
+        entry.adapter_contract_version,
+        entry.destination_reference,
+        entry.tenant_id,
+        entry.organization_id,
+        entry.connector_provisioning_reference,
+        entry.credential_reference,
+        entry.credential_purpose_reference,
+    )
+    if actual != expected:
+        raise RuntimeWorkerContractConflict("connector provisioning binding differs")
+    return entry
 
 
 def _validate_failure_stage(disposition, failure_stage) -> None:
@@ -455,6 +499,7 @@ def validate_runtime_worker_interruptible_wait_request(
 
 
 __all__ = (
+    "select_runtime_connector_provisioning_entry",
     "RuntimeWorkerContractConflict",
     "validate_runtime_worker_configuration",
     "validate_runtime_worker_configuration_binding",

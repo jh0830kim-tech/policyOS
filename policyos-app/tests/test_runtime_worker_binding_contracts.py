@@ -5,7 +5,11 @@ from typing import Literal, get_args, get_origin, get_type_hints
 from app.runtime.ports import (
     RuntimeCancellationPort,
     RuntimeClockPort,
+    RuntimeConnectorDeliveryMaterializationFacts,
     RuntimeConnectorMaterializationRequest,
+    RuntimeConnectorObservationInvocation,
+    RuntimeConnectorObservationMaterializationFacts,
+    RuntimeConnectorProvisioningCatalog,
     RuntimeCredentialBrokerPort,
     RuntimeEffectDeliveryPort,
     RuntimeEffectDeliveryResult,
@@ -28,6 +32,10 @@ from app.services.runtime_worker_contracts import (
     RuntimeWorkerShutdownObservationResult,
 )
 from app.services.runtime_worker_protocols import (
+    RuntimeConnectorDeliveryMaterializationFactsProviderFactory,
+    RuntimeConnectorObservationMaterializationFactsProviderFactory,
+    RuntimeConnectorObservationPreparationCapabilityFactory,
+    RuntimeConnectorProductionDependencyBundle,
     RuntimeWorkerApplicationService,
     RuntimeWorkerCancellationCapabilityFactory,
     RuntimeWorkerClaimCapability,
@@ -72,6 +80,59 @@ def test_operational_capability_failure_public_signature_is_exact() -> None:
     assert issubclass(RuntimeWorkerOperationalCapabilityFailure, RuntimeError)
     assert tuple(inspect.signature(RuntimeWorkerOperationalCapabilityFailure).parameters) == ()
     assert RuntimeWorkerOperationalCapabilityFailure.__slots__ == ()
+
+
+def test_connector_materialization_factories_and_bundle_signatures_are_exact() -> None:
+    delivery_call = inspect.signature(
+        RuntimeConnectorDeliveryMaterializationFactsProviderFactory.__call__
+    )
+    observation_call = inspect.signature(
+        RuntimeConnectorObservationMaterializationFactsProviderFactory.__call__
+    )
+    assert tuple(delivery_call.parameters) == ("self", "prepared_delivery")
+    assert tuple(observation_call.parameters) == ("self", "invocation")
+    assert (
+        get_type_hints(RuntimeConnectorDeliveryMaterializationFactsProviderFactory.__call__)[
+            "return"
+        ].__args__[0]
+        is RuntimeConnectorDeliveryMaterializationFacts
+    )
+    assert (
+        get_type_hints(RuntimeConnectorObservationMaterializationFactsProviderFactory.__call__)[
+            "return"
+        ].__args__[0]
+        is RuntimeConnectorObservationMaterializationFacts
+    )
+    assert (
+        get_type_hints(RuntimeConnectorObservationMaterializationFactsProviderFactory.__call__)[
+            "invocation"
+        ]
+        is RuntimeConnectorObservationInvocation
+    )
+    assert tuple(RuntimeConnectorProductionDependencyBundle.__dataclass_fields__) == (
+        "provisioning_catalog",
+        "delivery_materialization_facts_provider_factory",
+        "observation_materialization_facts_provider_factory",
+        "credential_broker_factory",
+        "outcome_facts_provider_factory",
+        "pre_invocation_revalidation_factory",
+        "delivery_factory",
+        "observation_preparation_factory",
+        "observation_factory",
+    )
+    assert (
+        get_type_hints(RuntimeConnectorProductionDependencyBundle)["provisioning_catalog"]
+        is RuntimeConnectorProvisioningCatalog
+    )
+    assert RuntimeConnectorProductionDependencyBundle.__dataclass_params__.frozen
+    assert tuple(inspect.signature(RuntimeConnectorProductionDependencyBundle).parameters) == tuple(
+        RuntimeConnectorProductionDependencyBundle.__dataclass_fields__
+    )
+    assert tuple(
+        inspect.signature(
+            RuntimeConnectorObservationPreparationCapabilityFactory.__call__
+        ).parameters
+    ) == ("self",)
 
 
 class ShutdownCapabilityDouble:

@@ -204,3 +204,12 @@ The immutable provisioning catalog rejects partial, latest, aliased and credenti
 selection. The frozen connector production bundle has exactly nine secret-free fields, reuses the
 existing managed broker factory and keeps secret and HTTPS transport factories behind concrete
 managed delivery and observation factories. Migration `20260808_0025` is not approved.
+
+## 13. Connector materialization-facts and production-bundle public contracts
+
+The implemented contract gate exposes separate delivery and observation facts, one-call managed
+providers, exact operation-specific factories, a single-entry immutable provisioning catalog and
+a nine-field production dependency bundle. Selection is exact across adapter, destination, tenant,
+organization, classification, provisioning and credential facts. Production network I/O,
+credential materialization and provider-sandbox acceptance remain later gates. No migration
+`20260808_0025` is required.

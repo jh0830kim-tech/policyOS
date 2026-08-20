@@ -3,7 +3,7 @@
 from datetime import datetime
 from enum import StrEnum
 from types import TracebackType
-from typing import Literal, Protocol, runtime_checkable
+from typing import Literal, Protocol, TypeVar, runtime_checkable
 from uuid import UUID
 
 from pydantic import field_validator
@@ -155,6 +155,97 @@ class RuntimeConnectorObservationOutcomeFacts(RuntimePortModel):
         return aware(value, "observed_at")
 
 
+class RuntimeConnectorDeliveryMaterializationFacts(RuntimePortModel):
+    runtime_connector_materialization_request_id: UUID
+    runtime_credential_lease_request_id: UUID
+    connector_provisioning_reference: BoundedId
+    credential_reference: BoundedId
+    credential_purpose_reference: BoundedId
+    requested_at: datetime
+    expires_at: datetime
+
+    @field_validator("requested_at", "expires_at")
+    @classmethod
+    def timestamps(cls, value: datetime, info) -> datetime:
+        return aware(value, info.field_name)
+
+    @field_validator("expires_at")
+    @classmethod
+    def expiry_follows_request(cls, value: datetime, info) -> datetime:
+        requested_at = info.data.get("requested_at")
+        if requested_at is not None and value <= requested_at:
+            raise ValueError("connector materialization facts expiry must follow request")
+        return value
+
+
+class RuntimeConnectorObservationMaterializationFacts(RuntimePortModel):
+    runtime_connector_observation_materialization_request_id: UUID
+    runtime_credential_lease_request_id: UUID
+    connector_provisioning_reference: BoundedId
+    credential_reference: BoundedId
+    credential_purpose_reference: BoundedId
+    requested_at: datetime
+    expires_at: datetime
+
+    @field_validator("requested_at", "expires_at")
+    @classmethod
+    def timestamps(cls, value: datetime, info) -> datetime:
+        return aware(value, info.field_name)
+
+    @field_validator("expires_at")
+    @classmethod
+    def expiry_follows_request(cls, value: datetime, info) -> datetime:
+        requested_at = info.data.get("requested_at")
+        if requested_at is not None and value <= requested_at:
+            raise ValueError("connector observation facts expiry must follow request")
+        return value
+
+
+MaterializationFactsT_co = TypeVar(
+    "MaterializationFactsT_co",
+    RuntimeConnectorDeliveryMaterializationFacts,
+    RuntimeConnectorObservationMaterializationFacts,
+    covariant=True,
+)
+
+
+@runtime_checkable
+class RuntimeConnectorMaterializationFactsProvider(Protocol[MaterializationFactsT_co]):
+    def facts(self) -> MaterializationFactsT_co: ...
+
+
+@runtime_checkable
+class RuntimeManagedConnectorMaterializationFactsProvider(Protocol[MaterializationFactsT_co]):
+    async def __aenter__(
+        self,
+    ) -> RuntimeConnectorMaterializationFactsProvider[MaterializationFactsT_co]: ...
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> Literal[False]: ...
+
+
+class RuntimeConnectorProvisioningEntry(RuntimePortModel):
+    connector_provisioning_reference: BoundedId
+    adapter_reference: BoundedId
+    adapter_contract_version: BoundedId
+    destination_reference: BoundedId
+    endpoint_uri: BoundedId
+    tenant_id: UUID
+    organization_id: UUID
+    classification_ceiling: DataClassification
+    credential_reference: BoundedId
+    credential_purpose_reference: BoundedId
+    enabled: Literal[True]
+
+
+class RuntimeConnectorProvisioningCatalog(RuntimePortModel):
+    entries: tuple[RuntimeConnectorProvisioningEntry, ...]
+
+
 @runtime_checkable
 class RuntimeConnectorOutcomeFactsProvider(Protocol):
     def delivery_facts(
@@ -204,6 +295,15 @@ class RuntimeConnectorObservationMaterializationRequest(RuntimePortModel):
     @classmethod
     def timestamp(cls, value: datetime) -> datetime:
         return aware(value, "requested_at")
+
+
+@runtime_checkable
+class RuntimeConnectorOutcomeFactsProviderFactory(Protocol):
+    def __call__(
+        self,
+        request: RuntimeConnectorMaterializationRequest
+        | RuntimeConnectorObservationMaterializationRequest,
+    ) -> RuntimeConnectorOutcomeFactsProvider: ...
 
 
 @runtime_checkable

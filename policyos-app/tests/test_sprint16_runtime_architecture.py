@@ -559,3 +559,58 @@ def test_adr129_connector_materialization_provider_and_bundle_signature_governan
         assert prohibited in adr129
 
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_connector_materialization_facts_and_bundle_public_contract_gate() -> None:
+    connector = (ROOT / "app/runtime/ports/connector.py").read_text(encoding="utf-8")
+    connector_validation = (ROOT / "app/runtime/ports/connector_validation.py").read_text(
+        encoding="utf-8"
+    )
+    worker_protocols = (ROOT / "app/services/runtime_worker_protocols.py").read_text(
+        encoding="utf-8"
+    )
+    worker_validation = (ROOT / "app/services/runtime_worker_validation.py").read_text(
+        encoding="utf-8"
+    )
+    combined = "\n".join((connector, connector_validation, worker_protocols, worker_validation))
+
+    for required in (
+        "RuntimeConnectorDeliveryMaterializationFacts",
+        "RuntimeConnectorObservationMaterializationFacts",
+        "MaterializationFactsT_co",
+        "RuntimeConnectorMaterializationFactsProvider",
+        "RuntimeManagedConnectorMaterializationFactsProvider",
+        "RuntimeConnectorProvisioningEntry",
+        "RuntimeConnectorProvisioningCatalog",
+        "select_runtime_connector_provisioning_entry",
+        "RuntimeConnectorObservationPreparationCapability",
+        "RuntimeConnectorOutcomeFactsProviderFactory",
+        "RuntimeConnectorProductionDependencyBundle",
+    ):
+        assert required in combined
+
+    assert (
+        len(
+            (
+                "provisioning_catalog",
+                "delivery_materialization_facts_provider_factory",
+                "observation_materialization_facts_provider_factory",
+                "credential_broker_factory",
+                "outcome_facts_provider_factory",
+                "pre_invocation_revalidation_factory",
+                "delivery_factory",
+                "observation_preparation_factory",
+                "observation_factory",
+            )
+        )
+        == 9
+    )
+    for prohibited in (
+        "credential_secret",
+        "bearer_token",
+        "httpx.client",
+        "requests.session",
+        "sqlalchemy",
+    ):
+        assert prohibited not in connector.lower()
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

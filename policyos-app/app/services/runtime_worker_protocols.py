@@ -10,7 +10,14 @@ from app.runtime.orchestration import RuntimeOrchestrationDeliveryRequest
 from app.runtime.ports import (
     RuntimeCancellationPort,
     RuntimeClockReading,
+    RuntimeConnectorDeliveryMaterializationFacts,
     RuntimeConnectorMaterializationRequest,
+    RuntimeConnectorObservationCapabilityFactory,
+    RuntimeConnectorObservationInvocation,
+    RuntimeConnectorObservationMaterializationFacts,
+    RuntimeConnectorObservationMaterializationRequest,
+    RuntimeConnectorOutcomeFactsProviderFactory,
+    RuntimeConnectorProvisioningCatalog,
     RuntimeCredentialBrokerPort,
     RuntimeEffectClaimRequest,
     RuntimeEffectDeliveryInvocation,
@@ -20,6 +27,7 @@ from app.runtime.ports import (
     RuntimeEffectDueSelectionRequest,
     RuntimeEffectLifecycleAppendRequest,
     RuntimeEffectLifecycleCommitResult,
+    RuntimeManagedConnectorMaterializationFactsProvider,
 )
 from app.services.runtime_worker_contracts import (
     RuntimeWorkerAssignment,
@@ -267,6 +275,43 @@ class RuntimeWorkerCredentialCapabilityFactory(Protocol):
 
 
 @runtime_checkable
+class RuntimeConnectorDeliveryMaterializationFactsProviderFactory(Protocol):
+    def __call__(
+        self,
+        prepared_delivery: RuntimeWorkerPreparedDelivery,
+    ) -> RuntimeManagedConnectorMaterializationFactsProvider[
+        RuntimeConnectorDeliveryMaterializationFacts
+    ]: ...
+
+
+@runtime_checkable
+class RuntimeConnectorObservationMaterializationFactsProviderFactory(Protocol):
+    def __call__(
+        self,
+        invocation: RuntimeConnectorObservationInvocation,
+    ) -> RuntimeManagedConnectorMaterializationFactsProvider[
+        RuntimeConnectorObservationMaterializationFacts
+    ]: ...
+
+
+@runtime_checkable
+class RuntimeConnectorObservationPreparationCapability(Protocol):
+    async def prepare(
+        self,
+        invocation: RuntimeConnectorObservationInvocation,
+    ) -> RuntimeConnectorObservationMaterializationRequest: ...
+
+
+@runtime_checkable
+class RuntimeConnectorObservationPreparationCapabilityFactory(Protocol):
+    def __call__(
+        self,
+    ) -> RuntimeWorkerManagedRequestCapability[
+        RuntimeConnectorObservationPreparationCapability
+    ]: ...
+
+
+@runtime_checkable
 class RuntimeWorkerShutdownObservationCapability(Protocol):
     async def observe(
         self,
@@ -356,6 +401,50 @@ class RuntimeWorkerPreInvocationRevalidationCapabilityFactory(Protocol):
     ) -> RuntimeWorkerManagedRequestCapability[
         RuntimeWorkerPreInvocationRevalidationCapability
     ]: ...
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RuntimeConnectorProductionDependencyBundle:
+    provisioning_catalog: RuntimeConnectorProvisioningCatalog
+    delivery_materialization_facts_provider_factory: (
+        RuntimeConnectorDeliveryMaterializationFactsProviderFactory
+    )
+    observation_materialization_facts_provider_factory: (
+        RuntimeConnectorObservationMaterializationFactsProviderFactory
+    )
+    credential_broker_factory: RuntimeWorkerCredentialCapabilityFactory
+    outcome_facts_provider_factory: RuntimeConnectorOutcomeFactsProviderFactory
+    pre_invocation_revalidation_factory: RuntimeWorkerPreInvocationRevalidationCapabilityFactory
+    delivery_factory: RuntimeWorkerDeliveryCapabilityFactory
+    observation_preparation_factory: RuntimeConnectorObservationPreparationCapabilityFactory
+    observation_factory: RuntimeConnectorObservationCapabilityFactory
+
+    def __post_init__(self) -> None:
+        expected = (
+            (self.provisioning_catalog, RuntimeConnectorProvisioningCatalog),
+            (
+                self.delivery_materialization_facts_provider_factory,
+                RuntimeConnectorDeliveryMaterializationFactsProviderFactory,
+            ),
+            (
+                self.observation_materialization_facts_provider_factory,
+                RuntimeConnectorObservationMaterializationFactsProviderFactory,
+            ),
+            (self.credential_broker_factory, RuntimeWorkerCredentialCapabilityFactory),
+            (self.outcome_facts_provider_factory, RuntimeConnectorOutcomeFactsProviderFactory),
+            (
+                self.pre_invocation_revalidation_factory,
+                RuntimeWorkerPreInvocationRevalidationCapabilityFactory,
+            ),
+            (self.delivery_factory, RuntimeWorkerDeliveryCapabilityFactory),
+            (
+                self.observation_preparation_factory,
+                RuntimeConnectorObservationPreparationCapabilityFactory,
+            ),
+            (self.observation_factory, RuntimeConnectorObservationCapabilityFactory),
+        )
+        if any(not isinstance(value, contract) for value, contract in expected):
+            raise TypeError("connector production dependency contract differs")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -453,6 +542,11 @@ class RuntimeWorkerApplicationService(Protocol):
 
 
 __all__ = (
+    "RuntimeConnectorDeliveryMaterializationFactsProviderFactory",
+    "RuntimeConnectorObservationMaterializationFactsProviderFactory",
+    "RuntimeConnectorObservationPreparationCapability",
+    "RuntimeConnectorObservationPreparationCapabilityFactory",
+    "RuntimeConnectorProductionDependencyBundle",
     "RuntimeWorkerCancellationCapabilityFactory",
     "RuntimeWorkerApplicationService",
     "RuntimeWorkerClaimCapability",

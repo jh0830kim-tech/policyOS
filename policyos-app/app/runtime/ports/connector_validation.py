@@ -5,6 +5,7 @@ import json
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from pydantic import ValidationError
@@ -13,14 +14,17 @@ from app.runtime.ports.connector import (
     RUNTIME_CONNECTOR_REQUEST_BODY_MAX_BYTES,
     RUNTIME_CONNECTOR_RESPONSE_BODY_MAX_BYTES,
     RuntimeConnectorDeliveryAcknowledgement,
+    RuntimeConnectorDeliveryMaterializationFacts,
     RuntimeConnectorDeliveryObservation,
     RuntimeConnectorDeliveryWireRequest,
     RuntimeConnectorDeliveryWireResponse,
     RuntimeConnectorMaterializationRequest,
     RuntimeConnectorObservationInvocation,
+    RuntimeConnectorObservationMaterializationFacts,
     RuntimeConnectorObservationMaterializationRequest,
     RuntimeConnectorObservationWireRequest,
     RuntimeConnectorObservationWireResponse,
+    RuntimeConnectorProvisioningCatalog,
 )
 from app.runtime.ports.delivery import (
     RuntimeEffectDeliveryCertainty,
@@ -372,6 +376,83 @@ def validate_runtime_connector_materialization_request(
     if request.requested_at >= attempt.deadline:
         raise RuntimePortCredentialError("connector materialization attempt is expired")
     return request
+
+
+def validate_runtime_connector_delivery_materialization_facts(
+    facts: RuntimeConnectorDeliveryMaterializationFacts,
+    request: RuntimeConnectorMaterializationRequest,
+) -> RuntimeConnectorDeliveryMaterializationFacts:
+    lease_request = request.credential_lease_request
+    expected = (
+        request.runtime_connector_materialization_request_id,
+        lease_request.runtime_credential_lease_request_id,
+        lease_request.connector_provisioning_reference,
+        lease_request.credential_reference,
+        lease_request.credential_purpose_reference,
+        request.requested_at,
+        lease_request.expires_at,
+    )
+    actual = (
+        facts.runtime_connector_materialization_request_id,
+        facts.runtime_credential_lease_request_id,
+        facts.connector_provisioning_reference,
+        facts.credential_reference,
+        facts.credential_purpose_reference,
+        facts.requested_at,
+        facts.expires_at,
+    )
+    if actual != expected:
+        raise RuntimePortCredentialError("connector delivery materialization facts differ")
+    return facts
+
+
+def validate_runtime_connector_observation_materialization_facts(
+    facts: RuntimeConnectorObservationMaterializationFacts,
+    request: RuntimeConnectorObservationMaterializationRequest,
+) -> RuntimeConnectorObservationMaterializationFacts:
+    lease_request = request.credential_lease_request
+    expected = (
+        request.runtime_connector_observation_materialization_request_id,
+        lease_request.runtime_credential_lease_request_id,
+        request.connector_provisioning_reference,
+        lease_request.credential_reference,
+        lease_request.credential_purpose_reference,
+        request.requested_at,
+        lease_request.expires_at,
+    )
+    actual = (
+        facts.runtime_connector_observation_materialization_request_id,
+        facts.runtime_credential_lease_request_id,
+        facts.connector_provisioning_reference,
+        facts.credential_reference,
+        facts.credential_purpose_reference,
+        facts.requested_at,
+        facts.expires_at,
+    )
+    if actual != expected:
+        raise RuntimePortCredentialError("connector observation materialization facts differ")
+    return facts
+
+
+def validate_runtime_connector_provisioning_catalog(
+    catalog: RuntimeConnectorProvisioningCatalog,
+) -> RuntimeConnectorProvisioningCatalog:
+    if len(catalog.entries) != 1:
+        raise RuntimePortContractError("connector provisioning catalog cardinality differs")
+    entry = catalog.entries[0]
+    parsed = urlsplit(entry.endpoint_uri)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.netloc != parsed.netloc.lower()
+        or parsed.port not in (None, 443)
+    ):
+        raise RuntimePortContractError("connector provisioning endpoint is not canonical HTTPS")
+    return catalog
 
 
 def validate_runtime_connector_delivery_result(
