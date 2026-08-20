@@ -160,3 +160,10 @@ are not enabled by this governance change.
 The implementation sequence is governance, public contract, production adapter, provider and
 PostgreSQL acceptance, then explicit operator enablement. No migration `20260808_0025`, provider
 call or production configuration is part of this gate.
+## 9. Connector authentication and canonical wire governance
+
+ADR-127 fixes one version-1 Bearer-authenticated JSON protocol with deterministic semantic digests,
+strict byte limits, exact status `200`, verified TLS, no redirects and caller-owned deadlines.
+Governance performs no provider call or credential enablement. The next gate adds secret-free
+public contracts; private transport, provider-sandbox acceptance and operator enablement remain
+separate. No migration `20260808_0025` is introduced.

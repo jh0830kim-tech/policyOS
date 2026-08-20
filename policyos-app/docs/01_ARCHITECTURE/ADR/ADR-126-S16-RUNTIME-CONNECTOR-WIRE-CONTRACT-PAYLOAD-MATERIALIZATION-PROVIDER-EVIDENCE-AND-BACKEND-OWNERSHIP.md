@@ -210,3 +210,10 @@ without opening a generic webhook or content-delivery surface. The conservative 
 produce more ambiguous outcomes, but it never claims non-delivery from incomplete transport
 evidence. Production code still requires a separate public-contract gate and operator-provided
 endpoint, secret backend, and enablement.
+## ADR-127 closed wire clarification
+
+ADR-127 fixes the remaining version-1 wire choices: protocol literal, Bearer header, strict JSON
+field declarations, canonical scalar and sequence encoding, delivery and observation digest order,
+32,768-byte request and 16,384-byte response limits, exact status `200`, TLS 1.2 or newer,
+certificate and hostname verification, no redirects, and caller-supplied deadline bounds. Secret
+injection remains private and the public-contract gate exposes no credential material.

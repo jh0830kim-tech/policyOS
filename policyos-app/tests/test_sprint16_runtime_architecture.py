@@ -353,3 +353,48 @@ def test_managed_connector_public_contract_gate_is_bounded() -> None:
         assert prohibited not in connector.lower()
 
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr127_connector_authentication_encoding_and_transport_governance() -> None:
+    adr127 = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / (
+            "ADR-127-S16-RUNTIME-CONNECTOR-AUTHENTICATION-CANONICAL-WIRE-ENCODING-"
+            "AND-TRANSPORT-BOUNDS.md"
+        )
+    ).read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+
+    for required in (
+        "policyos-runtime-connector-v1",
+        "Authorization: Bearer <opaque-secret>",
+        "Content-Type: application/json",
+        "Only HTTP status `200`",
+        "32,768 bytes",
+        "16,384 bytes",
+        "length-prefixed UTF-8",
+        "YYYY-MM-DDTHH:MM:SS.ffffffZ",
+        "sha256:<64 lowercase hexadecimal characters>",
+        "delivery_acknowledgement",
+        "delivery_observation",
+        "TLS 1.2 or newer",
+        "migration `20260808_0025`",
+    ):
+        assert required in adr127
+
+    for prohibited in (
+        "redirect following",
+        "raw JSON byte equality",
+        "environment",
+        "fallback",
+        "HTTP status never overrides",
+    ):
+        assert prohibited in adr127
+
+    assert "Governed / Validated, Pending Review" in roadmap
+    assert "Bearer-authenticated JSON protocol" in program
+    assert "entire header is excluded or redacted" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

@@ -1238,3 +1238,10 @@ reference-notification wire projection, canonical acknowledgement digest, conser
 boundary, provider-specific observation mapping, private secret backend and trusted PolicyOS
 outcome-facts source. It adds no schema or migration `20260808_0025`. Public contracts,
 production implementation and provider/PostgreSQL acceptance remain separate checkpoints.
+## Sprint 16 connector authentication and canonical wire governance
+
+**Status: Governed / Validated, Pending Review.** ADR-127 closes the version-1 authentication,
+JSON, digest, byte-bound, TLS, status and deadline meanings required before public contracts. It
+preserves private secret ownership and existing CP8 persistence, with no migration
+`20260808_0025`. Public-contract, production/provider-sandbox acceptance and operator enablement
+remain separate checkpoints.
