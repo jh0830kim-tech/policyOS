@@ -398,3 +398,38 @@ def test_adr127_connector_authentication_encoding_and_transport_governance() -> 
     assert "Bearer-authenticated JSON protocol" in program
     assert "entire header is excluded or redacted" in security
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_connector_wire_public_contract_gate_is_secret_free_and_bounded() -> None:
+    connector = (ROOT / "app/runtime/ports/connector.py").read_text(encoding="utf-8")
+    validation = (ROOT / "app/runtime/ports/connector_validation.py").read_text(encoding="utf-8")
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((connector, validation, roadmap, program, security))
+
+    for required in (
+        "RuntimeConnectorDeliveryWireRequest",
+        "RuntimeConnectorDeliveryAcknowledgement",
+        "RuntimeConnectorObservationWireRequest",
+        "RuntimeConnectorDeliveryObservation",
+        "RuntimeConnectorOutcomeFactsProvider",
+        "RUNTIME_CONNECTOR_REQUEST_BODY_MAX_BYTES = 32_768",
+        "RUNTIME_CONNECTOR_RESPONSE_BODY_MAX_BYTES = 16_384",
+        "runtime_connector_canonical_digest",
+        "connector JSON contains a duplicate field",
+        "exact HTTP 200",
+        "no migration `20260808_0025`",
+    ):
+        assert required in combined
+
+    for prohibited in (
+        "import httpx",
+        "import requests",
+        "authorization_header:",
+        "credential_secret:",
+        "bearer_token:",
+    ):
+        assert prohibited not in connector.lower()
+
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

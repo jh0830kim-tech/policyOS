@@ -1,12 +1,14 @@
 """Strict managed connector contracts with no credential-material surface."""
 
 from datetime import datetime
+from enum import StrEnum
 from types import TracebackType
 from typing import Literal, Protocol, runtime_checkable
 from uuid import UUID
 
 from pydantic import field_validator
 
+from app.ai.privacy import DataClassification
 from app.runtime.ports._base import BoundedId, RuntimePortModel, aware
 from app.runtime.ports.credentials import (
     RuntimeCredentialLeaseReference,
@@ -19,6 +21,149 @@ from app.runtime.ports.delivery import (
     RuntimeEffectReconciliationObservation,
     RuntimeEffectReconciliationRequest,
 )
+from app.runtime.ports.domain import RuntimePortErrorCode
+
+RUNTIME_CONNECTOR_PROTOCOL_VERSION = "policyos-runtime-connector-v1"
+RUNTIME_CONNECTOR_REQUEST_BODY_MAX_BYTES = 32_768
+RUNTIME_CONNECTOR_RESPONSE_BODY_MAX_BYTES = 16_384
+
+
+class RuntimeConnectorProviderState(StrEnum):
+    DELIVERED = "delivered"
+    NOT_DELIVERED = "not_delivered"
+    PENDING = "pending"
+
+
+class RuntimeConnectorDeliveryWireRequest(RuntimePortModel):
+    protocol_version: Literal["policyos-runtime-connector-v1"]
+    operation: Literal["deliver"]
+    runtime_effect_id: UUID
+    runtime_execution_request_id: UUID
+    runtime_effect_delivery_attempt_id: UUID
+    runtime_effect_delivery_invocation_id: UUID
+    runtime_effect_delivery_envelope_id: UUID
+    payload_reference: BoundedId
+    payload_digest_reference: BoundedId
+    destination_reference: BoundedId
+    connector_provisioning_reference: BoundedId
+    adapter_reference: BoundedId
+    adapter_contract_version: BoundedId
+    effect_idempotency_key: BoundedId
+    tenant_id: UUID
+    organization_id: UUID
+    classification: DataClassification
+    root_lineage_id: UUID
+    root_lineage_digest_reference: BoundedId
+    permit_reference_ids: tuple[UUID, ...]
+
+
+class RuntimeConnectorDeliveryAcknowledgement(RuntimePortModel):
+    protocol_version: Literal["policyos-runtime-connector-v1"]
+    operation_reference: BoundedId
+    runtime_effect_id: UUID
+    runtime_effect_delivery_attempt_id: UUID
+    destination_reference: BoundedId
+    effect_idempotency_key: BoundedId
+    accepted_at: datetime
+    acknowledgement_digest_reference: BoundedId
+
+    @field_validator("accepted_at")
+    @classmethod
+    def timestamp(cls, value: datetime) -> datetime:
+        return aware(value, "accepted_at")
+
+
+class RuntimeConnectorDeliveryWireResponse(RuntimePortModel):
+    delivery_acknowledgement: RuntimeConnectorDeliveryAcknowledgement
+
+
+class RuntimeConnectorObservationWireRequest(RuntimePortModel):
+    protocol_version: Literal["policyos-runtime-connector-v1"]
+    operation: Literal["observe"]
+    runtime_connector_observation_invocation_id: UUID
+    runtime_effect_id: UUID
+    runtime_effect_delivery_attempt_id: UUID
+    operation_reference: BoundedId
+    acknowledgement_digest_reference: BoundedId
+    destination_reference: BoundedId
+    connector_provisioning_reference: BoundedId
+    effect_idempotency_key: BoundedId
+    tenant_id: UUID
+    organization_id: UUID
+    classification: DataClassification
+    root_lineage_id: UUID
+    root_lineage_digest_reference: BoundedId
+    runtime_authority_bundle_id: UUID
+    runtime_admission_decision_id: UUID
+    permit_reference_ids: tuple[UUID, ...]
+    requested_at: datetime
+
+    @field_validator("requested_at")
+    @classmethod
+    def timestamp(cls, value: datetime) -> datetime:
+        return aware(value, "requested_at")
+
+
+class RuntimeConnectorDeliveryObservation(RuntimePortModel):
+    protocol_version: Literal["policyos-runtime-connector-v1"]
+    provider_state: RuntimeConnectorProviderState
+    provider_observation_reference: BoundedId
+    operation_reference: BoundedId
+    runtime_effect_id: UUID
+    runtime_effect_delivery_attempt_id: UUID
+    destination_reference: BoundedId
+    effect_idempotency_key: BoundedId
+    observed_at: datetime
+    observation_digest_reference: BoundedId
+
+    @field_validator("observed_at")
+    @classmethod
+    def timestamp(cls, value: datetime) -> datetime:
+        return aware(value, "observed_at")
+
+
+class RuntimeConnectorObservationWireResponse(RuntimePortModel):
+    delivery_observation: RuntimeConnectorDeliveryObservation
+
+
+class RuntimeConnectorDeliveryOutcomeFacts(RuntimePortModel):
+    runtime_effect_delivery_result_id: UUID
+    started_at: datetime
+    completed_at: datetime
+    result_reference: BoundedId
+    result_digest_reference: BoundedId
+    failure_code: RuntimePortErrorCode
+    failure_reference: BoundedId
+    result_fact_digest_reference: BoundedId
+
+    @field_validator("started_at", "completed_at")
+    @classmethod
+    def timestamps(cls, value: datetime, info) -> datetime:
+        return aware(value, info.field_name)
+
+
+class RuntimeConnectorObservationOutcomeFacts(RuntimePortModel):
+    runtime_effect_reconciliation_observation_id: UUID
+    observed_at: datetime
+    observation_reference: BoundedId
+    observation_digest_reference: BoundedId
+    failure_reference: BoundedId
+
+    @field_validator("observed_at")
+    @classmethod
+    def timestamp(cls, value: datetime) -> datetime:
+        return aware(value, "observed_at")
+
+
+@runtime_checkable
+class RuntimeConnectorOutcomeFactsProvider(Protocol):
+    def delivery_facts(
+        self, request: "RuntimeConnectorMaterializationRequest"
+    ) -> RuntimeConnectorDeliveryOutcomeFacts: ...
+
+    def observation_facts(
+        self, request: "RuntimeConnectorObservationMaterializationRequest"
+    ) -> RuntimeConnectorObservationOutcomeFacts: ...
 
 
 class RuntimeConnectorMaterializationRequest(RuntimePortModel):
