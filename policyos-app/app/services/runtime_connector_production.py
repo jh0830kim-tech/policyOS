@@ -45,6 +45,11 @@ def _select_entry(catalog, request):
     envelope = invocation.envelope
     identity = envelope.effect_identity
     lease_request = request.credential_lease_request
+    purpose_reference = (
+        entry.delivery_credential_purpose_reference
+        if isinstance(request, RuntimeConnectorMaterializationRequest)
+        else entry.observation_credential_purpose_reference
+    )
     expected = (
         envelope.adapter_reference,
         envelope.adapter_contract_version,
@@ -63,7 +68,7 @@ def _select_entry(catalog, request):
         entry.organization_id,
         entry.connector_provisioning_reference,
         entry.credential_reference,
-        entry.credential_purpose_reference,
+        purpose_reference,
     )
     classification_order = ("public", "internal", "confidential", "restricted")
     endpoint = urlsplit(entry.endpoint_uri)
@@ -309,6 +314,15 @@ class _DeliveryFactory:
 
 
 class _ManagedObservation(_ManagedDelivery):
+    def __init__(self, factory, request):
+        self._factory = factory
+        self._request = validate_runtime_connector_observation_materialization_request(request)
+        self._entered = False
+        self._exited = False
+        self._used = False
+        self._secret: bytearray | None = None
+        self._transport = None
+
     @property
     def connector_provisioning_reference(self):
         return self._request.connector_provisioning_reference

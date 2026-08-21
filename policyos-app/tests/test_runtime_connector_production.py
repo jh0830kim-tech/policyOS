@@ -9,6 +9,7 @@ from app.runtime.ports.connector import (
     RuntimeConnectorDeliveryAcknowledgement,
     RuntimeConnectorDeliveryOutcomeFacts,
     RuntimeConnectorDeliveryWireResponse,
+    RuntimeConnectorObservationOutcomeFacts,
     RuntimeConnectorProvisioningCatalog,
     RuntimeConnectorProvisioningEntry,
 )
@@ -17,7 +18,12 @@ from app.runtime.ports.domain import RuntimePortErrorCode
 from app.services.runtime_connector_production import (
     create_runtime_connector_production_dependencies,
 )
-from tests.test_runtime_connector_contracts import NOW, materialization, uid
+from tests.test_runtime_connector_contracts import (
+    NOW,
+    materialization,
+    observation_materialization,
+    uid,
+)
 
 
 class DummyFactory:
@@ -39,7 +45,13 @@ class FactsProvider:
         )
 
     def observation_facts(self, request):
-        raise NotImplementedError
+        return RuntimeConnectorObservationOutcomeFacts(
+            runtime_effect_reconciliation_observation_id=uid(71),
+            observed_at=request.requested_at + timedelta(seconds=1),
+            observation_reference="observation.provider",
+            observation_digest_reference="digest.observation",
+            failure_reference="failure.observation",
+        )
 
 
 class OutcomeFactory:
@@ -125,7 +137,8 @@ def catalog():
                 organization_id=identity.organization_id,
                 classification_ceiling=identity.classification,
                 credential_reference=lease.credential_reference,
-                credential_purpose_reference=lease.credential_purpose_reference,
+                delivery_credential_purpose_reference="connector.invoke",
+                observation_credential_purpose_reference="connector.observe",
                 enabled=True,
             ),
         )
@@ -177,6 +190,21 @@ async def test_post_boundary_failure_is_ambiguous_and_cleanup_is_exact():
 
     assert result.certainty.value == "ambiguous"
     assert result.acknowledgement_reference is None
+    assert secret.secret == bytearray()
+    assert transport.transport.closed == 1
+
+
+@pytest.mark.asyncio
+async def test_observation_uses_its_fresh_exact_purpose_and_request_validator():
+    request = observation_materialization()
+    secret = SecretSource()
+    transport = TransportFactory(request, fail=True)
+    bundle = dependencies(request, secret, transport)
+
+    async with bundle.observation_factory.create(request) as capability:
+        observation = await capability.observe(request.invocation)
+
+    assert observation.outcome.value == "observation_unavailable"
     assert secret.secret == bytearray()
     assert transport.transport.closed == 1
 

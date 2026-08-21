@@ -49,6 +49,26 @@ def test_adr123_governs_initial_connector_credentials_and_acknowledgement() -> N
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_connector_operation_purpose_contract_and_selection_are_implemented() -> None:
+    connector = (ROOT / "app/runtime/ports/connector.py").read_text(encoding="utf-8")
+    validation = (ROOT / "app/runtime/ports/connector_validation.py").read_text(encoding="utf-8")
+    worker = (ROOT / "app/services/runtime_worker_validation.py").read_text(encoding="utf-8")
+    production = (ROOT / "app/services/runtime_connector_production.py").read_text(encoding="utf-8")
+
+    for required in (
+        'delivery_credential_purpose_reference: Literal["connector.invoke"]',
+        'observation_credential_purpose_reference: Literal["connector.observe"]',
+    ):
+        assert required in connector
+    assert 'entry.delivery_credential_purpose_reference != "connector.invoke"' in validation
+    assert 'entry.observation_credential_purpose_reference != "connector.observe"' in validation
+    for source in (worker, production):
+        assert "isinstance(request, RuntimeConnectorMaterializationRequest)" in source
+        assert "entry.delivery_credential_purpose_reference" in source
+        assert "entry.observation_credential_purpose_reference" in source
+    assert "validate_runtime_connector_observation_materialization_request(request)" in production
+
+
 def test_adr126_connector_wire_evidence_and_backend_governance() -> None:
     adr123 = (
         ROOT

@@ -1306,10 +1306,15 @@ work. Provider-sandbox and PostgreSQL acceptance remain separate. No schema or m
 
 ## Sprint 16 connector operation-purpose governance correction
 
-**Status: Governed / Validated, Pending Review.** ADR-130 preserves one immutable provisioning
+**Status: Implemented / Validated, Pending Review.** ADR-130 preserves one immutable provisioning
 entry while separating delivery `connector.invoke` and observation `connector.observe` purpose
 authority into two explicit required fields. Concrete request type selects the exact field; shared,
 swapped, inferred, partial, or cross-operation purpose binding fails closed. The production bundle
 remains nine fields, existing CP8 persistence remains authoritative, and migration
 `20260808_0025` remains absent. Public-contract correction must merge before provider/PostgreSQL
 acceptance resumes.
+
+The public provisioning entry now carries both exact purpose fields. Pure catalog validation,
+Worker selection, and private production selection use the concrete delivery or observation
+materialization request to choose the corresponding field. Purpose mismatch fails before secret
+materialization or HTTPS transport construction; persistence and migration remain unchanged.

@@ -238,7 +238,8 @@ class RuntimeConnectorProvisioningEntry(RuntimePortModel):
     organization_id: UUID
     classification_ceiling: DataClassification
     credential_reference: BoundedId
-    credential_purpose_reference: BoundedId
+    delivery_credential_purpose_reference: Literal["connector.invoke"]
+    observation_credential_purpose_reference: Literal["connector.observe"]
     enabled: Literal[True]
 
 

@@ -450,8 +450,10 @@ def validate_runtime_connector_provisioning_catalog(
         or parsed.fragment
         or parsed.netloc != parsed.netloc.lower()
         or parsed.port not in (None, 443)
+        or entry.delivery_credential_purpose_reference != "connector.invoke"
+        or entry.observation_credential_purpose_reference != "connector.observe"
     ):
-        raise RuntimePortContractError("connector provisioning endpoint is not canonical HTTPS")
+        raise RuntimePortContractError("connector provisioning entry is invalid")
     return catalog
 
 
