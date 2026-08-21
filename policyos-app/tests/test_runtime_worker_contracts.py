@@ -759,7 +759,7 @@ def test_connector_provisioning_selection_is_exact_and_scope_bound() -> None:
         adapter_reference=envelope.adapter_reference,
         adapter_contract_version=envelope.adapter_contract_version,
         destination_reference=identity.destination_reference,
-        endpoint_uri="https://connector.policyos.example/v1/runtime",
+        endpoint_uri="https://connector.policyos.example/v1/runtime/connector",
         tenant_id=identity.tenant_id,
         organization_id=identity.organization_id,
         classification_ceiling=identity.classification,
