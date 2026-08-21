@@ -70,6 +70,18 @@ async def test_concurrent_worker_claim_has_one_append_and_exact_replay(
 
 
 @pytest.mark.asyncio
+async def test_connector_evidence_reuses_append_only_lifecycle_storage_without_secret_columns(
+    worker_sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await _commit_initial(worker_sessions)
+    columns = {column.key for column in RuntimeEffectLifecycleRevision.__table__.columns}
+    assert {"result_payload", "runtime_effect_delivery_result_id"} <= columns
+    assert not columns.intersection(
+        {"secret", "credential", "authorization", "bearer", "provider_body"}
+    )
+
+
+@pytest.mark.asyncio
 async def test_delivering_crash_window_is_not_selected_for_blind_redelivery(
     worker_sessions: async_sessionmaker[AsyncSession],
 ) -> None:
