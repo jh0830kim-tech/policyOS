@@ -67,6 +67,12 @@ authority. Resolve those requirements in a separate governance gate.
 - provider sandbox before any separately approved live-provider action;
 - Alembic single head `20260808_0024` and migration `20260808_0025` absence.
 
+The operator configuration contract reuses the exact one-entry provisioning catalog as the
+runtime manifest representation. Construction accepts only the canonical path
+`/v1/runtime/connector`; alternate paths, a trailing slash, query, fragment, userinfo, or non-HTTPS
+endpoint fail closed. The provisioning reference remains the immutable version identity, with no
+second manifest wrapper or runtime digest/signature authority.
+
 ## Deferred
 
 Another adapter family or destination, content-bearing payload materialization, autonomous redrive,

@@ -1357,3 +1357,9 @@ rollback, and emergency kill switch. Endpoint, credential, deployment, provider 
 release remain separate approvals. This governance adds no schema or migration
 `20260808_0025`; the Alembic head remains the single `20260808_0024` head. Mutable PolicyOS-owned
 enablement or durable provisioning history requires a separate authority and persistence gate.
+
+The operator-manifest contract correction reuses the existing one-entry
+`RuntimeConnectorProvisioningCatalog`; the entry provisioning reference remains its immutable
+version identity. The public validator now rejects every endpoint path except the exact
+`/v1/runtime/connector` path at construction time. No second manifest model, digest/signature
+contract, schema, or migration `20260808_0025` is introduced.
