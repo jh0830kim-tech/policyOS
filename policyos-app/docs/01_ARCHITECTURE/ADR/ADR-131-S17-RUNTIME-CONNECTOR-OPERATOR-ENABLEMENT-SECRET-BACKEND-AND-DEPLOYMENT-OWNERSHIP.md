@@ -150,3 +150,13 @@ Construction-time catalog validation requires the exact canonical HTTPS path
 cardinality, enabled-state, and operation-purpose rules. Production request binding repeats the
 path comparison as defense in depth. A trailing slash, alternate path, query, fragment, userinfo,
 or non-HTTPS endpoint fails before credential acquisition, secret materialization, or network I/O.
+
+## Deployment-neutral backend clarification
+
+ADR-132 leaves concrete secret-manager vendor and workload authentication selection with the
+deployment operator. PolicyOS production code may implement only a private adapter over one
+explicitly injected, version-pinned accessor and a hardened request-local `httpx` transport.
+Missing, unversioned, stale, revoked, substituted, cross-purpose or cross-scope access fails before
+network I/O. Environment and filesystem secrets, latest aliases, ambient proxies, redirects,
+retries, global clients and endpoint fallback are prohibited. This clarification adds no schema or
+migration `20260808_0025` and grants no live-provider authority.

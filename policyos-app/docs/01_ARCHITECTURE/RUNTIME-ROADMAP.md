@@ -1363,3 +1363,17 @@ The operator-manifest contract correction reuses the existing one-entry
 version identity. The public validator now rejects every endpoint path except the exact
 `/v1/runtime/connector` path at construction time. No second manifest model, digest/signature
 contract, schema, or migration `20260808_0025` is introduced.
+
+## Sprint 17 deployment-neutral secret backend and HTTPS transport governance
+
+ADR-132 keeps secret-manager vendor, workload authentication, credential provisioning, rotation,
+revocation and backend audit under deployment-operator ownership. PolicyOS owns only a private
+adapter over one explicitly injected, version-pinned accessor and one hardened request-local
+`httpx` transport with TLS verification, `trust_env=False`, no redirects, no retries, bounded I/O
+and exactly-once cleanup.
+
+Environment or filesystem secrets, latest-version lookup, ambient proxy/trust selection, mutable
+global clients and endpoint fallback remain prohibited. Existing CP8 evidence stays authoritative,
+the Alembic head remains `20260808_0024`, and migration `20260808_0025` remains absent. Private
+backend implementation, process entrypoint/runbook and pre-production acceptance remain separate
+checkpoints; no live endpoint, credential or provider traffic is enabled.

@@ -238,3 +238,12 @@ locators, environment-selected objects, test fakes, or hidden defaults cannot pr
 connector authority. Deployment replacement is the initial disablement, rollback, and emergency
 kill-switch mechanism; it does not create a PolicyOS provisioning registry or migration
 `20260808_0025`.
+
+## ADR-132 private-backend clarification
+
+The production composition root receives one deployment-injected, version-pinned secret accessor
+and one hardened request-local `httpx` transport factory. The accessor owns no PolicyOS public
+contract and the transport accepts no environment proxy, redirect, retry, alternate destination or
+global client. PolicyOS owns only exact request binding, one private mutable secret buffer, reverse
+exactly-once cleanup and conservative transport-failure mapping. Vendor selection, workload
+authentication, secret provisioning, rotation, revocation and backend audit remain operator-owned.

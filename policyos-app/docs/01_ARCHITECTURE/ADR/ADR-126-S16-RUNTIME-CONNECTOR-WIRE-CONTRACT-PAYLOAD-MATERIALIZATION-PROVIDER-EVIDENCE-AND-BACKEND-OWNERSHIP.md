@@ -240,3 +240,12 @@ endpoint and opaque credential-reference facts. It contains no secret and cannot
 overridden by a request, environment-selected implementation, mutable application state, redirect,
 or fallback. Secret creation, rotation, revocation, and backend access audit remain operator-owned;
 live provider traffic requires separate approval.
+
+## ADR-132 deployment-neutral backend clarification
+
+Sprint 17 keeps concrete secret-manager vendor and workload authentication selection with the
+deployment operator. PolicyOS owns only a private adapter over one explicitly injected,
+version-pinned accessor and a request-local hardened `httpx` transport. Environment or filesystem
+secrets, unversioned latest aliases, ambient proxies, redirects, retries, fallback endpoints and
+global clients remain prohibited. Every post-call failure retains the conservative ambiguous
+meaning, and this boundary adds no migration `20260808_0025`.
