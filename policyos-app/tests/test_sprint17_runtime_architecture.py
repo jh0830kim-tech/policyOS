@@ -39,6 +39,34 @@ def test_adr131_governs_operator_enablement_without_runtime_registry() -> None:
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_postgresql_connector_evidence_acceptance_is_explicit_and_secret_free() -> None:
+    support = _read("tests/runtime_connector_acceptance_test_support.py")
+    acceptance = _read("tests/test_runtime_connector_postgresql_acceptance.py")
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for phrase in (
+        "materialization_request=None",
+        "_catalog_for_request(request)",
+        "accepted_at=request.requested_at + timedelta(seconds=1)",
+    ):
+        assert phrase in support
+    for phrase in (
+        "real_https_dependencies",
+        "RuntimeEffectLifecycleCommitDisposition.APPENDED",
+        "RuntimeEffectLifecycleCommitDisposition.EXACT_REPLAY",
+        "deserialize_delivery_model",
+        '"sandbox-private-token"',
+        '"authorization"',
+    ):
+        assert phrase in acceptance
+    assert "Sprint 17 PostgreSQL connector evidence acceptance" in roadmap
+    assert "PostgreSQL connector evidence acceptance gate" in program
+    assert "Sprint 17 PostgreSQL connector evidence security proof" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_operator_manifest_contract_reuses_catalog_and_rejects_path_substitution() -> None:
     source = _read("app/runtime/ports/connector_validation.py")
     adr = _read(

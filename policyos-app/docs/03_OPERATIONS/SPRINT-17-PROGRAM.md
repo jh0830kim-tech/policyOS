@@ -138,3 +138,12 @@ Successful acknowledgement, exact idempotency carriage, timeout, disconnect, red
 response, one-call bounds, and managed secret cleanup are verified. This is local synthetic
 acceptance only; live credentials, provider traffic, deployment, schema, and migration
 `20260808_0025` remain absent.
+
+## PostgreSQL connector evidence acceptance gate
+
+**Status: Implemented / Validated, Pending Review.** The gate persists one verified result produced
+through the production connector and real loopback HTTPS transport, proves concurrent exact replay,
+and verifies the serialized revision is identical to the authoritative result. The combined matrix
+retains observation linkage, stale/substituted scope rejection, concurrency, and rollback residue
+zero. PostgreSQL stores no secret, bearer header, or raw provider body; the Alembic head remains
+`20260808_0024` and migration `20260808_0025` remains absent.

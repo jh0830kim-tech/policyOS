@@ -1014,6 +1014,15 @@ only already-admitted tasks to the exact sticky deadline without invented cancel
 lifecycle evidence. No transaction spans an external effect, and no schema or migration
 `20260808_0025` is introduced.
 
+## Sprint 17 PostgreSQL connector evidence security proof
+
+The acceptance path persists only the bounded `RuntimeEffectDeliveryResult` and lifecycle facts
+after exact production HTTPS acknowledgement validation. Concurrent identical writes collapse to
+one append plus one exact replay; credential bytes, Authorization headers, and raw provider bodies
+are absent from every persisted revision. Existing tenant, organization, classification, lineage,
+attempt, destination, idempotency, observation, conflict, and rollback checks remain fail closed.
+No live credential, provider, schema, or migration `20260808_0025` is introduced.
+
 ## Sprint 17 local HTTPS acceptance security evidence
 
 The test-only sandbox uses an ephemeral localhost key and certificate outside version control and
