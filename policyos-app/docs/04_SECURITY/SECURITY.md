@@ -1014,6 +1014,16 @@ only already-admitted tasks to the exact sticky deadline without invented cancel
 lifecycle evidence. No transaction spans an external effect, and no schema or migration
 `20260808_0025` is introduced.
 
+## Sprint 17 local HTTPS acceptance security evidence
+
+The test-only sandbox uses an ephemeral localhost key and certificate outside version control and
+requires hostname verification and TLS 1.2 or newer through the production request-local client.
+The wire request carries the exact idempotency key and a private Authorization value; assertions
+observe only the test token and confirm its mutable source buffer is erased after use. Timeout,
+disconnect, redirect, malformed response, and missing verified evidence never promote delivery and
+never exceed one network call. No live secret, provider, ambient proxy, production trust root,
+schema, or migration `20260808_0025` is introduced.
+
 ### CP10 Worker operational-result public-signature security boundary
 
 ADR-118 places every producer input in a strict, frozen, extra-forbidden operation-specific model.

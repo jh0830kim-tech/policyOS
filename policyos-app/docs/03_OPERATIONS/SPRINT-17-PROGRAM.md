@@ -128,3 +128,13 @@ remaining duration bounds every HTTP phase, and a fresh verified TLS context con
 hardened `httpx.AsyncClient` with environment trust and redirects disabled. Provider-sandbox and
 PostgreSQL acceptance remain separate; no live credential, provider, schema, or migration
 `20260808_0025` is introduced.
+
+## Local HTTPS provider-sandbox acceptance gate
+
+**Status: Implemented / Validated, Pending Review.** The acceptance harness generates an ephemeral
+localhost certificate outside the repository, starts a real loopback TLS server on the canonical
+HTTPS endpoint, and drives delivery and observation through the production `httpx` transport.
+Successful acknowledgement, exact idempotency carriage, timeout, disconnect, redirect, malformed
+response, one-call bounds, and managed secret cleanup are verified. This is local synthetic
+acceptance only; live credentials, provider traffic, deployment, schema, and migration
+`20260808_0025` remain absent.

@@ -1304,6 +1304,16 @@ No database transaction spans credential, secret, transport, response, outcome-f
 work. Provider-sandbox and PostgreSQL acceptance remain separate. No schema or migration
 `20260808_0025` is introduced.
 
+## Sprint 17 local HTTPS provider-sandbox acceptance
+
+**Status: Implemented / Validated, Pending Review.** A test-only loopback TLS server now exercises
+the production request-local `httpx.AsyncClient` path with an ephemeral localhost certificate,
+hostname verification, TLS 1.2+, exact Authorization and idempotency carriage, verified delivery
+acknowledgement, and provider observation. Timeout, disconnect, redirect, and malformed response
+paths preserve ambiguity and perform at most one network call. Secret buffers are erased after each
+managed request. No live provider, production credential, schema, or migration `20260808_0025` is
+introduced.
+
 ## Sprint 16 connector operation-purpose governance correction
 
 **Status: Implemented / Validated, Pending Review.** ADR-130 preserves one immutable provisioning
