@@ -224,3 +224,12 @@ separate materialization request and lease and preserves the closed provider-sta
 The Worker invokes `delivery_factory(revalidation.materialization_request)` exactly once only for
 an invokable result. Provider-sandbox, PostgreSQL 16 and combined live-wire acceptance remain the
 next gate. Operator enablement and migration `20260808_0025` remain outside this checkpoint.
+
+## 15. Connector operation-purpose governance correction
+
+ADR-130 keeps one provisioned connector destination and assigns separate required purposes to it:
+delivery uses `connector.invoke`, while observation uses `connector.observe` with a fresh lease.
+The concrete materialization request type selects the authoritative field. Generic, equal, swapped,
+inferred, stale, or cross-operation purposes fail before secret or transport construction. A
+separate public-contract correction precedes the paused provider/PostgreSQL acceptance. No schema
+or migration `20260808_0025` is introduced.

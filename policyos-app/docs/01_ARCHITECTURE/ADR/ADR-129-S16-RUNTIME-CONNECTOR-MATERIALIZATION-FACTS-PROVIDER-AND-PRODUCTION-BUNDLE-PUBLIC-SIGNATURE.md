@@ -159,3 +159,12 @@ Rejected because the contracts add no durable fact.
 
 The next contract gate can implement exact signatures without production-selected authority.
 Private connector I/O remains hidden behind managed delivery and observation factories.
+
+## ADR-130 provisioning-purpose correction
+
+`RuntimeConnectorProvisioningEntry` has two required operation-specific purpose fields:
+`delivery_credential_purpose_reference` and
+`observation_credential_purpose_reference`. They replace the ambiguous generic purpose, are exact
+and distinct, and do not change the catalog's exactly-one-entry cardinality or the production
+bundle's exactly-nine-field shape. Selectors compare only the field owned by the concrete
+materialization request type and fail closed on shared, swapped, missing, or substituted purposes.

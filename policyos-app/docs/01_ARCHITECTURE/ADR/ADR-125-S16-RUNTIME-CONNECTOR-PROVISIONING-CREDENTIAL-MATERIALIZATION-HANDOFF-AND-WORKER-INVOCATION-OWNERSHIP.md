@@ -221,3 +221,11 @@ transports and provider responses never become process-lifetime fields.
 ADR-129 fixes the additive public signatures for operation-specific materialization-facts
 factories, the managed generic provider, observation preparation and the immutable connector
 production bundle. It does not alter this ADR's request cardinality or Worker handoff.
+
+## ADR-130 operation-purpose clarification
+
+The one immutable provisioning entry carries separate explicit delivery and observation credential
+purposes. Delivery exact-matches `connector.invoke`; a fresh observation lease exact-matches
+`connector.observe`. A generic shared purpose, delivery-lease reuse, purpose inference, or duplicate
+per-operation provisioning entry is prohibited. All other provisioning, destination, scope,
+classification, and Worker handoff invariants remain unchanged.

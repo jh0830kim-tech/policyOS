@@ -1319,3 +1319,12 @@ Only complete canonical acknowledgement evidence at exact HTTP `200` can establi
 Local rejection before the governed call boundary is definitely not delivered; every possible
 transmission with incomplete evidence is ambiguous. Observation uncertainty is unavailable. No
 database transaction spans external I/O and no schema or migration `20260808_0025` is added.
+
+## Sprint 16 connector operation-purpose isolation
+
+One immutable connector provisioning entry carries two distinct server-owned purposes. Delivery
+accepts only `connector.invoke`; observation accepts only a fresh `connector.observe` lease. Shared,
+swapped, inferred, missing, stale, or cross-operation purpose binding fails closed before secret
+materialization or network I/O. The delivery lease, capability, and secret buffer are never reused
+for observation. This correction creates no credential storage, schema, migration
+`20260808_0025`, provider call, or operator enablement.
