@@ -683,8 +683,12 @@ def test_sprint16_production_connector_composition_is_private_and_exact():
     source = production.read_text(encoding="utf-8")
     worker_source = worker.read_text(encoding="utf-8")
     assert "create_runtime_connector_production_dependencies" in source
-    assert "secret_materialization_source" in source
-    assert "https_transport_factory" in source
+    assert "version_pinned_secret_accessor" in source
+    assert "tls_context_factory" in source
+    assert "clock_factory" in source
+    assert "expected_clock_reference" in source
+    assert "trust_env=False" in source
+    assert "follow_redirects=False" in source
     assert "RuntimeConnectorProductionDependencyBundle" in source
     assert "datetime.now" not in source
     assert "uuid4" not in source

@@ -1429,3 +1429,12 @@ verification, `CERT_REQUIRED`, and TLS 1.2 or newer; environment/default trust, 
 redirects, retries, alternate destinations, and fallback remain prohibited. The transport receives
 only one exact positive duration and performs at most one call. Private signatures expose no secret
 or SDK object and add no schema or migration `20260808_0025`.
+
+## Sprint 17 private backend implementation security evidence
+
+The implementation rejects accessor identity, purpose, provisioning, clock-reference, UTC, TLS,
+hostname-verification, and deadline mismatches before the network-call boundary. Received, copied,
+and Authorization buffers are overwritten and cleared, the managed clock and request-local client
+exit exactly once, and post-call uncertainty cannot be promoted to delivered. No secret, raw
+provider body, internal exception, ambient proxy, live credential, new schema, or migration
+`20260808_0025` is introduced.
