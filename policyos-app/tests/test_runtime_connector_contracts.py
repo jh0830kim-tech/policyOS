@@ -702,7 +702,7 @@ def test_provisioning_catalog_requires_one_canonical_https_entry() -> None:
         adapter_reference="adapter.connector",
         adapter_contract_version="1.0",
         destination_reference="destination.approved",
-        endpoint_uri="https://connector.policyos.example/v1/runtime",
+        endpoint_uri="https://connector.policyos.example/v1/runtime/connector",
         tenant_id=uid(8),
         organization_id=uid(9),
         classification_ceiling=DataClassification.CONFIDENTIAL,
@@ -733,4 +733,19 @@ def test_provisioning_catalog_requires_one_canonical_https_entry() -> None:
         with pytest.raises(RuntimePortContractError):
             validate_runtime_connector_provisioning_catalog(
                 RuntimeConnectorProvisioningCatalog(entries=(entry.model_copy(update=update),))
+            )
+
+    for endpoint_uri in (
+        "https://connector.policyos.example/v1/runtime",
+        "https://connector.policyos.example/v1/runtime/connector/",
+        "https://connector.policyos.example/other",
+        "https://connector.policyos.example/v1/runtime/connector?target=other",
+        "https://connector.policyos.example/v1/runtime/connector#fragment",
+        "https://user@connector.policyos.example/v1/runtime/connector",
+    ):
+        with pytest.raises(RuntimePortContractError):
+            validate_runtime_connector_provisioning_catalog(
+                RuntimeConnectorProvisioningCatalog(
+                    entries=(entry.model_copy(update={"endpoint_uri": endpoint_uri}),)
+                )
             )

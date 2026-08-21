@@ -37,3 +37,21 @@ def test_adr131_governs_operator_enablement_without_runtime_registry() -> None:
     assert "Sprint 17 operator-enablement governance boundary" in roadmap
     assert "Sprint 17 operator-enablement security boundary" in security
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_operator_manifest_contract_reuses_catalog_and_rejects_path_substitution() -> None:
+    source = _read("app/runtime/ports/connector_validation.py")
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-131-S17-RUNTIME-CONNECTOR-OPERATOR-ENABLEMENT-SECRET-BACKEND-AND-"
+        "DEPLOYMENT-OWNERSHIP.md"
+    )
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+
+    assert 'parsed.path != "/v1/runtime/connector"' in source
+    assert "runtime representation of the deployment manifest" in adr
+    assert "Therefore no second" in adr
+    assert "manifest wrapper" in adr
+    assert "Construction accepts only the canonical path" in program
+    assert "`/v1/runtime/connector`" in program
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

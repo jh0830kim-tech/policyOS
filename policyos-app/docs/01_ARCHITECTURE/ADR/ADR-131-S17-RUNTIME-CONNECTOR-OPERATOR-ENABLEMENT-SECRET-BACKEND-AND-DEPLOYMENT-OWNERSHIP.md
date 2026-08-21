@@ -136,3 +136,17 @@ and allow substitution, SSRF, cross-scope use, and secret leakage.
 ### Automatic activation after merge or startup
 
 Rejected because publication and process construction are not deployment authorization.
+
+## Operator manifest public-contract clarification
+
+`RuntimeConnectorProvisioningCatalog` is the runtime representation of the deployment manifest,
+and its single entry's `connector_provisioning_reference` is the exact immutable version identity.
+Deployment distribution and integrity verification remain outside PolicyOS. Therefore no second
+manifest wrapper, digest contract, signature contract, provider Protocol, registry, or hidden
+version lookup is introduced.
+
+Construction-time catalog validation requires the exact canonical HTTPS path
+`/v1/runtime/connector` in addition to the existing scheme, host, userinfo, port, query, fragment,
+cardinality, enabled-state, and operation-purpose rules. Production request binding repeats the
+path comparison as defense in depth. A trailing slash, alternate path, query, fragment, userinfo,
+or non-HTTPS endpoint fails before credential acquisition, secret materialization, or network I/O.

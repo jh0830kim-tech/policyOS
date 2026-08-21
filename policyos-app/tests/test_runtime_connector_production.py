@@ -15,6 +15,7 @@ from app.runtime.ports.connector import (
 )
 from app.runtime.ports.connector_validation import runtime_connector_canonical_digest
 from app.runtime.ports.domain import RuntimePortErrorCode
+from app.runtime.ports.errors import RuntimePortContractError
 from app.services.runtime_connector_production import (
     create_runtime_connector_production_dependencies,
 )
@@ -145,9 +146,9 @@ def catalog():
     )
 
 
-def dependencies(request, secret, transport):
+def dependencies(request, secret, transport, provisioning_catalog=None):
     return create_runtime_connector_production_dependencies(
-        provisioning_catalog=catalog(),
+        provisioning_catalog=provisioning_catalog or catalog(),
         delivery_materialization_facts_provider_factory=DummyFactory(),
         observation_materialization_facts_provider_factory=DummyFactory(),
         credential_broker_factory=DummyFactory(),
@@ -157,6 +158,22 @@ def dependencies(request, secret, transport):
         secret_materialization_source=secret,
         https_transport_factory=transport,
     )
+
+
+def test_production_construction_rejects_noncanonical_manifest_path():
+    request = materialization()
+    provisioning_catalog = catalog()
+    entry = provisioning_catalog.entries[0]
+    invalid = RuntimeConnectorProvisioningCatalog(
+        entries=(
+            entry.model_copy(
+                update={"endpoint_uri": "https://connector.policyos.example/v1/runtime/connector/"}
+            ),
+        )
+    )
+
+    with pytest.raises(RuntimePortContractError):
+        dependencies(request, SecretSource(), TransportFactory(request), invalid)
 
 
 @pytest.mark.asyncio

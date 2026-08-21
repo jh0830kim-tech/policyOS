@@ -1378,3 +1378,11 @@ organization, classification, lineage, attempt, destination, adapter, permit, en
 idempotency, provisioning, credential, operation purpose, and time mismatches fail closed before
 secret materialization or network I/O. No PolicyOS provisioning registry, backfill, schema, or
 migration `20260808_0025` is approved; the Alembic head remains `20260808_0024`.
+
+The operator-manifest public-contract correction treats the existing one-entry provisioning
+catalog as the only runtime manifest representation. Its provisioning reference remains the
+immutable version identity. Construction requires the exact canonical HTTPS path
+`/v1/runtime/connector` and rejects alternate paths, trailing slash, query, fragment, userinfo, or
+non-HTTPS endpoints before credential acquisition or secret materialization. No second manifest
+wrapper, manifest digest/signature authority, secret surface, schema, or migration
+`20260808_0025` is added.
