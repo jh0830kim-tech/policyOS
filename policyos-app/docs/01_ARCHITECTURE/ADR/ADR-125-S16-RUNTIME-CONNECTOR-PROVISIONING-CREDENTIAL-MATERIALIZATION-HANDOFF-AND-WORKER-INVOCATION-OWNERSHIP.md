@@ -229,3 +229,12 @@ purposes. Delivery exact-matches `connector.invoke`; a fresh observation lease e
 `connector.observe`. A generic shared purpose, delivery-lease reuse, purpose inference, or duplicate
 per-operation provisioning entry is prohibited. All other provisioning, destination, scope,
 classification, and Worker handoff invariants remain unchanged.
+
+## ADR-131 operator-enablement clarification
+
+Sprint 17 keeps the initial provisioning catalog as one deployment-owned immutable manifest. The
+deployment owner selects and integrity-checks its exact version before application construction;
+PolicyOS adds no provisioning mutation API, database registry, latest-row lookup, dynamic reload,
+or migration `20260808_0025`. Endpoint, credential reference, purpose, provider, destination, or
+adapter changes require a new globally non-reusable provisioning reference and controlled process
+replacement. Live endpoint and credential activation remain separate operator approvals.

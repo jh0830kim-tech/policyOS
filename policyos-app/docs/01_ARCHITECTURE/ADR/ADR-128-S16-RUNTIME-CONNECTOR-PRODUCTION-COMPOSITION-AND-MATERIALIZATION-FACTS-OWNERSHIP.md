@@ -228,3 +228,13 @@ its closed discriminator. It compares the lease only with the corresponding expl
 purpose and never accepts a generic operation string, shared purpose, swapped purpose, endpoint
 inference, or delivery lease for observation. This correction changes no factory graph, secret
 lifetime, transaction boundary, public bundle field count, or persistence ownership.
+
+## ADR-131 process-composition clarification
+
+The Sprint 17 production process receives an already verified deployment-owned immutable manifest
+and explicit private backend factories. Missing or partial dependencies fail construction before
+traffic. A running process does not reload or mutate its manifest, and `app.state`, service
+locators, environment-selected objects, test fakes, or hidden defaults cannot provide production
+connector authority. Deployment replacement is the initial disablement, rollback, and emergency
+kill-switch mechanism; it does not create a PolicyOS provisioning registry or migration
+`20260808_0025`.
