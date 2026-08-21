@@ -233,3 +233,16 @@ The concrete materialization request type selects the authoritative field. Gener
 inferred, stale, or cross-operation purposes fail before secret or transport construction. A
 separate public-contract correction precedes the paused provider/PostgreSQL acceptance. No schema
 or migration `20260808_0025` is introduced.
+
+## 16. Connector operation-purpose contract and production selection correction
+
+The immutable provisioning entry now requires `delivery_credential_purpose_reference` equal to
+`connector.invoke` and `observation_credential_purpose_reference` equal to `connector.observe`.
+Catalog validation rejects malformed or substituted values even when model construction is
+bypassed. Worker and production selectors choose the authoritative field from the concrete
+materialization request type, and observation uses its own exact validator and fresh lease.
+
+Focused contract, Worker, production, and architecture tests prove that wrong-operation purposes
+fail before secret or transport construction. The production dependency bundle remains nine
+fields. Provider-sandbox and PostgreSQL acceptance resumes only after this correction is merged;
+no schema or migration `20260808_0025` is added here.

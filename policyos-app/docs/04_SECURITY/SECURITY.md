@@ -1328,3 +1328,9 @@ swapped, inferred, missing, stale, or cross-operation purpose binding fails clos
 materialization or network I/O. The delivery lease, capability, and secret buffer are never reused
 for observation. This correction creates no credential storage, schema, migration
 `20260808_0025`, provider call, or operator enablement.
+
+The enforced public contract uses two literal fields rather than a generic purpose. Delivery and
+observation selectors receive their concrete materialization request and compare only the matching
+field. Model-bypass catalog validation repeats the exact-value check, while the observation
+capability validates the observation request directly. A purpose mismatch therefore cannot reach
+credential materialization, authorization-header construction, or HTTPS I/O.

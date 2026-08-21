@@ -707,7 +707,8 @@ def test_provisioning_catalog_requires_one_canonical_https_entry() -> None:
         organization_id=uid(9),
         classification_ceiling=DataClassification.CONFIDENTIAL,
         credential_reference="credential.reference",
-        credential_purpose_reference="connector.invoke",
+        delivery_credential_purpose_reference="connector.invoke",
+        observation_credential_purpose_reference="connector.observe",
         enabled=True,
     )
     catalog = RuntimeConnectorProvisioningCatalog(entries=(entry,))
@@ -723,3 +724,13 @@ def test_provisioning_catalog_requires_one_canonical_https_entry() -> None:
                 entries=(entry.model_copy(update={"endpoint_uri": "http://example.test"}),)
             )
         )
+    for update in (
+        {"delivery_credential_purpose_reference": "connector.observe"},
+        {"observation_credential_purpose_reference": "connector.invoke"},
+    ):
+        with pytest.raises(ValidationError):
+            RuntimeConnectorProvisioningEntry(**(entry.model_dump() | update))
+        with pytest.raises(RuntimePortContractError):
+            validate_runtime_connector_provisioning_catalog(
+                RuntimeConnectorProvisioningCatalog(entries=(entry.model_copy(update=update),))
+            )

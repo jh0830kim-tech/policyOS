@@ -7,8 +7,8 @@ from app.runtime.orchestration.delivery_validation import (
     validate_runtime_orchestration_candidate_claim,
 )
 from app.runtime.ports import (
-    RuntimeConnectorDeliveryMaterializationFacts,
-    RuntimeConnectorObservationMaterializationFacts,
+    RuntimeConnectorMaterializationRequest,
+    RuntimeConnectorObservationMaterializationRequest,
     RuntimeConnectorProvisioningCatalog,
     RuntimeConnectorProvisioningEntry,
     RuntimeEffectDeliveryResult,
@@ -56,27 +56,32 @@ class RuntimeWorkerContractConflict(ValueError):
 
 def select_runtime_connector_provisioning_entry(
     catalog: RuntimeConnectorProvisioningCatalog,
-    prepared_delivery: RuntimeWorkerPreparedDelivery,
-    facts: RuntimeConnectorDeliveryMaterializationFacts
-    | RuntimeConnectorObservationMaterializationFacts,
+    request: RuntimeConnectorMaterializationRequest
+    | RuntimeConnectorObservationMaterializationRequest,
 ) -> RuntimeConnectorProvisioningEntry:
     entry = validate_runtime_connector_provisioning_catalog(catalog).entries[0]
-    envelope = prepared_delivery.invocation.envelope
+    envelope = request.invocation.envelope
     identity = envelope.effect_identity
     classification_order = ("public", "internal", "confidential", "restricted")
     if classification_order.index(identity.classification.value) > classification_order.index(
         entry.classification_ceiling.value
     ):
         raise RuntimeWorkerContractConflict("connector provisioning classification differs")
+    lease_request = request.credential_lease_request
+    purpose_reference = (
+        entry.delivery_credential_purpose_reference
+        if isinstance(request, RuntimeConnectorMaterializationRequest)
+        else entry.observation_credential_purpose_reference
+    )
     expected = (
         envelope.adapter_reference,
         envelope.adapter_contract_version,
         identity.destination_reference,
         identity.tenant_id,
         identity.organization_id,
-        facts.connector_provisioning_reference,
-        facts.credential_reference,
-        facts.credential_purpose_reference,
+        lease_request.connector_provisioning_reference,
+        lease_request.credential_reference,
+        lease_request.credential_purpose_reference,
     )
     actual = (
         entry.adapter_reference,
@@ -86,7 +91,7 @@ def select_runtime_connector_provisioning_entry(
         entry.organization_id,
         entry.connector_provisioning_reference,
         entry.credential_reference,
-        entry.credential_purpose_reference,
+        purpose_reference,
     )
     if actual != expected:
         raise RuntimeWorkerContractConflict("connector provisioning binding differs")
