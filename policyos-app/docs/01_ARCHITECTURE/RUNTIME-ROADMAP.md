@@ -1377,3 +1377,16 @@ global clients and endpoint fallback remain prohibited. Existing CP8 evidence st
 the Alembic head remains `20260808_0024`, and migration `20260808_0025` remains absent. Private
 backend implementation, process entrypoint/runbook and pre-production acceptance remain separate
 checkpoints; no live endpoint, credential or provider traffic is enabled.
+
+## Sprint 17 trusted deadline clock and transport timeout governance
+
+ADR-133 assigns absolute-deadline conversion to one explicitly injected request-scoped managed
+trusted UTC clock. Delivery and observation validate the exact clock reference, read once
+immediately before transport invocation, and pass the exact positive remaining duration unchanged
+to every bounded HTTP phase. Hidden wall clocks, event-loop conversion, defaults, rounding,
+clamping, refresh, and fallback are prohibited.
+
+Zero or negative duration consumes the network-call boundary zero times. Once invocation begins,
+timeout or cancellation preserves delivery ambiguity or observation unavailability. The clock is
+ephemeral, creates no result or authority, and adds no schema or migration `20260808_0025`; the
+single Alembic head remains `20260808_0024`.

@@ -229,3 +229,11 @@ validated outcome and never changes delivery certainty.
 ADR-129 adds only an operation-bound factory for the existing outcome-facts provider. Provider
 methods, caller-owned identities, trusted times, canonical digest validation and private Bearer
 construction remain unchanged.
+
+## ADR-133 trusted deadline-clock clarification
+
+The positive remaining duration is not derived from an ambient wall clock, event-loop clock, or
+HTTP-client default. A request-scoped managed trusted UTC clock is read exactly once immediately
+before the network-call boundary, its exact reference is validated, and the caller-supplied
+deadline minus that reading is passed unchanged to every bounded transport phase. Zero or negative
+duration consumes the transport boundary zero times; possible transmission remains ambiguous.

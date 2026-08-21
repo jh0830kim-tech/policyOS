@@ -247,3 +247,12 @@ contract and the transport accepts no environment proxy, redirect, retry, altern
 global client. PolicyOS owns only exact request binding, one private mutable secret buffer, reverse
 exactly-once cleanup and conservative transport-failure mapping. Vendor selection, workload
 authentication, secret provisioning, rotation, revocation and backend audit remain operator-owned.
+
+## ADR-133 deadline-clock clarification
+
+The private connector construction graph additionally receives an expected clock reference and a
+factory for one request-scoped managed trusted UTC clock. The process bundle stores neither a
+clock capability nor a reading. Delivery and observation each read their own capability exactly
+once immediately before transport invocation, calculate the exact positive remaining duration,
+and dispose the clock exactly once with the other request-local resources. This addition creates no
+identity, result, persistence, schema, or public-facade authority.

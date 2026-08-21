@@ -1402,3 +1402,17 @@ alternate destinations and ambient proxies, performs at most one bounded call, a
 once. No secret, Authorization value, vendor response or internal failure detail enters contracts,
 logs, metrics, traces, evidence or persistence. Post-call uncertainty remains ambiguous, CP8
 evidence remains authoritative, and migration `20260808_0025` remains absent.
+
+## Sprint 17 trusted deadline-clock security boundary
+
+Connector deadline enforcement uses one explicitly injected request-scoped managed trusted UTC
+clock with an exact expected reference. It is read once immediately before transport invocation;
+the caller-supplied deadline minus the reading must be positive and is used unchanged for all HTTP
+timeout phases. Ambient wall clocks, event-loop time conversion, client defaults, rounding,
+clamping, refresh, fallback, and cross-request clock reuse are prohibited.
+
+Missing, stale, substituted, wrong-reference, non-UTC, zero, or negative readings fail before the
+network-call boundary and reveal no secret or backend detail. Once the call begins, timeout,
+cancellation, disconnect, or missing verified evidence remains ambiguous for delivery or
+unavailable for observation. Clock cleanup is exactly once and cannot rewrite outcome certainty.
+The reading is not persisted and adds no schema or migration `20260808_0025`.

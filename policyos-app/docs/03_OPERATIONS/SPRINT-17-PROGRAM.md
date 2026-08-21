@@ -92,3 +92,17 @@ buffer; overwrite and release it exactly once; disable environment proxy/trust s
 redirects, retries and fallback; and preserve ambiguity for every post-call failure. It adds no
 schema or migration `20260808_0025`. Process entrypoint/runbook and pre-production acceptance
 remain separate checkpoints, and live provider enablement still requires operator approval.
+
+## ADR-133 trusted deadline-clock gate
+
+Production transport receives no ambient time authority or default timeout. A request-scoped
+managed trusted UTC clock validates one expected reference and is read exactly once immediately
+before the network-call boundary. The exact caller deadline minus that reading must be positive and
+is passed unchanged to connection, pool, write, and read bounds. There is no rounding, clamp,
+refresh, fallback, or second clock read.
+
+Deadline exhaustion, missing clock configuration, stale or substituted readings, and non-UTC time
+fail before transport invocation. Timeout or cancellation after invocation preserves ambiguity or
+observation unavailability. Focused implementation and provider-sandbox acceptance are deferred to
+the private-backend gate. This governance adds no schema or migration `20260808_0025` and keeps the
+single Alembic head `20260808_0024`.
