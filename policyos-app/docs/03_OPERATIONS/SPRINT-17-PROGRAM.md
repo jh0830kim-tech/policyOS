@@ -2,7 +2,7 @@
 
 ## Status
 
-`GOVERNANCE PREPARATION`
+`COMPLETED WITH DEPLOYMENT DEFERRED`
 
 Sprint 17 starts from Sprint 16 closeout at merge baseline
 `12dade7aeadcd5e76763c685a11c46266045bb39` and Alembic single head
@@ -147,3 +147,18 @@ and verifies the serialized revision is identical to the authoritative result. T
 retains observation linkage, stale/substituted scope rejection, concurrency, and rollback residue
 zero. PostgreSQL stores no secret, bearer header, or raw provider body; the Alembic head remains
 `20260808_0024` and migration `20260808_0025` remains absent.
+
+## Sprint 17 closeout
+
+Sprint 17 is complete within the deployment-neutral boundary merged through PR #163 to PR #170.
+The immutable operator manifest, exact construction-time validation, private request-local secret
+accessor and HTTPS transport, trusted deadline clock, local TLS provider sandbox, and PostgreSQL
+lifecycle/reconciliation evidence are implemented and validated. The authoritative CI at the final
+acceptance head completed `2278` tests successfully.
+
+This closeout does not enable a live connector. Production credential provisioning, secret-manager
+vendor and workload identity selection, live endpoint traffic, process entrypoint/runbook,
+controlled deployment, observation/rollback operations drill, tag, and release remain explicit
+operator decisions. The next product step is a separately approved validation sprint using the
+bounded local vertical slice. The Alembic head remains the single `20260808_0024` head; migration
+`20260808_0025` is absent and no new authority, schema, or persistence owner is introduced.

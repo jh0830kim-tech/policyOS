@@ -1457,3 +1457,16 @@ and Authorization buffers are overwritten and cleared, the managed clock and req
 exit exactly once, and post-call uncertainty cannot be promoted to delivered. No secret, raw
 provider body, internal exception, ambient proxy, live credential, new schema, or migration
 `20260808_0025` is introduced.
+
+## Sprint 17 closeout security boundary
+
+Sprint 17 closes with exact operator-manifest validation, request-local secret handling,
+hostname-verifying TLS, one trusted deadline reading, bounded provider evidence, exact replay, and
+credential-free PostgreSQL persistence validated through PR #163 to PR #170. No raw secret,
+Authorization value, provider body, hidden endpoint, ambient proxy, or inferred identity becomes a
+contract, log, audit fact, error, or stored record.
+
+`COMPLETED WITH DEPLOYMENT DEFERRED` is not production enablement. Live credentials, workload
+identity, secret-manager vendor, endpoint activation, provider traffic, process deployment,
+operations drill, tag, and release require separate authorization. The closeout adds no authority,
+schema, backfill, or migration `20260808_0025`; the single head remains `20260808_0024`.

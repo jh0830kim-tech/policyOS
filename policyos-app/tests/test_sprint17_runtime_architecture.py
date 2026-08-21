@@ -292,3 +292,27 @@ def test_local_https_provider_sandbox_uses_the_production_transport_boundary() -
     assert "Local HTTPS provider-sandbox acceptance gate" in program
     assert "Sprint 17 local HTTPS acceptance security evidence" in security
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_sprint17_closeout_is_complete_with_deployment_deferred() -> None:
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    assert "Completed with Deployment Deferred" in roadmap
+    assert "`COMPLETED WITH DEPLOYMENT DEFERRED`" in program
+    assert "Sprint 17 closeout security boundary" in security
+    for phrase in (
+        "PR #163 through PR #170",
+        "local validation sprint",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in roadmap
+    for phrase in (
+        "process entrypoint/runbook",
+        "controlled deployment",
+        "tag, and release",
+    ):
+        assert phrase in program
+    assert "is not production enablement" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
