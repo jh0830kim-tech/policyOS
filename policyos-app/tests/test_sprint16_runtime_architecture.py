@@ -49,6 +49,27 @@ def test_adr123_governs_initial_connector_credentials_and_acknowledgement() -> N
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_sprint16_closeout_is_complete_and_bounded() -> None:
+    roadmap = (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8")
+    program = (ROOT / "docs/03_OPERATIONS/SPRINT-16-PROGRAM.md").read_text(encoding="utf-8")
+    security = (ROOT / "docs/04_SECURITY/SECURITY.md").read_text(encoding="utf-8")
+    combined = "\n".join((roadmap, program, security))
+
+    for required in (
+        "Sprint 16 closeout",
+        "Sprint 16 is complete",
+        "PR #146 through PR #161",
+        "single Alembic head `20260808_0024`",
+        "migration `20260808_0025`",
+        "separate operator decisions",
+        "external business-effect exactly-once",
+        "Sprint 16 closeout security boundary",
+    ):
+        assert required in combined
+
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_connector_provider_postgresql_acceptance_gate_is_bounded() -> None:
     root = Path(__file__).resolve().parents[1]
     support = (root / "tests/runtime_connector_acceptance_test_support.py").read_text(
