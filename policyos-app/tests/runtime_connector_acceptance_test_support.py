@@ -28,7 +28,7 @@ from app.runtime.ports.domain import RuntimePortErrorCode
 from app.services.runtime_connector_production import (
     create_runtime_connector_production_dependencies,
 )
-from tests.test_runtime_connector_contracts import NOW, uid
+from tests.test_runtime_connector_contracts import NOW, materialization, uid
 from tests.test_runtime_connector_production import (
     AsyncClient,
     ClockFactory,
@@ -39,11 +39,15 @@ from tests.test_runtime_connector_production import (
 
 
 class SandboxOutcomeFactsProvider:
+    def __init__(self, request=None):
+        self.request = request
+
     def delivery_facts(self, request):
+        started_at = self.request.requested_at if self.request is not None else NOW
         return RuntimeConnectorDeliveryOutcomeFacts(
             runtime_effect_delivery_result_id=uid(9700),
-            started_at=NOW,
-            completed_at=NOW + timedelta(seconds=2),
+            started_at=started_at,
+            completed_at=started_at + timedelta(seconds=2),
             result_reference="result.provider-sandbox",
             result_digest_reference="digest.result.provider-sandbox",
             failure_code=RuntimePortErrorCode.TIMEOUT,
@@ -63,7 +67,7 @@ class SandboxOutcomeFactsProvider:
 
 class SandboxOutcomeFactsProviderFactory:
     def __call__(self, request):
-        return SandboxOutcomeFactsProvider()
+        return SandboxOutcomeFactsProvider(request)
 
 
 class SandboxSecretSource:
@@ -116,7 +120,7 @@ class ProviderSandboxTransport:
             return self._observation_response(request)
         return self._delivery_response(request)
 
-    def _delivery_response(self, request):
+    def _delivery_response(self, request, *, accepted_at=None):
         acknowledgement = RuntimeConnectorDeliveryAcknowledgement(
             protocol_version=RUNTIME_CONNECTOR_PROTOCOL_VERSION,
             operation_reference="provider.operation",
@@ -124,7 +128,7 @@ class ProviderSandboxTransport:
             runtime_effect_delivery_attempt_id=UUID(request["runtime_effect_delivery_attempt_id"]),
             destination_reference=request["destination_reference"],
             effect_idempotency_key=request["effect_idempotency_key"],
-            accepted_at=NOW + timedelta(seconds=1),
+            accepted_at=accepted_at or NOW + timedelta(seconds=1),
             acknowledgement_digest_reference="digest.pending",
         )
         fields = tuple(type(acknowledgement).model_fields)[:-1]
@@ -238,9 +242,10 @@ def _tls_factories(tmp_path: Path):
 
 
 class LocalHttpsConnectorSandbox:
-    def __init__(self, *, server_context, scenario: str):
+    def __init__(self, *, server_context, scenario: str, accepted_at=None):
         self.server_context = server_context
         self.scenario = scenario
+        self.accepted_at = accepted_at
         self.calls = 0
         self.requests: list[dict[str, object]] = []
         self.authorization: list[str] = []
@@ -289,7 +294,10 @@ class LocalHttpsConnectorSandbox:
                 response = ProviderSandboxTransport(self.scenario)._observation_response(request)
                 status, response_body = response.status, response.body
             else:
-                response = ProviderSandboxTransport(self.scenario)._delivery_response(request)
+                response = ProviderSandboxTransport(self.scenario)._delivery_response(
+                    request,
+                    accepted_at=self.accepted_at,
+                )
                 status, response_body = response.status, response.body
             writer.write(
                 (
@@ -316,11 +324,14 @@ async def real_https_dependencies(
     *,
     scenario: str,
     timeout: bool = False,
+    materialization_request=None,
 ):
+    request = materialization_request or materialization()
     server_context, client_context = _tls_factories(tmp_path)
     async with LocalHttpsConnectorSandbox(
         server_context=server_context,
         scenario=scenario,
+        accepted_at=request.requested_at + timedelta(seconds=1),
     ) as server:
 
         class LoopbackAsyncClient:
@@ -336,7 +347,11 @@ async def real_https_dependencies(
 
         monkeypatch.setattr(production.httpx, "AsyncClient", LoopbackAsyncClient)
         secret = SandboxSecretSource()
-        observed_at = NOW + timedelta(minutes=5, milliseconds=-25) if timeout else NOW
+        observed_at = (
+            request.invocation.attempt.deadline - timedelta(milliseconds=25)
+            if timeout
+            else request.requested_at
+        )
         clock = ClockFactory(
             SimpleNamespace(
                 read=lambda: SimpleNamespace(
@@ -346,7 +361,7 @@ async def real_https_dependencies(
             )
         )
         bundle = create_runtime_connector_production_dependencies(
-            provisioning_catalog=catalog(),
+            provisioning_catalog=_catalog_for_request(request),
             delivery_materialization_facts_provider_factory=DummyFactory(),
             observation_materialization_facts_provider_factory=DummyFactory(),
             credential_broker_factory=DummyFactory(),
@@ -359,6 +374,29 @@ async def real_https_dependencies(
             expected_clock_reference="clock.connector",
         )
         yield bundle, secret, server
+
+
+def _catalog_for_request(request):
+    invocation = request.invocation
+    identity = invocation.envelope.effect_identity
+    lease = request.credential_lease_request
+    entry = (
+        catalog()
+        .entries[0]
+        .model_copy(
+            update={
+                "adapter_reference": invocation.envelope.adapter_reference,
+                "adapter_contract_version": invocation.envelope.adapter_contract_version,
+                "destination_reference": identity.destination_reference,
+                "tenant_id": identity.tenant_id,
+                "organization_id": identity.organization_id,
+                "classification_ceiling": identity.classification,
+                "credential_reference": lease.credential_reference,
+                "delivery_credential_purpose_reference": lease.credential_purpose_reference,
+            }
+        )
+    )
+    return catalog().model_copy(update={"entries": (entry,)})
 
 
 __all__ = ("real_https_dependencies", "sandbox_dependencies")

@@ -1304,6 +1304,16 @@ No database transaction spans credential, secret, transport, response, outcome-f
 work. Provider-sandbox and PostgreSQL acceptance remain separate. No schema or migration
 `20260808_0025` is introduced.
 
+## Sprint 17 PostgreSQL connector evidence acceptance
+
+**Status: Implemented / Validated, Pending Review.** A production-managed connector delivery now
+crosses the real loopback HTTPS boundary and is appended to the existing CP8 lifecycle revision
+store with exact effect, attempt, acknowledgement, result, classification, and lineage bindings.
+Concurrent identical outcome appends produce one `APPENDED` and one `EXACT_REPLAY`, while stored
+payloads contain no credential, Authorization value, or raw provider body. Existing reconciliation,
+substitution, and rollback-residue scenarios remain part of the combined PostgreSQL matrix. No new
+schema or migration `20260808_0025` is required.
+
 ## Sprint 17 local HTTPS provider-sandbox acceptance
 
 **Status: Implemented / Validated, Pending Review.** A test-only loopback TLS server now exercises
