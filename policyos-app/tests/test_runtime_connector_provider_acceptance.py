@@ -92,9 +92,9 @@ async def test_observation_preserves_all_closed_provider_outcomes(monkeypatch, s
 
 
 @pytest.mark.asyncio
-async def test_real_loopback_https_delivery_verifies_tls_and_acknowledgement(tmp_path):
+async def test_real_loopback_https_delivery_verifies_tls_and_acknowledgement(tmp_path, monkeypatch):
     request = materialization()
-    async with real_https_dependencies(tmp_path, scenario="delivered") as (
+    async with real_https_dependencies(tmp_path, monkeypatch, scenario="delivered") as (
         bundle,
         secret,
         server,
@@ -111,9 +111,9 @@ async def test_real_loopback_https_delivery_verifies_tls_and_acknowledgement(tmp
 
 
 @pytest.mark.asyncio
-async def test_real_loopback_https_observation_verifies_provider_state(tmp_path):
+async def test_real_loopback_https_observation_verifies_provider_state(tmp_path, monkeypatch):
     request = observation_materialization()
-    async with real_https_dependencies(tmp_path, scenario="observe_delivered") as (
+    async with real_https_dependencies(tmp_path, monkeypatch, scenario="observe_delivered") as (
         bundle,
         secret,
         server,
@@ -132,11 +132,13 @@ async def test_real_loopback_https_observation_verifies_provider_state(tmp_path)
 @pytest.mark.parametrize("scenario", ("timeout", "disconnect", "redirect", "malformed"))
 async def test_real_loopback_https_uncertain_or_invalid_response_is_ambiguous(
     tmp_path,
+    monkeypatch,
     scenario,
 ):
     request = materialization()
     async with real_https_dependencies(
         tmp_path,
+        monkeypatch,
         scenario=scenario,
         timeout=scenario == "timeout",
     ) as (bundle, secret, server):

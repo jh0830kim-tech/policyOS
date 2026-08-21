@@ -249,7 +249,8 @@ def test_local_https_provider_sandbox_uses_the_production_transport_boundary() -
         "asyncio.start_server",
         "ssl.PROTOCOL_TLS_SERVER",
         '"openssl"',
-        '"https://127.0.0.1/v1/runtime/connector"',
+        'f"https://127.0.0.1:{port}/v1/runtime/connector"',
+        "RealAsyncClient",
         "real_https_dependencies",
     ):
         assert phrase in support

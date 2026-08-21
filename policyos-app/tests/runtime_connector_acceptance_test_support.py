@@ -10,6 +10,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from uuid import UUID
 
+from httpx import AsyncClient as RealAsyncClient
+
 import app.services.runtime_connector_production as production
 from app.runtime.ports.connector import (
     RUNTIME_CONNECTOR_PROTOCOL_VERSION,
@@ -248,10 +250,11 @@ class LocalHttpsConnectorSandbox:
         self._server = await asyncio.start_server(
             self._handle,
             "127.0.0.1",
-            443,
+            0,
             ssl=self.server_context,
         )
-        self.endpoint_uri = "https://127.0.0.1/v1/runtime/connector"
+        port = self._server.sockets[0].getsockname()[1]
+        self.endpoint_uri = f"https://127.0.0.1:{port}/v1/runtime/connector"
         return self
 
     async def __aexit__(self, exc_type, exc, traceback):
@@ -307,14 +310,31 @@ class LocalHttpsConnectorSandbox:
 
 
 @asynccontextmanager
-async def real_https_dependencies(tmp_path: Path, *, scenario: str, timeout: bool = False):
+async def real_https_dependencies(
+    tmp_path: Path,
+    monkeypatch,
+    *,
+    scenario: str,
+    timeout: bool = False,
+):
     server_context, client_context = _tls_factories(tmp_path)
     async with LocalHttpsConnectorSandbox(
         server_context=server_context,
         scenario=scenario,
     ) as server:
-        entry = catalog().entries[0].model_copy(update={"endpoint_uri": server.endpoint_uri})
-        provisioning_catalog = catalog().model_copy(update={"entries": (entry,)})
+
+        class LoopbackAsyncClient:
+            def __init__(self, **kwargs):
+                self.client = RealAsyncClient(**kwargs)
+
+            async def post(self, endpoint_uri, **kwargs):
+                assert endpoint_uri == "https://connector.policyos.example/v1/runtime/connector"
+                return await self.client.post(server.endpoint_uri, **kwargs)
+
+            async def aclose(self):
+                await self.client.aclose()
+
+        monkeypatch.setattr(production.httpx, "AsyncClient", LoopbackAsyncClient)
         secret = SandboxSecretSource()
         observed_at = NOW + timedelta(minutes=5, milliseconds=-25) if timeout else NOW
         clock = ClockFactory(
@@ -326,7 +346,7 @@ async def real_https_dependencies(tmp_path: Path, *, scenario: str, timeout: boo
             )
         )
         bundle = create_runtime_connector_production_dependencies(
-            provisioning_catalog=provisioning_catalog,
+            provisioning_catalog=catalog(),
             delivery_materialization_facts_provider_factory=DummyFactory(),
             observation_materialization_facts_provider_factory=DummyFactory(),
             credential_broker_factory=DummyFactory(),
