@@ -1416,3 +1416,16 @@ network-call boundary and reveal no secret or backend detail. Once the call begi
 cancellation, disconnect, or missing verified evidence remains ambiguous for delivery or
 unavailable for observation. Clock cleanup is exactly once and cannot rewrite outcome certainty.
 The reading is not persisted and adds no schema or migration `20260808_0025`.
+
+## Sprint 17 private backend signature and TLS trust boundary
+
+The deployment-injected accessor returns secret material only with exact credential, operation
+purpose, and provisioning echoes. PolicyOS rejects unbound, immutable, empty, stale, substituted,
+cross-purpose, or cross-provisioning results before transport construction and overwrites received
+and copied request-local buffers exactly once.
+
+Each request receives a fresh managed clock and fresh explicit SSL context. TLS requires hostname
+verification, `CERT_REQUIRED`, and TLS 1.2 or newer; environment/default trust, shared clients,
+redirects, retries, alternate destinations, and fallback remain prohibited. The transport receives
+only one exact positive duration and performs at most one call. Private signatures expose no secret
+or SDK object and add no schema or migration `20260808_0025`.

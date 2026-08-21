@@ -180,3 +180,11 @@ refresh, fallback, or a second read, and passes it unchanged to the private `htt
 Deadline exhaustion is pre-send; any timeout after invocation begins preserves conservative
 ambiguity or observation unavailability. This clarification adds no persistence or migration
 `20260808_0025`.
+
+## ADR-134 private accessor and TLS signature clarification
+
+The injected accessor returns one private mutable result that echoes the existing version-pinned
+credential reference, operation-specific purpose, and provisioning reference. The hardened
+transport receives a fresh explicitly injected SSL context whose hostname verification,
+`CERT_REQUIRED`, and TLS 1.2 minimum are validated before request-local client construction.
+Environment/default trust, raw unbound secret bytes, and shared clients remain prohibited.

@@ -1390,3 +1390,16 @@ Zero or negative duration consumes the network-call boundary zero times. Once in
 timeout or cancellation preserves delivery ambiguity or observation unavailability. The clock is
 ephemeral, creates no result or authority, and adds no schema or migration `20260808_0025`; the
 single Alembic head remains `20260808_0024`.
+
+## Sprint 17 private backend signature and TLS trust governance
+
+ADR-134 closes the implementation signatures deferred by ADR-132 and ADR-133. One
+deployment-injected version-pinned accessor returns exact credential, purpose, and provisioning
+echoes with a private mutable buffer. Fresh request-scoped clock and TLS-context factories prevent
+hidden time, ambient trust, shared clients, and cross-request resource reuse.
+
+The private httpx transport accepts only the canonical endpoint, private Authorization buffer,
+bounded body, and exact positive remaining duration. It verifies TLS and hostname, sets
+`trust_env=False`, disables redirects and retries, performs at most one call, and closes exactly
+once. Public Runtime contracts and persistence remain unchanged; migration `20260808_0025` remains
+absent.
