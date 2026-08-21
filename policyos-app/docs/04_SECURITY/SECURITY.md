@@ -1334,3 +1334,13 @@ observation selectors receive their concrete materialization request and compare
 field. Model-bypass catalog validation repeats the exact-value check, while the observation
 capability validates the observation request directly. A purpose mismatch therefore cannot reach
 credential materialization, authorization-header construction, or HTTPS I/O.
+
+## Sprint 16 connector provider acceptance
+
+Provider-sandbox acceptance keeps credentials request-local, clears secret and Authorization
+buffers, and closes the transport exactly once. Only verified bounded acknowledgement evidence at
+the exact provisioned HTTPS destination can produce delivered certainty. Redirects, timeouts,
+disconnects, missing or malformed evidence remain ambiguous after the send boundary; rejection
+before transport construction is definitely not delivered. PostgreSQL stores only existing CP8
+safe result and observation evidence and has no credential, bearer, provider-body, or secret
+column. No live provider, operator credential, schema, or migration `20260808_0025` is enabled.

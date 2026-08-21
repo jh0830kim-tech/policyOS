@@ -1318,3 +1318,13 @@ The public provisioning entry now carries both exact purpose fields. Pure catalo
 Worker selection, and private production selection use the concrete delivery or observation
 materialization request to choose the corresponding field. Purpose mismatch fails before secret
 materialization or HTTPS transport construction; persistence and migration remain unchanged.
+
+## Sprint 16 connector provider-sandbox and PostgreSQL acceptance
+
+**Status: Implemented / Validated, Pending Review.** The provider sandbox covers verified
+acknowledgement, pre-send rejection, post-boundary timeout and disconnect, redirect refusal,
+malformed or missing evidence, stable idempotent replay, and every closed observation outcome.
+PostgreSQL 16 acceptance confirms that connector evidence continues to use the existing append-only
+CP8 lifecycle revision graph without credential, Authorization, provider-body, or secret columns.
+Tenant, organization, classification and lineage isolation remain exact. No live operator endpoint,
+credential enablement, schema change, or migration `20260808_0025` is introduced.

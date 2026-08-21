@@ -246,3 +246,12 @@ Focused contract, Worker, production, and architecture tests prove that wrong-op
 fail before secret or transport construction. The production dependency bundle remains nine
 fields. Provider-sandbox and PostgreSQL acceptance resumes only after this correction is merged;
 no schema or migration `20260808_0025` is added here.
+
+## 17. Connector provider-sandbox and PostgreSQL acceptance
+
+The bounded provider sandbox validates exact HTTP `200` acknowledgement evidence, pre-send
+definite rejection, conservative ambiguity after possible transmission, redirect refusal,
+idempotency-key preservation, every reconciliation observation outcome, and reverse exactly-once
+cleanup. PostgreSQL 16 reuses the existing append-only CP8 lifecycle evidence graph and proves that
+no credential, Authorization value, provider body, or secret enters relational storage. This gate
+does not activate an operator endpoint or credential and adds no migration `20260808_0025`.

@@ -49,6 +49,25 @@ def test_adr123_governs_initial_connector_credentials_and_acknowledgement() -> N
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_connector_provider_postgresql_acceptance_gate_is_bounded() -> None:
+    root = Path(__file__).resolve().parents[1]
+    support = (root / "tests/runtime_connector_acceptance_test_support.py").read_text(
+        encoding="utf-8"
+    )
+    provider = (root / "tests/test_runtime_connector_provider_acceptance.py").read_text(
+        encoding="utf-8"
+    )
+    postgres = (root / "tests/test_runtime_worker_postgresql_acceptance.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "sandbox_dependencies" in support
+    assert "pre_send_rejection" in provider
+    assert "OBSERVATION_UNAVAILABLE" in provider
+    assert "without_secret_columns" in postgres
+    assert "20260808_0025" not in support + provider + postgres
+
+
 def test_connector_operation_purpose_contract_and_selection_are_implemented() -> None:
     connector = (ROOT / "app/runtime/ports/connector.py").read_text(encoding="utf-8")
     validation = (ROOT / "app/runtime/ports/connector_validation.py").read_text(encoding="utf-8")
