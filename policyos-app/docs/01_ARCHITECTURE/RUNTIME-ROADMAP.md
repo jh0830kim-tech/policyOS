@@ -1291,3 +1291,15 @@ leaf factories, immutable single-entry provisioning catalog, pure exact selector
 preparation capability, outcome-facts provider factory and frozen nine-field production bundle.
 Private credential material, HTTPS transport and provider I/O remain deferred. No schema or
 migration `20260808_0025` is introduced.
+## Sprint 16 production managed connector and Worker composition
+
+**Status: Implemented / Validated, Pending Review.** The production composition gate constructs
+the secret-free nine-field connector bundle from an exact immutable provisioning catalog and
+explicit private secret-materialization and HTTPS-transport dependencies. Delivery and observation
+use separate request-local managed capabilities, exact canonical wire values, at most one transport
+call, reverse exactly-once cleanup, and caller-supplied outcome facts. The Worker passes the
+validated `materialization_request` unchanged to the request-accepting delivery factory.
+
+No database transaction spans credential, secret, transport, response, outcome-facts, or cleanup
+work. Provider-sandbox and PostgreSQL acceptance remain separate. No schema or migration
+`20260808_0025` is introduced.

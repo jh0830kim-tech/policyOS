@@ -1,0 +1,188 @@
+"""Focused tests for private managed connector production composition."""
+
+from datetime import timedelta
+
+import pytest
+
+from app.runtime.ports.connector import (
+    RUNTIME_CONNECTOR_PROTOCOL_VERSION,
+    RuntimeConnectorDeliveryAcknowledgement,
+    RuntimeConnectorDeliveryOutcomeFacts,
+    RuntimeConnectorDeliveryWireResponse,
+    RuntimeConnectorProvisioningCatalog,
+    RuntimeConnectorProvisioningEntry,
+)
+from app.runtime.ports.connector_validation import runtime_connector_canonical_digest
+from app.runtime.ports.domain import RuntimePortErrorCode
+from app.services.runtime_connector_production import (
+    create_runtime_connector_production_dependencies,
+)
+from tests.test_runtime_connector_contracts import NOW, materialization, uid
+
+
+class DummyFactory:
+    def __call__(self, *args):
+        raise NotImplementedError
+
+
+class FactsProvider:
+    def delivery_facts(self, request):
+        return RuntimeConnectorDeliveryOutcomeFacts(
+            runtime_effect_delivery_result_id=uid(70),
+            started_at=NOW,
+            completed_at=NOW + timedelta(seconds=2),
+            result_reference="result.logical",
+            result_digest_reference="digest.result",
+            failure_code=RuntimePortErrorCode.TIMEOUT,
+            failure_reference="failure.safe",
+            result_fact_digest_reference="digest.result-fact",
+        )
+
+    def observation_facts(self, request):
+        raise NotImplementedError
+
+
+class OutcomeFactory:
+    def __call__(self, request):
+        return FactsProvider()
+
+
+class SecretSource:
+    def __init__(self):
+        self.secret = None
+
+    async def materialize(self, entry, request):
+        self.secret = bytearray(b"private-token")
+        return self.secret
+
+
+class Transport:
+    def __init__(self, request, *, fail=False):
+        self.request = request
+        self.fail = fail
+        self.closed = 0
+        self.authorization = None
+
+    async def post(self, endpoint_uri, authorization, body, deadline):
+        self.authorization = authorization
+        if self.fail:
+            raise TimeoutError
+        invocation = self.request.invocation
+        identity = invocation.envelope.effect_identity
+        acknowledgement = RuntimeConnectorDeliveryAcknowledgement(
+            protocol_version=RUNTIME_CONNECTOR_PROTOCOL_VERSION,
+            operation_reference="provider.operation",
+            runtime_effect_id=identity.runtime_effect_id,
+            runtime_effect_delivery_attempt_id=(
+                invocation.attempt.runtime_effect_delivery_attempt_id
+            ),
+            destination_reference=identity.destination_reference,
+            effect_idempotency_key=identity.effect_idempotency_key,
+            accepted_at=NOW + timedelta(seconds=1),
+            acknowledgement_digest_reference="digest.pending",
+        )
+        fields = tuple(type(acknowledgement).model_fields)[:-1]
+        acknowledgement = acknowledgement.model_copy(
+            update={
+                "acknowledgement_digest_reference": runtime_connector_canonical_digest(
+                    tuple(getattr(acknowledgement, field) for field in fields)
+                )
+            }
+        )
+        response = RuntimeConnectorDeliveryWireResponse(delivery_acknowledgement=acknowledgement)
+        return type("Response", (), {"status": 200, "body": response.model_dump_json().encode()})()
+
+    async def close(self):
+        self.closed += 1
+
+
+class TransportFactory:
+    def __init__(self, request, *, fail=False):
+        self.transport = Transport(request, fail=fail)
+
+    def __call__(self):
+        return self.transport
+
+
+class ObservationFactory:
+    def create(self, request):
+        raise NotImplementedError
+
+
+def catalog():
+    request = materialization()
+    identity = request.invocation.envelope.effect_identity
+    lease = request.credential_lease_request
+    return RuntimeConnectorProvisioningCatalog(
+        entries=(
+            RuntimeConnectorProvisioningEntry(
+                connector_provisioning_reference=lease.connector_provisioning_reference,
+                adapter_reference=request.invocation.envelope.adapter_reference,
+                adapter_contract_version=request.invocation.envelope.adapter_contract_version,
+                destination_reference=identity.destination_reference,
+                endpoint_uri="https://connector.policyos.example/v1/runtime/connector",
+                tenant_id=identity.tenant_id,
+                organization_id=identity.organization_id,
+                classification_ceiling=identity.classification,
+                credential_reference=lease.credential_reference,
+                credential_purpose_reference=lease.credential_purpose_reference,
+                enabled=True,
+            ),
+        )
+    )
+
+
+def dependencies(request, secret, transport):
+    return create_runtime_connector_production_dependencies(
+        provisioning_catalog=catalog(),
+        delivery_materialization_facts_provider_factory=DummyFactory(),
+        observation_materialization_facts_provider_factory=DummyFactory(),
+        credential_broker_factory=DummyFactory(),
+        outcome_facts_provider_factory=OutcomeFactory(),
+        pre_invocation_revalidation_factory=DummyFactory(),
+        observation_preparation_factory=DummyFactory(),
+        secret_materialization_source=secret,
+        https_transport_factory=transport,
+    )
+
+
+@pytest.mark.asyncio
+async def test_delivery_uses_exact_request_once_and_cleans_secret_and_transport():
+    request = materialization()
+    secret = SecretSource()
+    transport = TransportFactory(request)
+    bundle = dependencies(request, secret, transport)
+
+    async with bundle.delivery_factory(request) as capability:
+        result = await capability.deliver(request.invocation)
+
+    assert result.certainty.value == "delivered"
+    assert result.acknowledgement_reference == "provider.operation"
+    assert secret.secret == bytearray()
+    assert transport.transport.authorization == bytearray()
+    assert transport.transport.closed == 1
+    with pytest.raises(RuntimeError):
+        await capability.deliver(request.invocation)
+
+
+@pytest.mark.asyncio
+async def test_post_boundary_failure_is_ambiguous_and_cleanup_is_exact():
+    request = materialization()
+    secret = SecretSource()
+    transport = TransportFactory(request, fail=True)
+    bundle = dependencies(request, secret, transport)
+
+    async with bundle.delivery_factory(request) as capability:
+        result = await capability.deliver(request.invocation)
+
+    assert result.certainty.value == "ambiguous"
+    assert result.acknowledgement_reference is None
+    assert secret.secret == bytearray()
+    assert transport.transport.closed == 1
+
+
+def test_production_module_exports_only_the_composition_factory():
+    import app.services.runtime_connector_production as production
+
+    assert production.__all__ == ("create_runtime_connector_production_dependencies",)
+    assert "secret" not in repr(catalog()).lower()

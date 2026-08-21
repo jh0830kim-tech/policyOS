@@ -134,7 +134,9 @@ class RuntimeWorkerService:
             return None
 
         try:
-            async with self.dependencies.delivery_factory() as delivery:
+            async with self.dependencies.delivery_factory(
+                revalidation.materialization_request
+            ) as delivery:
                 result = await delivery.deliver(prepared.invocation)
         except RuntimeWorkerOperationalCapabilityFailure:
             return None

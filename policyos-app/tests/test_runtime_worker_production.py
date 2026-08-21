@@ -4,7 +4,10 @@ import inspect
 from pathlib import Path
 
 from app.services.runtime_worker import RuntimeWorkerService
-from app.services.runtime_worker_production import create_runtime_worker_application_service
+from app.services.runtime_worker_production import (
+    bind_runtime_connector_dependencies,
+    create_runtime_worker_application_service,
+)
 from app.services.runtime_worker_protocols import RuntimeWorkerApplicationService
 
 
@@ -36,4 +39,17 @@ def test_worker_production_exports_are_explicit_immutable_tuples():
     import app.services.runtime_worker_production as production
 
     assert worker.__all__ == ("RuntimeWorkerService",)
-    assert production.__all__ == ("create_runtime_worker_application_service",)
+    assert production.__all__ == (
+        "bind_runtime_connector_dependencies",
+        "create_runtime_worker_application_service",
+    )
+
+
+def test_connector_binding_replaces_only_connector_owned_worker_factories():
+    source = inspect.getsource(bind_runtime_connector_dependencies)
+    assert "delivery_factory=connector.delivery_factory" in source
+    assert "credential_factory=connector.credential_broker_factory" in source
+    assert (
+        "pre_invocation_revalidation_factory=connector.pre_invocation_revalidation_factory"
+        in source
+    )
