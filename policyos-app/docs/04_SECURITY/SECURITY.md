@@ -1307,3 +1307,15 @@ cardinality, non-canonical HTTPS endpoints, scope, classification, destination, 
 provisioning or credential mismatch. The public bundle contains only nine secret-free factories
 and values; private bearer material and HTTPS transport factories are not exported. This gate
 adds no persistence, schema or migration `20260808_0025`.
+### Sprint 16 production managed connector security boundary
+
+The private production connector validates the exact materialization request and immutable
+provisioning entry before secret materialization. Credential material exists only in mutable
+request-local buffers, is never included in public contracts, persistence, logs, errors or
+evidence, and is overwritten and released exactly once. Transport resources close exactly once in
+reverse order while preserving the primary result or exception.
+
+Only complete canonical acknowledgement evidence at exact HTTP `200` can establish delivery.
+Local rejection before the governed call boundary is definitely not delivered; every possible
+transmission with incomplete evidence is ambiguous. Observation uncertainty is unavailable. No
+database transaction spans external I/O and no schema or migration `20260808_0025` is added.

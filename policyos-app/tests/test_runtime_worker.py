@@ -162,3 +162,5 @@ def test_worker_does_not_fold_candidate_failures_or_enter_revalidation_leaf_fact
     assert "candidate_stages" not in worker_source
     assert "self.dependencies.cancellation_factory()" not in worker_source
     assert "self.dependencies.credential_factory()" not in worker_source
+    assert "revalidation.materialization_request" in worker_source
+    assert "self.dependencies.delivery_factory()" not in worker_source

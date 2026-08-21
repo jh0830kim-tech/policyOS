@@ -213,3 +213,14 @@ a nine-field production dependency bundle. Selection is exact across adapter, de
 organization, classification, provisioning and credential facts. Production network I/O,
 credential materialization and provider-sandbox acceptance remain later gates. No migration
 `20260808_0025` is required.
+## 14. Production managed connector and Worker composition
+
+The production connector now binds one validated provisioning catalog to explicit private secret
+and HTTPS transport dependencies without exposing either through Runtime Ports or Worker bundles.
+Managed delivery preserves pre-send definite rejection, post-boundary ambiguity, exact HTTP `200`
+plus verified acknowledgement for delivery, and reverse exactly-once cleanup. Observation uses a
+separate materialization request and lease and preserves the closed provider-state mapping.
+
+The Worker invokes `delivery_factory(revalidation.materialization_request)` exactly once only for
+an invokable result. Provider-sandbox, PostgreSQL 16 and combined live-wire acceptance remain the
+next gate. Operator enablement and migration `20260808_0025` remain outside this checkpoint.

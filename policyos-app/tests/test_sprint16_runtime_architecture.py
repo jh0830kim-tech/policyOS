@@ -614,3 +614,21 @@ def test_connector_materialization_facts_and_bundle_public_contract_gate() -> No
     ):
         assert prohibited not in connector.lower()
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_sprint16_production_connector_composition_is_private_and_exact():
+    production = ROOT / "app/services/runtime_connector_production.py"
+    worker = ROOT / "app/services/runtime_worker.py"
+    assert production.exists()
+    source = production.read_text(encoding="utf-8")
+    worker_source = worker.read_text(encoding="utf-8")
+    assert "create_runtime_connector_production_dependencies" in source
+    assert "secret_materialization_source" in source
+    assert "https_transport_factory" in source
+    assert "RuntimeConnectorProductionDependencyBundle" in source
+    assert "datetime.now" not in source
+    assert "uuid4" not in source
+    assert "sqlalchemy" not in source.lower()
+    assert "commit(" not in source and "rollback(" not in source
+    assert "revalidation.materialization_request" in worker_source
+    assert "self.dependencies.delivery_factory()" not in worker_source
