@@ -30,7 +30,10 @@ from app.ai.privacy import DataClassification
 from app.runtime.ports import (
     RuntimeAdapterFamily,
     RuntimeClockReading,
+    RuntimeConnectorDeliveryMaterializationFacts,
     RuntimeConnectorMaterializationRequest,
+    RuntimeConnectorProvisioningCatalog,
+    RuntimeConnectorProvisioningEntry,
     RuntimeCredentialLeaseReference,
     RuntimeCredentialLeaseRequest,
     RuntimeEffectDeliveryInvocation,
@@ -73,6 +76,7 @@ from app.services.runtime_worker_protocols import (
 )
 from app.services.runtime_worker_validation import (
     RuntimeWorkerContractConflict,
+    select_runtime_connector_provisioning_entry,
     validate_runtime_worker_configuration,
     validate_runtime_worker_interruptible_wait_request,
     validate_runtime_worker_poll_cycle_result,
@@ -743,3 +747,42 @@ def test_result_completion_accepts_only_the_actual_bound_adapter_result():
     substituted = result.model_copy(update={"runtime_effect_delivery_result_id": delivery_uid(999)})
     with pytest.raises(RuntimeWorkerContractConflict):
         validate_runtime_worker_result_completion(prepared, substituted, append_request)
+
+
+def test_connector_provisioning_selection_is_exact_and_scope_bound() -> None:
+    prepared = prepared_delivery()
+    envelope = prepared.invocation.envelope
+    identity = envelope.effect_identity
+    facts = RuntimeConnectorDeliveryMaterializationFacts(
+        runtime_connector_materialization_request_id=uid(901),
+        runtime_credential_lease_request_id=uid(902),
+        connector_provisioning_reference="connector.provisioning",
+        credential_reference="credential.reference",
+        credential_purpose_reference="connector.invoke",
+        requested_at=NOW,
+        expires_at=NOW + timedelta(minutes=1),
+    )
+    entry = RuntimeConnectorProvisioningEntry(
+        connector_provisioning_reference=facts.connector_provisioning_reference,
+        adapter_reference=envelope.adapter_reference,
+        adapter_contract_version=envelope.adapter_contract_version,
+        destination_reference=identity.destination_reference,
+        endpoint_uri="https://connector.policyos.example/v1/runtime",
+        tenant_id=identity.tenant_id,
+        organization_id=identity.organization_id,
+        classification_ceiling=identity.classification,
+        credential_reference=facts.credential_reference,
+        credential_purpose_reference=facts.credential_purpose_reference,
+        enabled=True,
+    )
+    catalog = RuntimeConnectorProvisioningCatalog(entries=(entry,))
+
+    assert select_runtime_connector_provisioning_entry(catalog, prepared, facts) is entry
+    with pytest.raises(RuntimeWorkerContractConflict):
+        select_runtime_connector_provisioning_entry(
+            RuntimeConnectorProvisioningCatalog(
+                entries=(entry.model_copy(update={"organization_id": uid(999)}),)
+            ),
+            prepared,
+            facts,
+        )

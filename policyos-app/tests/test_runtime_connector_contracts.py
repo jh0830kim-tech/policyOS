@@ -13,6 +13,7 @@ from app.runtime.ports import (
     RUNTIME_CONNECTOR_PROTOCOL_VERSION,
     RuntimeAdapterFamily,
     RuntimeConnectorDeliveryAcknowledgement,
+    RuntimeConnectorDeliveryMaterializationFacts,
     RuntimeConnectorDeliveryWireRequest,
     RuntimeConnectorDeliveryWireResponse,
     RuntimeConnectorInvocationCapability,
@@ -21,8 +22,11 @@ from app.runtime.ports import (
     RuntimeConnectorObservationCapability,
     RuntimeConnectorObservationCapabilityFactory,
     RuntimeConnectorObservationInvocation,
+    RuntimeConnectorObservationMaterializationFacts,
     RuntimeConnectorObservationMaterializationRequest,
     RuntimeConnectorOutcomeFactsProvider,
+    RuntimeConnectorProvisioningCatalog,
+    RuntimeConnectorProvisioningEntry,
     RuntimeCredentialLeaseReference,
     RuntimeCredentialLeaseRequest,
     RuntimeEffectClaim,
@@ -46,15 +50,50 @@ from app.runtime.ports import (
     parse_runtime_connector_delivery_response,
     runtime_connector_canonical_digest,
     validate_runtime_connector_delivery_acknowledgement,
+    validate_runtime_connector_delivery_materialization_facts,
     validate_runtime_connector_delivery_result,
     validate_runtime_connector_delivery_wire_request,
     validate_runtime_connector_materialization_request,
     validate_runtime_connector_observation,
     validate_runtime_connector_observation_invocation,
+    validate_runtime_connector_observation_materialization_facts,
     validate_runtime_connector_observation_materialization_request,
+    validate_runtime_connector_provisioning_catalog,
 )
 
 NOW = datetime(2026, 8, 16, 4, 0, tzinfo=UTC)
+
+
+def delivery_materialization_facts() -> RuntimeConnectorDeliveryMaterializationFacts:
+    request = materialization()
+    lease = request.credential_lease_request
+    return RuntimeConnectorDeliveryMaterializationFacts(
+        runtime_connector_materialization_request_id=(
+            request.runtime_connector_materialization_request_id
+        ),
+        runtime_credential_lease_request_id=lease.runtime_credential_lease_request_id,
+        connector_provisioning_reference=lease.connector_provisioning_reference,
+        credential_reference=lease.credential_reference,
+        credential_purpose_reference=lease.credential_purpose_reference,
+        requested_at=request.requested_at,
+        expires_at=lease.expires_at,
+    )
+
+
+def observation_materialization_facts() -> RuntimeConnectorObservationMaterializationFacts:
+    request = observation_materialization()
+    lease = request.credential_lease_request
+    return RuntimeConnectorObservationMaterializationFacts(
+        runtime_connector_observation_materialization_request_id=(
+            request.runtime_connector_observation_materialization_request_id
+        ),
+        runtime_credential_lease_request_id=lease.runtime_credential_lease_request_id,
+        connector_provisioning_reference=request.connector_provisioning_reference,
+        credential_reference=lease.credential_reference,
+        credential_purpose_reference=lease.credential_purpose_reference,
+        requested_at=request.requested_at,
+        expires_at=lease.expires_at,
+    )
 
 
 def uid(value: int) -> UUID:
@@ -626,3 +665,61 @@ def test_outcome_facts_provider_is_runtime_checkable_without_secret_surface() ->
     assert isinstance(Provider(), RuntimeConnectorOutcomeFactsProvider)
     fields = set(RuntimeConnectorDeliveryWireRequest.model_fields)
     assert not fields.intersection({"credential", "secret", "authorization", "token"})
+
+
+def test_materialization_facts_are_strict_frozen_and_exactly_bound() -> None:
+    delivery = delivery_materialization_facts()
+    observed = observation_materialization_facts()
+
+    assert (
+        validate_runtime_connector_delivery_materialization_facts(delivery, materialization())
+        is delivery
+    )
+    assert (
+        validate_runtime_connector_observation_materialization_facts(
+            observed, observation_materialization()
+        )
+        is observed
+    )
+    with pytest.raises(ValidationError):
+        RuntimeConnectorDeliveryMaterializationFacts.model_validate(
+            {**delivery.model_dump(), "unexpected": "forbidden"}
+        )
+    with pytest.raises(ValidationError):
+        RuntimeConnectorDeliveryMaterializationFacts(
+            **{**delivery.model_dump(), "expires_at": delivery.requested_at}
+        )
+    with pytest.raises(RuntimePortCredentialError):
+        validate_runtime_connector_delivery_materialization_facts(
+            delivery.model_copy(update={"credential_reference": "credential.substituted"}),
+            materialization(),
+        )
+
+
+def test_provisioning_catalog_requires_one_canonical_https_entry() -> None:
+    entry = RuntimeConnectorProvisioningEntry(
+        connector_provisioning_reference="connector.provisioning",
+        adapter_reference="adapter.connector",
+        adapter_contract_version="1.0",
+        destination_reference="destination.approved",
+        endpoint_uri="https://connector.policyos.example/v1/runtime",
+        tenant_id=uid(8),
+        organization_id=uid(9),
+        classification_ceiling=DataClassification.CONFIDENTIAL,
+        credential_reference="credential.reference",
+        credential_purpose_reference="connector.invoke",
+        enabled=True,
+    )
+    catalog = RuntimeConnectorProvisioningCatalog(entries=(entry,))
+    assert validate_runtime_connector_provisioning_catalog(catalog) is catalog
+
+    with pytest.raises(RuntimePortContractError):
+        validate_runtime_connector_provisioning_catalog(
+            RuntimeConnectorProvisioningCatalog(entries=())
+        )
+    with pytest.raises(RuntimePortContractError):
+        validate_runtime_connector_provisioning_catalog(
+            RuntimeConnectorProvisioningCatalog(
+                entries=(entry.model_copy(update={"endpoint_uri": "http://example.test"}),)
+            )
+        )

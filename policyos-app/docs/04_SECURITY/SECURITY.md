@@ -1298,3 +1298,12 @@ selection. The nine-field public bundle reuses the managed broker factory and ex
 buffers, Bearer values, private secret-source and HTTPS transport interfaces, clients, sessions
 and responses. No transaction spans provider, broker, secret, transport, outcome or cleanup work,
 and no migration `20260808_0025` is introduced.
+
+### Sprint 16 connector materialization-facts public-contract boundary
+
+The implemented contracts keep delivery and observation identities, lease requests and lifetimes
+separate and caller supplied. Provisioning selection is pure and fails closed on catalog
+cardinality, non-canonical HTTPS endpoints, scope, classification, destination, adapter,
+provisioning or credential mismatch. The public bundle contains only nine secret-free factories
+and values; private bearer material and HTTPS transport factories are not exported. This gate
+adds no persistence, schema or migration `20260808_0025`.
