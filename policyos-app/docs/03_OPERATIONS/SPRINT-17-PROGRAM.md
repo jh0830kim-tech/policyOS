@@ -106,3 +106,15 @@ fail before transport invocation. Timeout or cancellation after invocation prese
 observation unavailability. Focused implementation and provider-sandbox acceptance are deferred to
 the private-backend gate. This governance adds no schema or migration `20260808_0025` and keeps the
 single Alembic head `20260808_0024`.
+
+## ADR-134 private backend signature gate
+
+The private implementation receives an explicit version-pinned accessor, fresh TLS-context
+factory, zero-argument managed clock factory, and expected clock reference. Accessor results echo
+the existing credential, operation purpose, and provisioning references and return one bounded
+mutable buffer. No new version identity or public contract is introduced.
+
+The later implementation must validate fresh SSL contexts, use one exact positive remaining
+duration for every httpx timeout phase, disable environment trust, redirects, retries, and fallback,
+and clean every request-local resource exactly once. Local HTTPS sandbox and PostgreSQL acceptance
+follow implementation. This gate adds no schema or migration `20260808_0025`.

@@ -162,3 +162,58 @@ def test_adr133_governs_trusted_deadline_clock_and_transport_timeout() -> None:
     assert "Sprint 17 trusted deadline clock and transport timeout governance" in roadmap
     assert "Sprint 17 trusted deadline-clock security boundary" in security
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr134_governs_private_backend_signatures_and_tls_trust() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-134-S17-RUNTIME-CONNECTOR-PRIVATE-BACKEND-SIGNATURE-AND-TLS-TRUST-"
+        "OWNERSHIP.md"
+    )
+    adr128 = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-128-S16-RUNTIME-CONNECTOR-PRODUCTION-COMPOSITION-AND-"
+        "MATERIALIZATION-FACTS-OWNERSHIP.md"
+    )
+    adr132 = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-132-S17-RUNTIME-CONNECTOR-SECRET-BACKEND-AND-HTTPS-TRANSPORT-"
+        "PRODUCTION-OWNERSHIP.md"
+    )
+    adr133 = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-133-S17-RUNTIME-CONNECTOR-TRUSTED-DEADLINE-CLOCK-AND-TRANSPORT-"
+        "TIMEOUT-OWNERSHIP.md"
+    )
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for phrase in (
+        "version-pinned accessor",
+        "credential_purpose_reference",
+        "connector_provisioning_reference",
+        "zero-argument TLS-context factory",
+        "RuntimeClockPort",
+        "strictly positive `datetime.timedelta`",
+        "`trust_env=False`",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in adr
+
+    for forbidden_choice in (
+        "Return raw secret bytes without identity echoes",
+        "Add a new credential-version identity",
+        "Use default or environment TLS trust",
+        "Reuse one clock, TLS context, client, or secret buffer across requests",
+        "Export private backend Protocols publicly",
+    ):
+        assert forbidden_choice in adr
+
+    assert "ADR-134 private backend signature clarification" in adr128
+    assert "ADR-134 private accessor and TLS signature clarification" in adr132
+    assert "ADR-134 managed clock factory clarification" in adr133
+    assert "ADR-134 private backend signature gate" in program
+    assert "Sprint 17 private backend signature and TLS trust governance" in roadmap
+    assert "Sprint 17 private backend signature and TLS trust boundary" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

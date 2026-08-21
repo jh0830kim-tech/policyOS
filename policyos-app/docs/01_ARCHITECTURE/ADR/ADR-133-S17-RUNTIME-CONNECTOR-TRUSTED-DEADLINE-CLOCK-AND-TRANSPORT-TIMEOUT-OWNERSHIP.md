@@ -127,3 +127,11 @@ The private connector can now enforce absolute caller-owned deadlines without a 
 default timeout. The explicit request-scoped clock adds one managed dependency and a failure path,
 but its narrow authority makes deadline exhaustion, transport consumption, cleanup, and delivery
 certainty independently testable.
+
+## ADR-134 managed clock factory clarification
+
+The clock factory is zero argument and returns one fresh async managed capability yielding the
+existing `RuntimeClockPort`. Production supplies one expected bounded clock reference, performs one
+`read()` immediately before transport invocation, and passes a strictly positive unchanged
+`datetime.timedelta` to the private transport. The factory and reference remain private
+composition inputs rather than new public Worker or Runtime API contracts.

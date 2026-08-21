@@ -256,3 +256,10 @@ clock capability nor a reading. Delivery and observation each read their own cap
 once immediately before transport invocation, calculate the exact positive remaining duration,
 and dispose the clock exactly once with the other request-local resources. This addition creates no
 identity, result, persistence, schema, or public-facade authority.
+
+## ADR-134 private backend signature clarification
+
+The private production constructor receives a version-pinned accessor, fresh TLS-context factory,
+zero-argument managed clock factory, and expected clock reference. Accessor results echo the exact
+credential, operation purpose, and provisioning references before PolicyOS copies the bounded
+mutable secret. These signatures remain private and add no Runtime Port or facade contract.
