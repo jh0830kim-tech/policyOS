@@ -1344,3 +1344,16 @@ disconnects, missing or malformed evidence remain ambiguous after the send bound
 before transport construction is definitely not delivered. PostgreSQL stores only existing CP8
 safe result and observation evidence and has no credential, bearer, provider-body, or secret
 column. No live provider, operator credential, schema, or migration `20260808_0025` is enabled.
+
+## Sprint 16 closeout security boundary
+
+Sprint 16 is complete only within the merged, explicitly provisioned, single-destination connector
+boundary from PR #146 through PR #161. Exact tenant, organization, classification, lineage, attempt,
+adapter, destination, credential-lease, purpose, idempotency, acknowledgement, and observation
+binding remains fail closed. Existing CP8 append-only lifecycle and reconciliation persistence stays
+authoritative, with the single Alembic head `20260808_0024` and no migration `20260808_0025`.
+
+The closeout does not expose or persist secret material, activate a live endpoint or production
+credential, grant redirect authority, select a dynamic destination, claim external
+business-effect exactly-once, deploy software, or create a tag or release. Operator enablement
+remains separate from Sprint 16 completion.

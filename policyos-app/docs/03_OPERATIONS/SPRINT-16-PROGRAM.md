@@ -255,3 +255,15 @@ idempotency-key preservation, every reconciliation observation outcome, and reve
 cleanup. PostgreSQL 16 reuses the existing append-only CP8 lifecycle evidence graph and proves that
 no credential, Authorization value, provider body, or secret enters relational storage. This gate
 does not activate an operator endpoint or credential and adds no migration `20260808_0025`.
+
+## 18. Sprint 16 closeout
+
+Sprint 16 is complete within the reviewed managed HTTPS connector boundary merged in PR #146
+through PR #161. The sequence includes governance, secret-free public contracts, exact Worker
+materialization handoff, persistence sufficiency, private production composition, operation-purpose
+isolation, bounded provider-sandbox behavior, and PostgreSQL 16 acceptance. The repository remains
+at the single Alembic head `20260808_0024`; migration `20260808_0025` is absent.
+
+Production endpoint and credential provisioning, deployment, tag, release, another adapter family,
+dynamic destination selection, generalized retry, autonomous redrive, and external exactly-once are
+not Sprint 16 completion work. Each requires a separate operator or governance decision.

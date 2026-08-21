@@ -1328,3 +1328,17 @@ PostgreSQL 16 acceptance confirms that connector evidence continues to use the e
 CP8 lifecycle revision graph without credential, Authorization, provider-body, or secret columns.
 Tenant, organization, classification and lineage isolation remain exact. No live operator endpoint,
 credential enablement, schema change, or migration `20260808_0025` is introduced.
+
+## Sprint 16 closeout
+
+Sprint 16 is complete within the approved single-destination managed connector boundary. Governance,
+public contracts, persistence sufficiency, Worker handoff, canonical wire, production composition,
+operation-purpose isolation, and provider/PostgreSQL acceptance merged in PR #146 through PR #161.
+The merged tree retains the single Alembic head `20260808_0024` and introduces no migration
+`20260808_0025`.
+
+Existing CP8 lifecycle and reconciliation records remain the authoritative bounded evidence owner.
+No live endpoint, production credential, secret-manager provisioning, deployment, tag, or release is
+enabled by this closeout. Those remain separate operator decisions. Dynamic destinations, another
+adapter family, autonomous redrive, and external business-effect exactly-once remain outside the
+approved Sprint 16 boundary.
