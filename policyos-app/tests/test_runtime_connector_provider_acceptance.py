@@ -11,9 +11,9 @@ from tests.test_runtime_connector_contracts import materialization, observation_
 
 
 @pytest.mark.asyncio
-async def test_verified_acknowledgement_is_delivered_and_replay_is_stable():
+async def test_verified_acknowledgement_is_delivered_and_replay_is_stable(monkeypatch):
     request = materialization()
-    bundle, secret, transport = sandbox_dependencies(scenario="delivered")
+    bundle, secret, transport = sandbox_dependencies(monkeypatch, scenario="delivered")
 
     async with bundle.delivery_factory(request) as capability:
         first = await capability.deliver(request.invocation)
@@ -33,9 +33,9 @@ async def test_verified_acknowledgement_is_delivered_and_replay_is_stable():
 
 
 @pytest.mark.asyncio
-async def test_pre_send_rejection_is_definite_and_never_calls_transport():
+async def test_pre_send_rejection_is_definite_and_never_calls_transport(monkeypatch):
     request = materialization()
-    bundle, secret, transport = sandbox_dependencies(scenario="pre_send_rejection")
+    bundle, secret, transport = sandbox_dependencies(monkeypatch, scenario="pre_send_rejection")
 
     async with bundle.delivery_factory(request) as capability:
         result = await capability.deliver(request.invocation)
@@ -51,9 +51,9 @@ async def test_pre_send_rejection_is_definite_and_never_calls_transport():
     "scenario",
     ("timeout", "disconnect", "redirect", "missing_acknowledgement", "malformed"),
 )
-async def test_possible_transmission_never_invents_delivery(scenario):
+async def test_possible_transmission_never_invents_delivery(monkeypatch, scenario):
     request = materialization()
-    bundle, secret, transport = sandbox_dependencies(scenario=scenario)
+    bundle, secret, transport = sandbox_dependencies(monkeypatch, scenario=scenario)
 
     async with bundle.delivery_factory(request) as capability:
         result = await capability.deliver(request.invocation)
@@ -75,9 +75,9 @@ async def test_possible_transmission_never_invents_delivery(scenario):
         ("timeout", RuntimeEffectReconciliationOutcome.OBSERVATION_UNAVAILABLE),
     ),
 )
-async def test_observation_preserves_all_closed_provider_outcomes(scenario, expected):
+async def test_observation_preserves_all_closed_provider_outcomes(monkeypatch, scenario, expected):
     request = observation_materialization()
-    bundle, secret, transport = sandbox_dependencies(scenario=scenario)
+    bundle, secret, transport = sandbox_dependencies(monkeypatch, scenario=scenario)
 
     async with bundle.observation_factory.create(request) as capability:
         result = await capability.observe(request.invocation)

@@ -5,6 +5,7 @@ from datetime import timedelta
 from types import SimpleNamespace
 from uuid import UUID
 
+import app.services.runtime_connector_production as production
 from app.runtime.ports.connector import (
     RUNTIME_CONNECTOR_PROTOCOL_VERSION,
     RuntimeConnectorDeliveryAcknowledgement,
@@ -21,7 +22,13 @@ from app.services.runtime_connector_production import (
     create_runtime_connector_production_dependencies,
 )
 from tests.test_runtime_connector_contracts import NOW, uid
-from tests.test_runtime_connector_production import DummyFactory, catalog
+from tests.test_runtime_connector_production import (
+    AsyncClient,
+    ClockFactory,
+    DummyFactory,
+    catalog,
+    tls_context,
+)
 
 
 class SandboxOutcomeFactsProvider:
@@ -63,7 +70,14 @@ class SandboxSecretSource:
         if self.reject:
             raise RuntimeError("sandbox credential rejected before send")
         self.secret = bytearray(b"sandbox-private-token")
-        return self.secret
+        return SimpleNamespace(
+            credential_reference=entry.credential_reference,
+            credential_purpose_reference=(
+                request.credential_lease_request.credential_purpose_reference
+            ),
+            connector_provisioning_reference=entry.connector_provisioning_reference,
+            secret=self.secret,
+        )
 
 
 class ProviderSandboxTransport:
@@ -80,7 +94,7 @@ class ProviderSandboxTransport:
         request = json.loads(body.decode("utf-8"))
         self.requests.append(request)
         assert endpoint_uri == "https://connector.policyos.example/v1/runtime/connector"
-        assert deadline.tzinfo is not None
+        assert deadline > timedelta(0)
         if self.scenario == "timeout":
             raise TimeoutError
         if self.scenario == "disconnect":
@@ -154,9 +168,14 @@ class ProviderSandboxTransportFactory:
         return self.transport
 
 
-def sandbox_dependencies(*, scenario: str):
+def sandbox_dependencies(monkeypatch, *, scenario: str):
     secret = SandboxSecretSource(reject=scenario == "pre_send_rejection")
     transport = ProviderSandboxTransportFactory(scenario)
+    monkeypatch.setattr(
+        production.httpx,
+        "AsyncClient",
+        lambda **kwargs: AsyncClient(transport.transport, **kwargs),
+    )
     bundle = create_runtime_connector_production_dependencies(
         provisioning_catalog=catalog(),
         delivery_materialization_facts_provider_factory=DummyFactory(),
@@ -165,8 +184,10 @@ def sandbox_dependencies(*, scenario: str):
         outcome_facts_provider_factory=SandboxOutcomeFactsProviderFactory(),
         pre_invocation_revalidation_factory=DummyFactory(),
         observation_preparation_factory=DummyFactory(),
-        secret_materialization_source=secret,
-        https_transport_factory=transport,
+        version_pinned_secret_accessor=secret,
+        tls_context_factory=tls_context,
+        clock_factory=ClockFactory(),
+        expected_clock_reference="clock.connector",
     )
     return bundle, secret, transport
 

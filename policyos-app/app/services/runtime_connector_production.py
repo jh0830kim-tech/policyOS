@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
+import ssl
+from contextlib import AbstractAsyncContextManager
+from dataclasses import dataclass, field
+from datetime import UTC, timedelta
 from types import TracebackType
 from typing import Protocol
 from urllib.parse import urlsplit
 
+import httpx
+
+from app.runtime.ports.clock import RuntimeClockPort
 from app.runtime.ports.connector import (
     RUNTIME_CONNECTOR_PROTOCOL_VERSION,
     RuntimeConnectorDeliveryWireRequest,
@@ -82,8 +87,24 @@ def _select_entry(catalog, request):
     return entry
 
 
-class _SecretMaterializationSource(Protocol):
-    async def materialize(self, entry, request) -> bytearray: ...
+@dataclass(slots=True)
+class _SecretAccessorResult:
+    credential_reference: str
+    credential_purpose_reference: str
+    connector_provisioning_reference: str
+    secret: bytearray = field(repr=False)
+
+
+class _VersionPinnedSecretAccessor(Protocol):
+    async def materialize(self, entry, request) -> _SecretAccessorResult: ...
+
+
+class _ClockFactory(Protocol):
+    def __call__(self) -> AbstractAsyncContextManager[RuntimeClockPort]: ...
+
+
+class _TlsContextFactory(Protocol):
+    def __call__(self) -> ssl.SSLContext: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,14 +119,55 @@ class _HttpsTransport(Protocol):
         endpoint_uri: str,
         authorization: bytearray,
         body: bytes,
-        deadline: datetime,
+        remaining: timedelta,
     ) -> _TransportResponse: ...
 
     async def close(self) -> None: ...
 
 
-class _HttpsTransportFactory(Protocol):
-    def __call__(self) -> _HttpsTransport: ...
+def _erase(value: bytearray | None) -> None:
+    if value is not None:
+        value[:] = b"\x00" * len(value)
+        value.clear()
+
+
+def _validated_tls_context(factory: _TlsContextFactory) -> ssl.SSLContext:
+    context = factory()
+    if (
+        not isinstance(context, ssl.SSLContext)
+        or not context.check_hostname
+        or context.verify_mode != ssl.CERT_REQUIRED
+        or context.minimum_version < ssl.TLSVersion.TLSv1_2
+    ):
+        raise RuntimeError("connector TLS trust context differs")
+    return context
+
+
+class _HttpxTransport:
+    def __init__(self, context: ssl.SSLContext):
+        self._context = context
+        self._client: httpx.AsyncClient | None = None
+        self._closed = False
+
+    async def post(self, endpoint_uri, authorization, body, remaining):
+        if self._client is not None or self._closed or remaining <= timedelta(0):
+            raise RuntimeError("connector transport lifecycle differs")
+        seconds = remaining.total_seconds()
+        timeout = httpx.Timeout(seconds, connect=seconds, read=seconds, write=seconds, pool=seconds)
+        self._client = httpx.AsyncClient(
+            verify=self._context, timeout=timeout, trust_env=False, follow_redirects=False
+        )
+        response = await self._client.post(
+            endpoint_uri, headers={"Authorization": authorization.decode("ascii")}, content=body
+        )
+        return _TransportResponse(status=response.status_code, body=await response.aread())
+
+    async def close(self):
+        if self._closed:
+            raise RuntimeError("connector transport cleanup differs")
+        self._closed = True
+        if self._client is not None:
+            await self._client.aclose()
 
 
 def _delivery_wire(request: RuntimeConnectorMaterializationRequest):
@@ -209,6 +271,39 @@ class _ManagedDelivery:
         self._secret: bytearray | None = None
         self._transport = None
 
+    async def _prepare_call(self, entry, deadline):
+        result = await self._factory.secret_accessor.materialize(entry, self._request)
+        purpose = (
+            entry.delivery_credential_purpose_reference
+            if isinstance(self._request, RuntimeConnectorMaterializationRequest)
+            else entry.observation_credential_purpose_reference
+        )
+        received = result.secret
+        try:
+            if (
+                result.credential_reference != entry.credential_reference
+                or result.credential_purpose_reference != purpose
+                or result.connector_provisioning_reference != entry.connector_provisioning_reference
+                or not isinstance(received, bytearray)
+                or not received
+            ):
+                raise RuntimeError("connector secret accessor evidence differs")
+            self._secret = bytearray(received)
+        finally:
+            _erase(received)
+        async with self._factory.clock_factory() as clock:
+            reading = clock.read()
+            if (
+                reading.clock_reference != self._factory.expected_clock_reference
+                or reading.observed_at.utcoffset() != timedelta(0)
+            ):
+                raise RuntimeError("connector trusted clock differs")
+            remaining = deadline.astimezone(UTC) - reading.observed_at.astimezone(UTC)
+            if remaining <= timedelta(0):
+                raise RuntimeError("connector deadline exhausted")
+        self._transport = _HttpxTransport(_validated_tls_context(self._factory.tls_context_factory))
+        return remaining
+
     async def __aenter__(self):
         if self._entered or self._exited:
             raise RuntimeError("connector delivery capability lifecycle differs")
@@ -257,13 +352,10 @@ class _ManagedDelivery:
         facts = provider.delivery_facts(self._request)
         entry = _select_entry(self._factory.catalog, self._request)
         try:
-            self._secret = await self._factory.secret_source.materialize(entry, self._request)
-            if not isinstance(self._secret, bytearray) or not self._secret:
-                raise RuntimeError("connector secret materialization failed")
+            remaining = await self._prepare_call(entry, invocation.attempt.deadline)
             wire = _delivery_wire(self._request)
             body = encode_runtime_connector_wire_request(wire)
             authorization = bytearray(b"Bearer ") + self._secret
-            self._transport = self._factory.transport_factory()
         except BaseException:
             return _delivery_result(
                 self._request,
@@ -275,7 +367,7 @@ class _ManagedDelivery:
                 entry.endpoint_uri,
                 authorization,
                 body,
-                invocation.attempt.deadline,
+                remaining,
             )
             parsed = parse_runtime_connector_delivery_response(response.body)
             acknowledgement = validate_runtime_connector_delivery_acknowledgement(
@@ -292,8 +384,7 @@ class _ManagedDelivery:
                 RuntimeEffectDeliveryCertainty.AMBIGUOUS,
             )
         finally:
-            authorization[:] = b"\x00" * len(authorization)
-            authorization.clear()
+            _erase(authorization)
         return _delivery_result(
             self._request,
             facts,
@@ -306,8 +397,10 @@ class _ManagedDelivery:
 class _DeliveryFactory:
     catalog: object
     outcome_facts_provider_factory: object
-    secret_source: _SecretMaterializationSource
-    transport_factory: _HttpsTransportFactory
+    secret_accessor: _VersionPinnedSecretAccessor
+    tls_context_factory: _TlsContextFactory
+    clock_factory: _ClockFactory
+    expected_clock_reference: str
 
     def __call__(self, request):
         return _ManagedDelivery(self, request)
@@ -343,18 +436,17 @@ class _ManagedObservation(_ManagedDelivery):
         unavailable = False
         provider_observation = None
         try:
-            self._secret = await self._factory.secret_source.materialize(entry, self._request)
-            if not isinstance(self._secret, bytearray) or not self._secret:
-                raise RuntimeError("connector observation secret materialization failed")
+            remaining = await self._prepare_call(
+                entry, self._request.credential_lease_request.expires_at
+            )
             wire = _observation_wire(self._request)
             body = encode_runtime_connector_wire_request(wire)
             authorization = bytearray(b"Bearer ") + self._secret
-            self._transport = self._factory.transport_factory()
             response = await self._transport.post(
                 entry.endpoint_uri,
                 authorization,
                 body,
-                self._request.credential_lease_request.expires_at,
+                remaining,
             )
             parsed = parse_runtime_connector_observation_response(response.body)
             provider_observation = validate_runtime_connector_delivery_observation(
@@ -367,8 +459,7 @@ class _ManagedObservation(_ManagedDelivery):
             unavailable = True
         finally:
             if "authorization" in locals():
-                authorization[:] = b"\x00" * len(authorization)
-                authorization.clear()
+                _erase(authorization)
         if unavailable:
             outcome = RuntimeEffectReconciliationOutcome.OBSERVATION_UNAVAILABLE
         else:
@@ -420,8 +511,10 @@ class _ManagedObservation(_ManagedDelivery):
 class _ObservationFactory:
     catalog: object
     outcome_facts_provider_factory: object
-    secret_source: _SecretMaterializationSource
-    transport_factory: _HttpsTransportFactory
+    secret_accessor: _VersionPinnedSecretAccessor
+    tls_context_factory: _TlsContextFactory
+    clock_factory: _ClockFactory
+    expected_clock_reference: str
 
     def create(self, request):
         validate_runtime_connector_observation_materialization_request(request)
@@ -437,8 +530,10 @@ def create_runtime_connector_production_dependencies(
     outcome_facts_provider_factory,
     pre_invocation_revalidation_factory,
     observation_preparation_factory,
-    secret_materialization_source,
-    https_transport_factory,
+    version_pinned_secret_accessor,
+    tls_context_factory,
+    clock_factory,
+    expected_clock_reference,
 ) -> RuntimeConnectorProductionDependencyBundle:
     """Construct the secret-free public bundle from explicit private production inputs."""
 
@@ -457,15 +552,19 @@ def create_runtime_connector_production_dependencies(
         delivery_factory=_DeliveryFactory(
             catalog,
             outcome_facts_provider_factory,
-            secret_materialization_source,
-            https_transport_factory,
+            version_pinned_secret_accessor,
+            tls_context_factory,
+            clock_factory,
+            expected_clock_reference,
         ),
         observation_preparation_factory=observation_preparation_factory,
         observation_factory=_ObservationFactory(
             catalog,
             outcome_facts_provider_factory,
-            secret_materialization_source,
-            https_transport_factory,
+            version_pinned_secret_accessor,
+            tls_context_factory,
+            clock_factory,
+            expected_clock_reference,
         ),
     )
 

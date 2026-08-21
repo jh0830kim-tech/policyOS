@@ -118,3 +118,13 @@ The later implementation must validate fresh SSL contexts, use one exact positiv
 duration for every httpx timeout phase, disable environment trust, redirects, retries, and fallback,
 and clean every request-local resource exactly once. Local HTTPS sandbox and PostgreSQL acceptance
 follow implementation. This gate adds no schema or migration `20260808_0025`.
+
+## Private backend implementation gate
+
+The request-local private backend validates the version-pinned accessor's credential,
+operation-purpose, and provisioning echoes, copies only bounded mutable secret material, and
+erases both received and copied buffers. A fresh managed clock is read once, the exact positive
+remaining duration bounds every HTTP phase, and a fresh verified TLS context constructs one
+hardened `httpx.AsyncClient` with environment trust and redirects disabled. Provider-sandbox and
+PostgreSQL acceptance remain separate; no live credential, provider, schema, or migration
+`20260808_0025` is introduced.

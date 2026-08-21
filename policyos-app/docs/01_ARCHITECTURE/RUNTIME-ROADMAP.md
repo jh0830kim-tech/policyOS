@@ -1403,3 +1403,13 @@ bounded body, and exact positive remaining duration. It verifies TLS and hostnam
 `trust_env=False`, disables redirects and retries, performs at most one call, and closes exactly
 once. Public Runtime contracts and persistence remain unchanged; migration `20260808_0025` remains
 absent.
+
+## Sprint 17 private backend implementation
+
+**Status: Implemented / Validated, Pending Review.** The private connector consumes the exact
+ADR-134 accessor echoes, manages received and copied mutable secret buffers, reads one fresh
+trusted UTC clock, validates one fresh TLS 1.2+ hostname-verifying context, and passes the exact
+positive remaining duration to every hardened request-local `httpx` timeout phase. Environment
+trust, redirects, retries, fallback, hidden time, and shared clients remain absent. Local HTTPS and
+PostgreSQL acceptance remain separate checkpoints; no live provider, schema, or migration
+`20260808_0025` is introduced.

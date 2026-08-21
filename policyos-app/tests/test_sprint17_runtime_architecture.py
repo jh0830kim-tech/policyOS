@@ -217,3 +217,22 @@ def test_adr134_governs_private_backend_signatures_and_tls_trust() -> None:
     assert "Sprint 17 private backend signature and TLS trust governance" in roadmap
     assert "Sprint 17 private backend signature and TLS trust boundary" in security
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr134_private_backend_implementation_is_explicit_and_private() -> None:
+    source = _read("app/services/runtime_connector_production.py")
+    for phrase in (
+        "version_pinned_secret_accessor",
+        "tls_context_factory",
+        "clock_factory",
+        "expected_clock_reference",
+        "ssl.CERT_REQUIRED",
+        "ssl.TLSVersion.TLSv1_2",
+        "trust_env=False",
+        "follow_redirects=False",
+        "remaining <= timedelta(0)",
+    ):
+        assert phrase in source
+    for forbidden in ("datetime.now", "uuid4", "trust_env=True", "follow_redirects=True"):
+        assert forbidden not in source
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
