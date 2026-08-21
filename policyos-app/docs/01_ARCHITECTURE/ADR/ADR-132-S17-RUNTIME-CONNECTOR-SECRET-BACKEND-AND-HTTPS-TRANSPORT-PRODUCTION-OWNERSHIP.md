@@ -170,3 +170,13 @@ Sprint 17 can implement a concrete, testable PolicyOS-side private adapter and h
 without pretending that repository code owns a secret vendor or production deployment. Operators
 retain backend and activation authority, while exact connector binding, conservative delivery
 certainty, secret non-disclosure, and migration boundaries remain unchanged.
+
+## ADR-133 trusted timeout clarification
+
+The hardened transport does not interpret an absolute deadline with an ambient clock. One injected
+request-scoped managed trusted UTC clock supplies an exact-reference reading immediately before
+the call boundary. Production computes one positive remaining duration without rounding, clamping,
+refresh, fallback, or a second read, and passes it unchanged to the private `httpx` transport.
+Deadline exhaustion is pre-send; any timeout after invocation begins preserves conservative
+ambiguity or observation unavailability. This clarification adds no persistence or migration
+`20260808_0025`.

@@ -108,3 +108,57 @@ def test_adr132_governs_deployment_neutral_secret_and_transport_backends() -> No
     assert "Sprint 17 deployment-neutral secret backend" in roadmap
     assert "Sprint 17 deployment-neutral private-backend security boundary" in security
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr133_governs_trusted_deadline_clock_and_transport_timeout() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-133-S17-RUNTIME-CONNECTOR-TRUSTED-DEADLINE-CLOCK-AND-TRANSPORT-"
+        "TIMEOUT-OWNERSHIP.md"
+    )
+    adr127 = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-127-S16-RUNTIME-CONNECTOR-AUTHENTICATION-CANONICAL-WIRE-ENCODING-"
+        "AND-TRANSPORT-BOUNDS.md"
+    )
+    adr128 = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-128-S16-RUNTIME-CONNECTOR-PRODUCTION-COMPOSITION-AND-"
+        "MATERIALIZATION-FACTS-OWNERSHIP.md"
+    )
+    adr132 = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-132-S17-RUNTIME-CONNECTOR-SECRET-BACKEND-AND-HTTPS-TRANSPORT-"
+        "PRODUCTION-OWNERSHIP.md"
+    )
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for phrase in (
+        "request-scoped managed clock capability",
+        "immediately before the governed network-call boundary",
+        "remaining_duration = caller_supplied_deadline - observed_at",
+        "zero or negative duration",
+        "performs no rounding, clamping",
+        "migration `20260808_0025`",
+        "Alembic head remains the single",
+    ):
+        assert phrase in adr
+
+    for forbidden_choice in (
+        "Read the process wall clock directly",
+        "Use the HTTP client's default timeout",
+        "Convert with event-loop monotonic time",
+        "Clamp or refresh the remaining duration",
+        "Persist clock readings or timeout budgets",
+    ):
+        assert forbidden_choice in adr
+
+    assert "ADR-133 trusted deadline-clock clarification" in adr127
+    assert "ADR-133 deadline-clock clarification" in adr128
+    assert "ADR-133 trusted timeout clarification" in adr132
+    assert "ADR-133 trusted deadline-clock gate" in program
+    assert "Sprint 17 trusted deadline clock and transport timeout governance" in roadmap
+    assert "Sprint 17 trusted deadline-clock security boundary" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
