@@ -220,3 +220,11 @@ ADR-129 fixes the exact public signatures deferred here. It uses separate delive
 facts and leaf factories, one covariant managed provider, the exact provisioning catalog and a
 nine-field secret-free public bundle. Private secret and HTTPS transport factories remain
 composition inputs captured behind managed delivery and observation factories.
+
+## ADR-130 operation-purpose clarification
+
+Production catalog selection uses the concrete delivery or observation materialization request as
+its closed discriminator. It compares the lease only with the corresponding explicit provisioning
+purpose and never accepts a generic operation string, shared purpose, swapped purpose, endpoint
+inference, or delivery lease for observation. This correction changes no factory graph, secret
+lifetime, transaction boundary, public bundle field count, or persistence ownership.

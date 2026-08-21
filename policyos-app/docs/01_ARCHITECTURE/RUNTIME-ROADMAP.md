@@ -1303,3 +1303,13 @@ validated `materialization_request` unchanged to the request-accepting delivery 
 No database transaction spans credential, secret, transport, response, outcome-facts, or cleanup
 work. Provider-sandbox and PostgreSQL acceptance remain separate. No schema or migration
 `20260808_0025` is introduced.
+
+## Sprint 16 connector operation-purpose governance correction
+
+**Status: Governed / Validated, Pending Review.** ADR-130 preserves one immutable provisioning
+entry while separating delivery `connector.invoke` and observation `connector.observe` purpose
+authority into two explicit required fields. Concrete request type selects the exact field; shared,
+swapped, inferred, partial, or cross-operation purpose binding fails closed. The production bundle
+remains nine fields, existing CP8 persistence remains authoritative, and migration
+`20260808_0025` remains absent. Public-contract correction must merge before provider/PostgreSQL
+acceptance resumes.

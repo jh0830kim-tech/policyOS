@@ -632,3 +632,43 @@ def test_sprint16_production_connector_composition_is_private_and_exact():
     assert "commit(" not in source and "rollback(" not in source
     assert "revalidation.materialization_request" in worker_source
     assert "self.dependencies.delivery_factory()" not in worker_source
+
+
+def test_adr130_governs_operation_specific_connector_purposes() -> None:
+    adr = (
+        ROOT
+        / "docs/01_ARCHITECTURE/ADR"
+        / "ADR-130-S16-RUNTIME-CONNECTOR-OPERATION-PURPOSE-OWNERSHIP.md"
+    ).read_text(encoding="utf-8")
+    adr125 = next((ROOT / "docs/01_ARCHITECTURE/ADR").glob("ADR-125-*.md")).read_text(
+        encoding="utf-8"
+    )
+    adr128 = next((ROOT / "docs/01_ARCHITECTURE/ADR").glob("ADR-128-*.md")).read_text(
+        encoding="utf-8"
+    )
+    adr129 = next((ROOT / "docs/01_ARCHITECTURE/ADR").glob("ADR-129-*.md")).read_text(
+        encoding="utf-8"
+    )
+    combined = "\n".join((adr, adr125, adr128, adr129))
+
+    for required in (
+        "exactly one immutable enabled provisioning entry",
+        "delivery_credential_purpose_reference",
+        "observation_credential_purpose_reference",
+        "connector.invoke",
+        "connector.observe",
+        "concrete request type",
+        "fresh observation lease",
+        "exactly-nine-field shape",
+        "migration `20260808_0025`",
+    ):
+        assert required in combined
+
+    for prohibited in (
+        "Share one generic purpose",
+        "Create one catalog entry per operation",
+        "Infer purpose from the request operation",
+    ):
+        assert prohibited in adr
+
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
