@@ -1433,3 +1433,18 @@ positive remaining duration to every hardened request-local `httpx` timeout phas
 trust, redirects, retries, fallback, hidden time, and shared clients remain absent. Local HTTPS and
 PostgreSQL acceptance remain separate checkpoints; no live provider, schema, or migration
 `20260808_0025` is introduced.
+
+## Sprint 17 closeout
+
+**Status: Completed with Deployment Deferred.** PR #163 through PR #170 establish the immutable
+operator manifest, deployment-neutral private connector backend, trusted deadline clock, real local
+HTTPS provider sandbox, and exact PostgreSQL evidence acceptance. The final acceptance CI completed
+`2278` tests successfully, and the existing CP8 lifecycle/reconciliation records remain the only
+authoritative persistence owner.
+
+Sprint 17 completion does not claim live-provider readiness or deployment. Production credentials,
+secret-manager vendor and workload identity selection, live endpoint enablement, process
+entrypoint/runbook, controlled deployment and operations drill remain separately authorized. The
+next gated activity is a local validation sprint. The single Alembic head remains
+`20260808_0024`; migration `20260808_0025`, new schema, dynamic destinations, another adapter
+family, tag, and release remain absent.
