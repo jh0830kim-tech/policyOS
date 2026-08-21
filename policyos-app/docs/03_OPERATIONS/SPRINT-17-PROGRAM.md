@@ -78,3 +78,17 @@ second manifest wrapper or runtime digest/signature authority.
 Another adapter family or destination, content-bearing payload materialization, autonomous redrive,
 external business-effect exactly-once, PolicyOS-managed provisioning, production credentials,
 provider deployment, tag, and release are outside this governance checkpoint.
+
+## ADR-132 deployment-neutral backend gate
+
+The private backend checkpoint uses one deployment-injected, version-pinned secret accessor and a
+hardened request-local `httpx` transport. The deployment operator, not PolicyOS configuration,
+selects the concrete secret-manager vendor, workload authentication, credential version, rotation,
+revocation and access-audit policy.
+
+The later implementation must reject missing, unversioned, stale, substituted, revoked,
+cross-purpose and cross-scope accessor results before I/O; use one mutable request-local secret
+buffer; overwrite and release it exactly once; disable environment proxy/trust selection,
+redirects, retries and fallback; and preserve ambiguity for every post-call failure. It adds no
+schema or migration `20260808_0025`. Process entrypoint/runbook and pre-production acceptance
+remain separate checkpoints, and live provider enablement still requires operator approval.

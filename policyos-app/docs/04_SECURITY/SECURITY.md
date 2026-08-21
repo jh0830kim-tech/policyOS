@@ -1386,3 +1386,19 @@ immutable version identity. Construction requires the exact canonical HTTPS path
 non-HTTPS endpoints before credential acquisition or secret materialization. No second manifest
 wrapper, manifest digest/signature authority, secret surface, schema, or migration
 `20260808_0025` is added.
+
+## Sprint 17 deployment-neutral private-backend security boundary
+
+ADR-132 keeps secret-manager vendor, workload identity, credential provisioning, pinned-version
+selection, rotation, revocation and backend audit outside PolicyOS authority. Production receives
+one explicitly injected, version-pinned private accessor; environment variables, filesystem
+secrets, unversioned latest aliases, mutable registries, service locators and fallback chains cannot
+materialize connector credentials.
+
+PolicyOS copies only the exact purpose-bound result into one private mutable request-local buffer
+and overwrites and releases it exactly once on success, failure or cancellation. The hardened
+`httpx` transport verifies TLS and hostname, sets `trust_env=False`, rejects redirects, retries,
+alternate destinations and ambient proxies, performs at most one bounded call, and closes exactly
+once. No secret, Authorization value, vendor response or internal failure detail enters contracts,
+logs, metrics, traces, evidence or persistence. Post-call uncertainty remains ambiguous, CP8
+evidence remains authoritative, and migration `20260808_0025` remains absent.
