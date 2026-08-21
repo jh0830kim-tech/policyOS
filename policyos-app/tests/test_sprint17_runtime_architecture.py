@@ -236,3 +236,30 @@ def test_adr134_private_backend_implementation_is_explicit_and_private() -> None
     for forbidden in ("datetime.now", "uuid4", "trust_env=True", "follow_redirects=True"):
         assert forbidden not in source
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_local_https_provider_sandbox_uses_the_production_transport_boundary() -> None:
+    support = _read("tests/runtime_connector_acceptance_test_support.py")
+    acceptance = _read("tests/test_runtime_connector_provider_acceptance.py")
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for phrase in (
+        "asyncio.start_server",
+        "ssl.PROTOCOL_TLS_SERVER",
+        '"openssl"',
+        '"https://127.0.0.1/v1/runtime/connector"',
+        "real_https_dependencies",
+    ):
+        assert phrase in support
+    for phrase in (
+        "test_real_loopback_https_delivery_verifies_tls_and_acknowledgement",
+        "test_real_loopback_https_observation_verifies_provider_state",
+        "test_real_loopback_https_uncertain_or_invalid_response_is_ambiguous",
+    ):
+        assert phrase in acceptance
+    assert "Sprint 17 local HTTPS provider-sandbox acceptance" in roadmap
+    assert "Local HTTPS provider-sandbox acceptance gate" in program
+    assert "Sprint 17 local HTTPS acceptance security evidence" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

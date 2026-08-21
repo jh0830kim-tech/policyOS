@@ -1,7 +1,12 @@
-"""Test-only provider sandbox for Sprint 16 connector acceptance."""
+"""Test-only provider sandbox for Sprint 16 and 17 connector acceptance."""
 
+import asyncio
 import json
+import ssl
+import subprocess
+from contextlib import asynccontextmanager
 from datetime import timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from uuid import UUID
 
@@ -192,4 +197,148 @@ def sandbox_dependencies(monkeypatch, *, scenario: str):
     return bundle, secret, transport
 
 
-__all__ = ("sandbox_dependencies",)
+def _tls_factories(tmp_path: Path):
+    certificate = tmp_path / "localhost.crt"
+    private_key = tmp_path / "localhost.key"
+    subprocess.run(
+        (
+            "openssl",
+            "req",
+            "-x509",
+            "-newkey",
+            "rsa:2048",
+            "-nodes",
+            "-keyout",
+            str(private_key),
+            "-out",
+            str(certificate),
+            "-days",
+            "1",
+            "-subj",
+            "/CN=localhost",
+            "-addext",
+            "subjectAltName=DNS:localhost,IP:127.0.0.1",
+        ),
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_context.minimum_version = ssl.TLSVersion.TLSv1_2
+    server_context.load_cert_chain(certificate, private_key)
+
+    def client_context():
+        context = ssl.create_default_context(cafile=certificate)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        return context
+
+    return server_context, client_context
+
+
+class LocalHttpsConnectorSandbox:
+    def __init__(self, *, server_context, scenario: str):
+        self.server_context = server_context
+        self.scenario = scenario
+        self.calls = 0
+        self.requests: list[dict[str, object]] = []
+        self.authorization: list[str] = []
+        self._server = None
+
+    async def __aenter__(self):
+        self._server = await asyncio.start_server(
+            self._handle,
+            "127.0.0.1",
+            443,
+            ssl=self.server_context,
+        )
+        self.endpoint_uri = "https://127.0.0.1/v1/runtime/connector"
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        self._server.close()
+        await self._server.wait_closed()
+        return False
+
+    async def _handle(self, reader, writer):
+        try:
+            header_block = await reader.readuntil(b"\r\n\r\n")
+            header_lines = header_block.decode("ascii").split("\r\n")
+            headers = {
+                key.lower(): value.strip()
+                for key, value in (line.split(":", 1) for line in header_lines[1:] if ":" in line)
+            }
+            body = await reader.readexactly(int(headers.get("content-length", "0")))
+            request = json.loads(body.decode("utf-8"))
+            self.calls += 1
+            self.requests.append(request)
+            self.authorization.append(headers.get("authorization", ""))
+
+            if self.scenario == "timeout":
+                await asyncio.sleep(0.2)
+                return
+            if self.scenario == "disconnect":
+                return
+            if self.scenario == "redirect":
+                status, response_body = 307, b"{}"
+            elif self.scenario == "malformed":
+                status, response_body = 200, b"{"
+            elif request["operation"] == "observe":
+                response = ProviderSandboxTransport(self.scenario)._observation_response(request)
+                status, response_body = response.status, response.body
+            else:
+                response = ProviderSandboxTransport(self.scenario)._delivery_response(request)
+                status, response_body = response.status, response.body
+            writer.write(
+                (
+                    f"HTTP/1.1 {status} Sandbox\r\n"
+                    "Content-Type: application/json\r\n"
+                    f"Content-Length: {len(response_body)}\r\n"
+                    "Connection: close\r\n\r\n"
+                ).encode("ascii")
+                + response_body
+            )
+            await writer.drain()
+        finally:
+            writer.close()
+            try:
+                await writer.wait_closed()
+            except (ConnectionError, OSError, ssl.SSLError):
+                pass
+
+
+@asynccontextmanager
+async def real_https_dependencies(tmp_path: Path, *, scenario: str, timeout: bool = False):
+    server_context, client_context = _tls_factories(tmp_path)
+    async with LocalHttpsConnectorSandbox(
+        server_context=server_context,
+        scenario=scenario,
+    ) as server:
+        entry = catalog().entries[0].model_copy(update={"endpoint_uri": server.endpoint_uri})
+        provisioning_catalog = catalog().model_copy(update={"entries": (entry,)})
+        secret = SandboxSecretSource()
+        observed_at = NOW + timedelta(minutes=5, milliseconds=-25) if timeout else NOW
+        clock = ClockFactory(
+            SimpleNamespace(
+                read=lambda: SimpleNamespace(
+                    clock_reference="clock.connector",
+                    observed_at=observed_at,
+                )
+            )
+        )
+        bundle = create_runtime_connector_production_dependencies(
+            provisioning_catalog=provisioning_catalog,
+            delivery_materialization_facts_provider_factory=DummyFactory(),
+            observation_materialization_facts_provider_factory=DummyFactory(),
+            credential_broker_factory=DummyFactory(),
+            outcome_facts_provider_factory=SandboxOutcomeFactsProviderFactory(),
+            pre_invocation_revalidation_factory=DummyFactory(),
+            observation_preparation_factory=DummyFactory(),
+            version_pinned_secret_accessor=secret,
+            tls_context_factory=client_context,
+            clock_factory=clock,
+            expected_clock_reference="clock.connector",
+        )
+        yield bundle, secret, server
+
+
+__all__ = ("real_https_dependencies", "sandbox_dependencies")
