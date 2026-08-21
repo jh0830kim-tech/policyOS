@@ -1357,3 +1357,24 @@ The closeout does not expose or persist secret material, activate a live endpoin
 credential, grant redirect authority, select a dynamic destination, claim external
 business-effect exactly-once, deploy software, or create a tag or release. Operator enablement
 remains separate from Sprint 16 completion.
+
+## Sprint 17 operator-enablement security boundary
+
+ADR-131 authorizes governance of one deployment-owned immutable, secret-free connector manifest;
+it does not activate a live endpoint or credential. The deployment operator owns manifest
+integrity, exact version selection, secret-manager configuration, credential creation, rotation,
+revocation, controlled process replacement, rollback, and emergency disablement. A merge, startup,
+request, Worker claim, successful sandbox test, or provider response is not enablement authority.
+
+The manifest contains only bounded approved provisioning facts and opaque credential references.
+It contains no bearer value, token, key, secret-manager payload, filesystem secret path, or
+environment secret. Public contracts, persistence, audit, logs, errors, metrics, and provider
+evidence remain secret-free. Request-local secret bytes are materialized only after exact binding,
+held in one private mutable buffer, and overwritten and released exactly once.
+
+Dynamic URLs, redirects, caller endpoints, environment-selected implementations, mutable
+`app.state`, service locators, latest-row selection, and fallback are prohibited. Tenant,
+organization, classification, lineage, attempt, destination, adapter, permit, envelope,
+idempotency, provisioning, credential, operation purpose, and time mismatches fail closed before
+secret materialization or network I/O. No PolicyOS provisioning registry, backfill, schema, or
+migration `20260808_0025` is approved; the Alembic head remains `20260808_0024`.

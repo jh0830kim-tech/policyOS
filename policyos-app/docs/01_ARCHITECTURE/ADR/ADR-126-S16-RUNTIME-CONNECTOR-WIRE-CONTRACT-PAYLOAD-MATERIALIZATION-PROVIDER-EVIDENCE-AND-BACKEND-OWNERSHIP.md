@@ -231,3 +231,12 @@ validation, outcome-facts production or cleanup.
 ADR-129 keeps secret materialization and HTTPS transport factories outside Runtime Ports and the
 public production bundle. Concrete delivery and observation factories capture those private
 dependencies while their public signatures remain secret-free and request-bound.
+
+## ADR-131 deployment-backend clarification
+
+Sprint 17 assigns selection and configuration of the concrete secret manager and HTTPS transport
+to the deployment composition owner. One immutable secret-free manifest supplies only approved
+endpoint and opaque credential-reference facts. It contains no secret and cannot be selected or
+overridden by a request, environment-selected implementation, mutable application state, redirect,
+or fallback. Secret creation, rotation, revocation, and backend access audit remain operator-owned;
+live provider traffic requires separate approval.

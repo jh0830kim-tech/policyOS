@@ -1342,3 +1342,18 @@ No live endpoint, production credential, secret-manager provisioning, deployment
 enabled by this closeout. Those remain separate operator decisions. Dynamic destinations, another
 adapter family, autonomous redrive, and external business-effect exactly-once remain outside the
 approved Sprint 16 boundary.
+
+## Sprint 17 operator-enablement governance boundary
+
+ADR-131 starts Sprint 17 from the completed Sprint 16 single-destination connector. The initial
+operating model is exactly one deployment-owned immutable, secret-free manifest validated at
+application construction. PolicyOS owns no provisioning mutation API or database registry and does
+not select an endpoint, credential, provider, or implementation from caller input, recency,
+redirects, mutable application state, environment-selected objects, or fallback.
+
+The deployment security operator owns the concrete secret backend, credential provisioning,
+rotation, revocation, manifest integrity and version selection, controlled process replacement,
+rollback, and emergency kill switch. Endpoint, credential, deployment, provider traffic, tag, and
+release remain separate approvals. This governance adds no schema or migration
+`20260808_0025`; the Alembic head remains the single `20260808_0024` head. Mutable PolicyOS-owned
+enablement or durable provisioning history requires a separate authority and persistence gate.
