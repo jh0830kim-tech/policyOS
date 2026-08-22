@@ -141,3 +141,16 @@ required aggregate usage counters. Absent cached, thought, and tool counters rem
 An `invalid_response` may carry an adapter-private bounded validation-stage category for local
 diagnosis; it never contains provider values or authorizes a retry. Do not print the raw response
 to investigate it. A second live smoke remains separately approved.
+
+### Gemini safe request-rejection diagnostics
+
+Provider HTTP 400 and 422 remain public non-retryable `invalid_request`, except for the existing
+closed policy-block mapping. Operators may receive only a private content-free category combining
+the exact HTTP status with `invalid_argument`, `failed_precondition`, `out_of_range`,
+`policy_blocked`, or `unclassified`. Do not inspect or retain the provider body, message, field
+path, prompt, schema, or credential.
+
+The corrected request carries one structured-output `response_format` array element while keeping
+the configured model, schema, `/v1beta/interactions`, and `Api-Revision: 2026-05-20` fixed. This
+network-free correction does not authorize a live call. Any later smoke requires separate approval,
+uses one call with retry and fallback zero, and stops after the first result.

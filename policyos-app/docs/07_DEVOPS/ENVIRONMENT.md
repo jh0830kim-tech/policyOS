@@ -187,3 +187,15 @@ governance tests without `GEMINI_API_KEY` and without `RUN_GEMINI_LIVE_TESTS`. O
 metadata is validated locally and private diagnostic categories remain bounded and content-free.
 Do not use them to trigger retry or provider fallback. Any second live smoke requires a separate
 explicit approval.
+
+### Gemini request-wire correction operation
+
+The adapter uses one exact structured-output `response_format` array element. The deployment does
+not select the container shape, endpoint, or revision: `/v1beta/interactions` and
+`Api-Revision: 2026-05-20` remain private pinned constants. HTTP 400 and 422 expose only existing
+safe public errors plus one private closed request-rejection category; provider-controlled detail
+is neither logged nor persisted.
+
+This implementation remains network free. Do not set a real credential or run a provider probe as
+part of validation. A later synthetic-public probe requires separate one-call approval, retry and
+fallback zero, and no automatic second call.

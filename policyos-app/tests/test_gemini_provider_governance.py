@@ -219,3 +219,27 @@ def test_adr138_response_wire_correction_is_narrow_and_private() -> None:
 
     assert "diagnostic_reason" not in _read("app/ai/model_gateway.py")
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr139_request_wire_correction_is_single_variable_and_private() -> None:
+    adapter = _read("app/ai/providers/gemini_interactions.py")
+    tests = _read("tests/test_gemini_interactions.py")
+
+    for phrase in (
+        "class _RequestRejection(StrEnum):",
+        "request_http_400_invalid_argument",
+        "request_http_422_unclassified",
+        "_ALLOWED_PROVIDER_ERROR_CODES",
+        '"response_format": [',
+        '"/v1beta/interactions"',
+        '"2026-05-20"',
+    ):
+        assert phrase in adapter
+    for phrase in (
+        "test_request_rejection_diagnostic_is_closed_and_content_free",
+        "test_untrusted_request_rejection_detail_collapses_to_unclassified",
+        "len(transport.requests) == 1",
+    ):
+        assert phrase in tests
+    assert "diagnostic_reason" not in _read("app/ai/model_gateway.py")
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

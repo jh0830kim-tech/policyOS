@@ -124,11 +124,13 @@ async def test_pinned_wire_maps_valid_structured_response_and_usage() -> None:
     assert body["store"] is False
     assert body["background"] is False
     assert body["stream"] is False
-    assert body["response_format"] == {
-        "type": "text",
-        "mime_type": "application/json",
-        "schema": SCHEMA,
-    }
+    assert body["response_format"] == [
+        {
+            "type": "text",
+            "mime_type": "application/json",
+            "schema": SCHEMA,
+        }
+    ]
     assert "tools" not in body
     assert "previous_interaction_id" not in body
 
@@ -380,6 +382,91 @@ async def test_safe_http_error_mapping(status, provider_status, code, retryable)
     assert caught.value.code is code
     assert caught.value.retryable is retryable
     assert "synthetic-key" not in str(caught.value)
+    assert transport.close_count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [400, 422])
+@pytest.mark.parametrize(
+    ("provider_status", "reason", "code"),
+    [
+        ("INVALID_ARGUMENT", "invalid_argument", ModelErrorCode.INVALID_REQUEST),
+        ("FAILED_PRECONDITION", "failed_precondition", ModelErrorCode.INVALID_REQUEST),
+        ("OUT_OF_RANGE", "out_of_range", ModelErrorCode.INVALID_REQUEST),
+        ("SAFETY", "policy_blocked", ModelErrorCode.POLICY_BLOCKED),
+        ("UNRECOGNIZED", "unclassified", ModelErrorCode.INVALID_REQUEST),
+    ],
+)
+async def test_request_rejection_diagnostic_is_closed_and_content_free(
+    status: int,
+    provider_status: str,
+    reason: str,
+    code: ModelErrorCode,
+) -> None:
+    payload = {"error": {"message": "private-provider-message", "status": provider_status}}
+    transport = transport_for(payload, status=status)
+
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway("synthetic-key", model=MODEL, transport=transport).generate(
+            request()
+        )
+
+    assert caught.value.code is code
+    assert caught.value.retryable is False
+    assert caught.value.diagnostic_reason == f"request_http_{status}_{reason}"
+    assert "private-provider-message" not in str(caught.value)
+    assert provider_status not in str(caught.value)
+    assert len(transport.requests) == 1
+    assert transport.close_count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("status", "payload"),
+    [
+        (400, {}),
+        (422, {"error": {}}),
+        (400, {"error": {"status": "invalid_argument"}}),
+        (422, {"error": {"status": 400}}),
+        (400, {"error": {"status": "X" * 101}}),
+    ],
+)
+async def test_untrusted_request_rejection_detail_collapses_to_unclassified(
+    status: int, payload: dict
+) -> None:
+    transport = transport_for(payload, status=status)
+
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway("synthetic-key", model=MODEL, transport=transport).generate(
+            request()
+        )
+
+    assert caught.value.code is ModelErrorCode.INVALID_REQUEST
+    assert caught.value.retryable is False
+    assert caught.value.diagnostic_reason == f"request_http_{status}_unclassified"
+    assert len(transport.requests) == 1
+    assert transport.close_count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [400, 422])
+async def test_oversized_request_rejection_body_is_not_inspected(status: int) -> None:
+    transport = CountingTransport(
+        lambda request: httpx.Response(
+            status,
+            content=b"x" * 1_048_577,
+            request=request,
+        )
+    )
+
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway("synthetic-key", model=MODEL, transport=transport).generate(
+            request()
+        )
+
+    assert caught.value.code is ModelErrorCode.INVALID_REQUEST
+    assert caught.value.diagnostic_reason == f"request_http_{status}_unclassified"
+    assert len(transport.requests) == 1
     assert transport.close_count == 1
 
 
