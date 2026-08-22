@@ -204,3 +204,11 @@ Neither configuration nor the adapter may create `models/` prefixes, strip them,
 names, or infer one identity from the other. An exact reviewed binding must carry both values, and
 provider response identity is validated against the wire resource without replacing the logical
 identity recorded by PolicyOS.
+
+## ADR-143 composition ownership amendment
+
+The production application factory, not `Settings` or the Gemini adapter, owns injection of one
+caller-supplied immutable registry snapshot and one exact logical model selection. Construction
+validates the selected active Gemini registration and supplies its exact
+`RegisteredModel.provider_model_name` as the wire resource. Registry discovery, latest lookup,
+synthetic snapshots, and a second wire-model configuration are prohibited.

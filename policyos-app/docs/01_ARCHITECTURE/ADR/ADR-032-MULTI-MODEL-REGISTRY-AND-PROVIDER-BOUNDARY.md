@@ -62,3 +62,10 @@ credential handling.
 
 Independent cross-validation remains deferred to Sprint 12. Evaluation and observability remain
 deferred to Sprint 13. Real provider integrations do not exist in this checkpoint.
+
+## ADR-143 production-composition amendment
+
+ADR-143 preserves caller-versioned `ModelRegistrySnapshot` ownership: an application factory may
+receive one complete immutable snapshot, but configuration, adapters, and provider responses may
+not construct, refresh, or select another snapshot. The exact selected `RegisteredModel` supplies
+both logical `model_id` and provider-facing `provider_model_name` to request-scoped composition.

@@ -40,3 +40,10 @@ credentials, HTTP client, streaming, routing, fallback, retry, persistence, heal
 pricing, tool execution, multimodal execution, result synthesis, evaluation, or observability.
 Provider-specific adapters are deferred to later deployment work. Independent cross-validation
 orchestration remains deferred to Sprint 12.
+
+## ADR-143 composition bridge amendment
+
+ADR-143 does not merge the legacy office `ModelGateway` with the normalized invocation contracts.
+It permits a narrow composition bridge that validates one exact selected registration and passes
+only its logical and provider-facing names into the private Gemini gateway. The bridge cannot
+route, persist, refresh a registry, create a permit, or bypass the normalized invocation boundary.

@@ -104,3 +104,10 @@ boundaries.
 - Let a response, environment default, or first configured value select either identity.
 - Add schema or migration `20260808_0025` for an identity distinction already present in domain
   contracts.
+
+## ADR-143 composition closure
+
+ADR-143 assigns snapshot injection to the production application factory and exact registration
+validation to a pure composition binder. The binder accepts the immutable snapshot plus the
+caller-supplied logical selection, returns the registered logical/wire pair, and performs no I/O
+or inference. The private Gemini gateway receives both exact values and never the snapshot.

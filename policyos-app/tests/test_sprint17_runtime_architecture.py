@@ -39,6 +39,37 @@ def test_adr131_governs_operator_enablement_without_runtime_registry() -> None:
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_adr143_governs_registry_snapshot_production_composition() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-143-S17-GEMINI-REGISTRY-SNAPSHOT-AND-PRODUCTION-COMPOSITION-OWNERSHIP.md"
+    )
+    for phrase in (
+        "production application factory",
+        "caller-supplied immutable",
+        "`ModelRegistrySnapshot`",
+        "pure composition binder",
+        "exact logical model selection",
+        "`RegisteredModel.provider_model_name`",
+        "before credential access",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in adr
+    for name in ("ADR-032", "ADR-037", "ADR-038", "ADR-136", "ADR-142"):
+        path = next((ROOT / "docs/01_ARCHITECTURE/ADR").glob(f"{name}-*.md"))
+        assert "ADR-143" in _read(path.relative_to(ROOT).as_posix())
+    assert "Sprint 17 Gemini registry-snapshot production composition governance" in _read(
+        "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md"
+    )
+    assert "Gemini registry snapshot and production composition governance gate" in _read(
+        "docs/03_OPERATIONS/SPRINT-17-PROGRAM.md"
+    )
+    assert "Gemini registry-snapshot composition security boundary" in _read(
+        "docs/04_SECURITY/SECURITY.md"
+    )
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_adr141_governs_stable_path_and_closed_http_404_provenance() -> None:
     adr = _read(
         "docs/01_ARCHITECTURE/ADR/"

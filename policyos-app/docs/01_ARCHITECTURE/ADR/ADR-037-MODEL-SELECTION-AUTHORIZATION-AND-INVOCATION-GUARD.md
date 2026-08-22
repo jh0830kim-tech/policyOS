@@ -48,3 +48,10 @@ CP2 provides model-target contracts and typed placeholders for future target fam
 model invocation is supported. Real provider adapters, provider APIs, credentials, prompt
 execution, response normalization, automatic routing, fallback, retry, persistence,
 cross-validation orchestration, evaluation, and observability remain deferred.
+
+## ADR-143 exact-selection amendment
+
+Production composition cannot treat `gemini_model` as both selection authority and provider wire
+identity. It must receive the same caller-supplied registry snapshot and exact logical model
+selection already bound by authorization, then fail closed on revision, provider, lifecycle, or
+model mismatch before constructing the Gemini gateway.

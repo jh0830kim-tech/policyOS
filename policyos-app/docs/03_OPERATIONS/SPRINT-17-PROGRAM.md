@@ -317,3 +317,12 @@ The following correction gate is network free and may change only the explicitly
 registry wiring, adapter, tests, and operational documentation needed to carry and compare both
 facts. A later probe changes only the model resource and still requires separate one-call approval.
 No schema, backfill, persistence change, or migration `20260808_0025` is introduced.
+
+## Gemini registry snapshot and production composition governance gate
+
+**Status: Governed / Pending Review.** ADR-143 requires application-factory injection of one
+immutable `ModelRegistrySnapshot` and one exact logical selection. A pure binder returns the
+selected active Gemini registration's logical `model_id` and exact `provider_model_name`.
+Missing, stale, disabled, cross-provider, revision-mismatched, or substituted facts fail before
+credential access or network I/O. Registry persistence, discovery, fallback, schema, and migration
+`20260808_0025` remain prohibited.

@@ -1661,3 +1661,11 @@ Missing, malformed, stale, substituted, cross-provider, or mismatched binding fa
 accepted result. Provider responses cannot select either identity. Diagnostics remain closed and
 content free; prompts, schemas, credentials, raw responses, and provider messages remain excluded.
 No credential use, external call, schema, or migration `20260808_0025` is authorized by this gate.
+
+## Gemini registry-snapshot composition security boundary
+
+ADR-143 makes the production application factory the injection boundary for one immutable registry
+snapshot and exact logical selection. A pure binder validates the exact active Gemini provider and
+model registration before credential access. The private gateway receives only validated logical
+and wire identities; it cannot inspect a registry, choose a model, or accept response-selected
+identity. No secret, registry serialization, schema, or migration `20260808_0025` is added.
