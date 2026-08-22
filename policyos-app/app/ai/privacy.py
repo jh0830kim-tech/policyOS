@@ -1,8 +1,10 @@
 """Provider privacy, redaction, and transmission policy contracts."""
 
 import re
+from collections.abc import Mapping
 from datetime import datetime
 from enum import StrEnum
+from types import MappingProxyType
 from typing import Protocol
 from uuid import UUID
 
@@ -27,6 +29,7 @@ class PolicyDecision(StrEnum):
     DENY_ORGANIZATION = "deny_organization"
     DENY_PERMISSION = "deny_permission"
     DENY_PROVIDER = "deny_provider"
+    DENY_CLASSIFICATION = "deny_classification"
     DENY_CROSS_ORGANIZATION = "deny_cross_organization"
 
 
@@ -49,11 +52,34 @@ class TransmissionDecision(PrivacyModel):
 class ProviderTransmissionPolicy:
     def __init__(
         self,
-        approved_providers: frozenset[str] = frozenset({"openai"}),
+        allowed_classifications_by_provider: Mapping[str, frozenset[DataClassification]]
+        | None = None,
         *,
         allow_confidential_external_provider: bool = False,
     ) -> None:
-        self._approved_providers = approved_providers
+        configured = (
+            {
+                "openai": frozenset(
+                    {
+                        DataClassification.PUBLIC,
+                        DataClassification.INTERNAL,
+                        DataClassification.CONFIDENTIAL,
+                    }
+                )
+            }
+            if allowed_classifications_by_provider is None
+            else allowed_classifications_by_provider
+        )
+        copied: dict[str, frozenset[DataClassification]] = {}
+        for provider, classifications in configured.items():
+            if not provider or provider != provider.strip() or len(provider) > 50:
+                raise ValueError("Provider identifiers must be non-empty, bounded, and trimmed")
+            if not classifications or any(
+                not isinstance(item, DataClassification) for item in classifications
+            ):
+                raise ValueError("Provider classification sets must contain enum values")
+            copied[provider] = frozenset(classifications)
+        self._allowed_classifications_by_provider = MappingProxyType(copied)
         self._allow_confidential_external_provider = allow_confidential_external_provider
 
     def evaluate(self, provider: str, context: ProviderTransmissionContext) -> TransmissionDecision:
@@ -61,7 +87,8 @@ class ProviderTransmissionPolicy:
             return TransmissionDecision(
                 allowed=False, decision=PolicyDecision.DENY_CROSS_ORGANIZATION
             )
-        if provider not in self._approved_providers:
+        allowed_classifications = self._allowed_classifications_by_provider.get(provider)
+        if allowed_classifications is None:
             return TransmissionDecision(allowed=False, decision=PolicyDecision.DENY_PROVIDER)
         if not context.organization_allows_provider:
             return TransmissionDecision(allowed=False, decision=PolicyDecision.DENY_ORGANIZATION)
@@ -69,6 +96,8 @@ class ProviderTransmissionPolicy:
             return TransmissionDecision(allowed=False, decision=PolicyDecision.DENY_PERMISSION)
         if context.data_classification is DataClassification.RESTRICTED:
             return TransmissionDecision(allowed=False, decision=PolicyDecision.DENY_RESTRICTED)
+        if context.data_classification not in allowed_classifications:
+            return TransmissionDecision(allowed=False, decision=PolicyDecision.DENY_CLASSIFICATION)
         if context.data_classification is DataClassification.CONFIDENTIAL and not (
             context.confidential_external_allowed or self._allow_confidential_external_provider
         ):

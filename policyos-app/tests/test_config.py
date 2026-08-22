@@ -1,5 +1,5 @@
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from app.core.config import Settings
 
@@ -42,6 +42,69 @@ def test_openai_resilience_settings_are_bounded() -> None:
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None, openai_max_retries=11)
+
+
+def test_gemini_settings_are_bounded_and_secret_wrapped() -> None:
+    settings = Settings(
+        _env_file=None,
+        ai_provider="gemini",
+        gemini_api_key="synthetic-secret",
+        gemini_model="gemini-3.7-flash",
+        gemini_timeout_seconds=12,
+        gemini_max_retries=3,
+        gemini_retry_backoff_seconds=0.25,
+    )
+
+    assert isinstance(settings.gemini_api_key, SecretStr)
+    assert settings.gemini_model == "gemini-3.7-flash"
+    assert settings.gemini_timeout_seconds == 12
+    assert settings.gemini_max_retries == 3
+    assert settings.gemini_retry_backoff_seconds == 0.25
+    assert "synthetic-secret" not in repr(settings)
+    assert "gemini_api_key" not in settings.model_dump()
+
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            ai_provider="gemini",
+            gemini_api_key="synthetic-secret",
+            gemini_model="gemini-3.7-flash",
+            gemini_max_retries=11,
+        )
+
+
+@pytest.mark.parametrize(
+    ("api_key", "model"),
+    [
+        (None, "gemini-3.7-flash"),
+        (" synthetic-secret", "gemini-3.7-flash"),
+        ("synthetic-secret ", "gemini-3.7-flash"),
+        ("synthetic-secret", None),
+        ("synthetic-secret", " gemini-3.7-flash"),
+        ("synthetic-secret", "gemini-3.7-flash "),
+    ],
+)
+def test_gemini_rejects_missing_or_untrimmed_identity(
+    api_key: str | None, model: str | None
+) -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            ai_provider="gemini",
+            gemini_api_key=api_key,
+            gemini_model=model,
+        )
+
+
+def test_gemini_rejects_ambient_google_api_key() -> None:
+    with pytest.raises(ValidationError, match="sole credential owner"):
+        Settings(
+            _env_file=None,
+            ai_provider="gemini",
+            gemini_api_key="synthetic-secret",
+            google_api_key="ambiguous-secret",
+            gemini_model="gemini-3.7-flash",
+        )
 
 
 def test_secure_ingestion_settings_are_bounded() -> None:

@@ -139,6 +139,45 @@ def test_confidential_requires_explicit_policy_and_restricted_is_blocked() -> No
     assert restricted.decision is PolicyDecision.DENY_RESTRICTED
 
 
+def test_gemini_allows_only_public_classification() -> None:
+    policy = ProviderTransmissionPolicy(
+        {"gemini": frozenset({DataClassification.PUBLIC})},
+        allow_confidential_external_provider=True,
+    )
+
+    assert policy.evaluate("gemini", context(DataClassification.PUBLIC)).allowed
+    for classification in (DataClassification.INTERNAL, DataClassification.CONFIDENTIAL):
+        decision = policy.evaluate("gemini", context(classification, confidential_allowed=True))
+        assert decision.decision is PolicyDecision.DENY_CLASSIFICATION
+    restricted = policy.evaluate("gemini", context(DataClassification.RESTRICTED))
+    assert restricted.decision is PolicyDecision.DENY_RESTRICTED
+
+
+def test_provider_classification_mapping_is_copied_and_immutable() -> None:
+    configured = {"gemini": frozenset({DataClassification.PUBLIC})}
+    policy = ProviderTransmissionPolicy(configured)
+    configured["gemini"] = frozenset({DataClassification.INTERNAL})
+
+    assert policy.evaluate("gemini", context(DataClassification.PUBLIC)).allowed
+    with pytest.raises(TypeError):
+        policy._allowed_classifications_by_provider["gemini"] = frozenset(  # type: ignore[index]
+            {DataClassification.INTERNAL}
+        )
+
+
+@pytest.mark.parametrize("provider", ["", " gemini", "gemini ", "g" * 51])
+def test_provider_classification_mapping_rejects_invalid_provider_ids(provider: str) -> None:
+    with pytest.raises(ValueError, match="Provider identifiers"):
+        ProviderTransmissionPolicy({provider: frozenset({DataClassification.PUBLIC})})
+
+
+def test_provider_classification_mapping_rejects_empty_or_untyped_sets() -> None:
+    with pytest.raises(ValueError, match="classification sets"):
+        ProviderTransmissionPolicy({"gemini": frozenset()})
+    with pytest.raises(ValueError, match="classification sets"):
+        ProviderTransmissionPolicy({"gemini": frozenset({"public"})})  # type: ignore[arg-type]
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("transmission_context", "decision"),

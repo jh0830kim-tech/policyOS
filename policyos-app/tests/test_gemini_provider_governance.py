@@ -73,3 +73,29 @@ def test_adr136_defines_exact_provider_classification_denial() -> None:
     assert "shared classification ceiling" in environment
     assert "Provider-specific immutable classification sets" in security
     assert "Treat `deny_classification` as the expected result" in runbook
+
+
+def test_gemini_config_and_privacy_contracts_are_implemented_without_adapter() -> None:
+    config = _read("app/core/config.py")
+    privacy = _read("app/ai/privacy.py")
+    environment = _read("docs/07_DEVOPS/ENVIRONMENT.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for phrase in (
+        "gemini_api_key: SecretStr",
+        "google_api_key: SecretStr",
+        "gemini_model: str | None",
+        '"fake", "disabled", "openai", "gemini"',
+        "GEMINI_API_KEY is the sole credential owner",
+    ):
+        assert phrase in config
+    for phrase in (
+        'DENY_CLASSIFICATION = "deny_classification"',
+        "allowed_classifications_by_provider",
+        "MappingProxyType",
+    ):
+        assert phrase in privacy
+    assert "Gemini config/privacy public-contract implementation" in environment
+    assert "Gemini config/privacy contract security boundary" in security
+    assert not (ROOT / "app/ai/providers/gemini.py").exists()
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
