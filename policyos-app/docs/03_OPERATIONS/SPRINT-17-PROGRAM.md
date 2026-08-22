@@ -262,3 +262,15 @@ and the single structured-output `response_format` container to one exact array 
 live probe requires separate approval and must stop after exactly one call. Endpoint, revision,
 model, schema, classification, credential, retry, and fallback substitutions are prohibited. This
 gate adds no public contract, persistence, schema, or migration `20260808_0025`.
+
+## Gemini request-wire and safe diagnostic correction gate
+
+**Status: Implemented / Validated, Pending Review.** Network-free tests prove an exact one-element
+`response_format` array, unchanged endpoint/revision/model/schema facts, and closed private
+diagnostics for HTTP 400 and 422. The adapter recognizes only the ADR-139 provider-status allowlist
+and collapses all missing, malformed, oversized, case-substituted, or unknown values to
+`unclassified` without retaining provider content.
+
+Public error and retry semantics remain unchanged. Credential use, provider traffic, a follow-up
+probe, public contracts, persistence, schema, and migration `20260808_0025` remain outside this
+gate. A single live probe still requires separate explicit approval after authoritative CI.

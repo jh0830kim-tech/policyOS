@@ -1604,3 +1604,16 @@ The next network-free correction changes only `response_format` to one exact arr
 separately approved probe keeps the fixed origin, `/v1beta/interactions`, revision header, model,
 schema, public classification, retry zero, and fallback zero, and stops after one call regardless
 of result. No schema or migration `20260808_0025` is introduced.
+
+## Gemini request-wire correction security evidence
+
+The adapter now places exactly one governed structured-output object inside the private
+`response_format` array and changes no endpoint, revision, model, schema, classification,
+credential, timeout, retry, fallback, storage, background, tool, history, redirect, proxy, or
+cleanup boundary.
+
+HTTP 400 and 422 diagnostics contain only a closed status-and-reason enum. Provider bodies,
+messages, details, field paths, arbitrary statuses, prompts, schemas, credentials, and raw
+responses are discarded and cannot enter public errors, logs, audit, persistence, or snapshots.
+Unknown and untrusted values collapse to `unclassified`. This correction is credential-free and
+network-free and adds no public contract, schema, or migration `20260808_0025`.

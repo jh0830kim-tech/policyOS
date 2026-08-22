@@ -1510,6 +1510,19 @@ The adapter correction and any second one-call smoke remain separate gates. No s
 `20260808_0025`, fallback, broader classification, production enablement, deployment, tag, or
 release is introduced.
 
+## Sprint 17 Gemini request-wire and safe diagnostic correction
+
+**Status: Implemented / Validated, Pending Review.** The network-free adapter sends the existing
+single structured-output format as one exact `response_format` array element and keeps the fixed
+origin, `/v1beta/interactions`, `Api-Revision: 2026-05-20`, model, schema, public-only ceiling,
+storage/background denial, and retry/fallback ownership unchanged.
+
+HTTP 400 and 422 retain their existing safe public semantics while a private closed category
+records only the status and an allowlisted request-rejection reason. Missing, malformed,
+oversized, case-substituted, or unknown provider status collapses to `unclassified`; raw provider
+content is discarded. No external call, public contract, persistence, schema, or migration
+`20260808_0025` is included.
+
 ## Sprint 17 Gemini response wire correction implementation
 
 **Status: Implemented / Validated, Pending Review.** The network-free adapter now accepts the

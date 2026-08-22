@@ -55,6 +55,16 @@ _ALLOWED_RESPONSE_FIELDS = frozenset(
     }
 )
 _ALLOWED_SERVICE_TIERS = frozenset({"deferred", "flex", "priority", "standard"})
+_ALLOWED_PROVIDER_ERROR_CODES = frozenset(
+    {
+        "FAILED_PRECONDITION",
+        "INVALID_ARGUMENT",
+        "OUT_OF_RANGE",
+        "RECITATION",
+        "SAFETY",
+        "SENSITIVE_INFORMATION",
+    }
+)
 _ALLOWED_STEP_FIELDS = frozenset({"content", "type"})
 _ALLOWED_CONTENT_FIELDS = frozenset({"text", "type"})
 _ALLOWED_USAGE_FIELDS = frozenset(
@@ -113,10 +123,43 @@ class _ResponseRejection(StrEnum):
     USAGE_VALUE = "usage_value"
 
 
+class _RequestRejection(StrEnum):
+    HTTP_400_INVALID_ARGUMENT = "request_http_400_invalid_argument"
+    HTTP_400_FAILED_PRECONDITION = "request_http_400_failed_precondition"
+    HTTP_400_OUT_OF_RANGE = "request_http_400_out_of_range"
+    HTTP_400_POLICY_BLOCKED = "request_http_400_policy_blocked"
+    HTTP_400_UNCLASSIFIED = "request_http_400_unclassified"
+    HTTP_422_INVALID_ARGUMENT = "request_http_422_invalid_argument"
+    HTTP_422_FAILED_PRECONDITION = "request_http_422_failed_precondition"
+    HTTP_422_OUT_OF_RANGE = "request_http_422_out_of_range"
+    HTTP_422_POLICY_BLOCKED = "request_http_422_policy_blocked"
+    HTTP_422_UNCLASSIFIED = "request_http_422_unclassified"
+
+
 class _GeminiInvalidResponseError(ModelGatewayError):
     def __init__(self, reason: _ResponseRejection, message: str) -> None:
         self.diagnostic_reason = reason.value
         super().__init__(ModelErrorCode.INVALID_RESPONSE, message, retryable=False)
+
+
+class _GeminiRequestRejectedError(ModelGatewayError):
+    def __init__(
+        self,
+        reason: _RequestRejection,
+        code: ModelErrorCode,
+        message: str,
+        *,
+        started: float,
+        retry_count: int,
+    ) -> None:
+        self.diagnostic_reason = reason.value
+        super().__init__(
+            code,
+            message,
+            retryable=False,
+            retry_count=retry_count,
+            latency_ms=max(0, int((perf_counter() - started) * 1000)),
+        )
 
 
 class GeminiInteractionsGateway:
@@ -245,11 +288,13 @@ class GeminiInteractionsGateway:
             "background": False,
             "input": model_input,
             "model": self._model,
-            "response_format": {
-                "mime_type": "application/json",
-                "schema": request.output_schema,
-                "type": "text",
-            },
+            "response_format": [
+                {
+                    "mime_type": "application/json",
+                    "schema": request.output_schema,
+                    "type": "text",
+                }
+            ],
             "store": False,
             "stream": False,
             "system_instruction": system_instruction,
@@ -593,19 +638,7 @@ def _map_http_error(
             True,
         )
     elif status in {400, 422}:
-        provider_code = _provider_error_code(response)
-        if provider_code in {"SAFETY", "RECITATION", "SENSITIVE_INFORMATION"}:
-            code, message, retryable = (
-                ModelErrorCode.POLICY_BLOCKED,
-                "Model provider blocked the request",
-                False,
-            )
-        else:
-            code, message, retryable = (
-                ModelErrorCode.INVALID_REQUEST,
-                "Model provider rejected the request",
-                False,
-            )
+        return _request_rejection_error(response, started, retry_count)
     else:
         code, message, retryable = ModelErrorCode.UNKNOWN, "Model provider failed", False
     return _timed_error(
@@ -631,7 +664,35 @@ def _provider_error_code(response: httpx.Response) -> str | None:
     if not isinstance(error, dict):
         return None
     code = error.get("status")
-    return code if isinstance(code, str) and 0 < len(code) <= 100 else None
+    return code if isinstance(code, str) and code in _ALLOWED_PROVIDER_ERROR_CODES else None
+
+
+def _request_rejection_error(
+    response: httpx.Response,
+    started: float,
+    retry_count: int,
+) -> ModelGatewayError:
+    provider_code = _provider_error_code(response)
+    if provider_code in {"SAFETY", "RECITATION", "SENSITIVE_INFORMATION"}:
+        reason = "policy_blocked"
+        code = ModelErrorCode.POLICY_BLOCKED
+        message = "Model provider blocked the request"
+    else:
+        reason = {
+            "FAILED_PRECONDITION": "failed_precondition",
+            "INVALID_ARGUMENT": "invalid_argument",
+            "OUT_OF_RANGE": "out_of_range",
+        }.get(provider_code, "unclassified")
+        code = ModelErrorCode.INVALID_REQUEST
+        message = "Model provider rejected the request"
+    rejection = _RequestRejection(f"request_http_{response.status_code}_{reason}")
+    return _GeminiRequestRejectedError(
+        rejection,
+        code,
+        message,
+        started=started,
+        retry_count=retry_count,
+    )
 
 
 def _retry_after(value: str | None) -> float | None:
