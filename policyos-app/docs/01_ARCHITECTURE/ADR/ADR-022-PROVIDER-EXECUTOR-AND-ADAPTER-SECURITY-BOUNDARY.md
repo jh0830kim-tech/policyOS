@@ -50,3 +50,14 @@ cost. Output and evidence remain bounded by existing execution models. The execu
 history or duplicate-prevention set and introduces no parallelism, worker, persistence, retry
 loop, or hidden timeout. Runtime orchestration, in-flight cooperative cancellation, broader
 provider adapters, durable idempotency, and CP6 synthesis remain deferred.
+
+## ADR-136 Gemini evaluation clarification
+
+Gemini model execution remains behind the provider-neutral gateway and does not change this
+executor or adapter authority boundary. Deployment configuration exclusively selects the provider
+and exact model; there is no response-driven substitution or cross-provider fallback. The initial
+Gemini ceiling is synthetic `public` data only, with request-scoped credential and client lifetime,
+SDK retry disabled, metadata-only audit, and local domain validation after structured output.
+
+The connectivity smoke is not provider enablement. ADR-136 adds no credential to a public contract,
+no stored interaction, no new executor authority, and no schema or migration `20260808_0025`.

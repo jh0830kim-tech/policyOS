@@ -74,3 +74,15 @@ Six operational agents, four deterministic work-package workflows, governed arti
 The governed Knowledge Platform release candidate is covered by a synthetic, network-free E2E flow from login and organization RBAC through combined internal RAG/fake MCP routing, cited evidence merge, conflict/gap and confidence assessment, eight-agent Chief Secretary orchestration, reviewable Work Package/artifact persistence, and safe API output. All fixture facts are explicitly fictional. Default CI forbids real OpenAI, remote MCP, and subprocess MCP calls.
 
 Release operation requires Alembic head `20260720_0013`, reviewed environment settings, backup/rollback, retention dry-run, legal-hold protection, privacy incident handling, and provider/MCP outage procedures. See `RELEASE_NOTES_v0.4.md` and `RUNBOOK.md`. Production pgvector/ANN, real government connectors, workers, Redis coordination, scheduled cleanup, SIEM integrations, and live staging verification remain deferred.
+
+## Post-Sprint 17 Gemini provider evaluation governance
+
+ADR-136 governs a disabled-by-default Gemini evaluation behind the existing provider-neutral model
+gateway. Its initial transmission ceiling is synthetic `public` data only. Exact deployment-owned
+provider, model, and credential configuration, request-scoped managed client lifetime, single-owner
+retry, structured-response validation, generic usage mapping, metadata-only audit, and a separately
+approved one-call live smoke are required before implementation can be enabled.
+
+The governance decision adds no application capability, provider traffic, production credential,
+schema, backfill, or migration `20260808_0025`. Internal or confidential Gemini use remains
+unapproved.

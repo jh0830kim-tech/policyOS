@@ -111,3 +111,17 @@ Connectors default disabled. Review timeout, retry, limits, cache, stale recover
 
 ## Provider configuration
 Provider configuration must reference deployment-managed secrets and allowlisted adapter types. Do not expose credentials, endpoints, MCP commands, or transport settings through the provider API. Live provider transports are opt-in and are not enabled by Checkpoint 3.
+
+## Gemini evaluation configuration governance
+
+Gemini remains disabled until its implementation gate is merged. When `AI_PROVIDER=gemini`,
+construction must require one exact non-empty `GEMINI_MODEL` and one explicitly injected
+`GEMINI_API_KEY`. The application must fail closed if `GOOGLE_API_KEY` is also present or if either
+required value is missing, blank, untrimmed, or ambiguous. Ambient credential discovery, default
+model selection, custom base URLs, environment proxy inheritance, and provider fallback are
+prohibited.
+
+The initial approved classification ceiling is synthetic `public` only. Automated tests stay
+network free. `RUN_GEMINI_LIVE_TESTS=1` is a temporary staging-only opt-in for one separately
+approved call with application and SDK retry disabled; it is intentionally absent from
+`.env.example`.

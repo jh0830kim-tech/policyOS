@@ -1504,3 +1504,16 @@ Base records, outbox, effect, lifecycle revision one, lifecycle head, logical re
 and transport receipt either commit in the facade-owned transaction or leave zero residue.
 External readers and Workers cannot observe the initial lifecycle before commit. This boundary
 adds no secret, authority, schema, backfill, dispatcher, or migration `20260808_0025`.
+
+## Gemini provider evaluation security boundary
+
+ADR-136 restricts initial Gemini evaluation to synthetic `public` data and exact deployment-owned
+provider/model/credential configuration. Internal, confidential, and restricted inputs are denied
+before client construction and network I/O. Ambient Google credential precedence, environment
+proxy inheritance, provider/model fallback, stored interaction history, tools, files, and SDK retry
+are prohibited.
+
+The API key, prompt, context, raw response, hidden reasoning, provider error detail, and thought
+signature cannot enter public contracts, persistence, audit, logs, errors, or snapshots. The
+request-scoped async client closes exactly once on every exit. Safe audit reuses bounded generic
+metadata; no schema, backfill, or migration `20260808_0025` is authorized.

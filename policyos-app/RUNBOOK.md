@@ -95,3 +95,19 @@ For connector rollout, confirm head `20260720_0014`, reviewed HTTPS origins, sec
 
 ## Knowledge provider operations
 Inspect /api/v1/providers and local health aggregation without invoking remote health checks. For failures, use correlation ID and minimized audit metadata. Do not log raw query/evidence/response or credentials. Authentication, policy, classification, and security failures must not be bypassed with fallback.
+
+## Gemini evaluation mode
+
+Gemini is not enabled by the connectivity smoke. After the ADR-136 implementation gate is merged,
+an approved staging operator may select `AI_PROVIDER=gemini`, inject one exact `GEMINI_MODEL` and
+`GEMINI_API_KEY`, and confirm that `GOOGLE_API_KEY` is absent. Initial use is restricted to a
+synthetic `public` request. Internal, confidential, and restricted content must not be transmitted.
+
+The separate live smoke requires temporary `RUN_GEMINI_LIVE_TESTS=1`, one call, application and SDK
+retry zero, no tools/history/storage, and safe output limited to provider/model identity, response
+ID, latency, and token counts. Never print or retain the key, prompt, raw response, hidden reasoning,
+or provider error body. Clear the opt-in and process credential after the check.
+
+For authentication, permission, policy-block, malformed-output, model-substitution, or timeout
+events, inspect only PolicyOS safe error codes and metadata audit. Disable Gemini rather than
+switching provider or model implicitly.
