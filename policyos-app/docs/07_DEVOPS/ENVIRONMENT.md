@@ -145,7 +145,7 @@ inputs retain `deny_restricted`, and the global confidential opt-in cannot widen
 
 ### Gemini pinned wire and validator governance
 
-The adapter uses only `https://generativelanguage.googleapis.com/v1beta2/interactions` with
+The adapter uses only `https://generativelanguage.googleapis.com/v1/interactions` with
 `Api-Revision: 2026-05-20`, non-streaming JSON, `store=false`, and `background=false`. Neither
 environment values nor responses select an endpoint or revision. The direct `jsonschema`
 dependency is reserved for bounded Draft 2020-12 request-schema compilation and local response
@@ -191,10 +191,14 @@ explicit approval.
 ### Gemini request-wire correction operation
 
 The adapter uses one exact structured-output `response_format` array element. The deployment does
-not select the container shape, endpoint, or revision: `/v1beta2/interactions` and
+not select the container shape, endpoint, or revision: `/v1/interactions` and
 `Api-Revision: 2026-05-20` remain private pinned constants. HTTP 400 and 422 expose only existing
 safe public errors plus one private closed request-rejection category; provider-controlled detail
 is neither logged nor persisted.
+
+HTTP 404 is a non-retryable `configuration_error` with private category
+`request_http_404_unclassified`. It does not identify path, model, or account resource as the sole
+cause, and provider-controlled detail remains unavailable.
 
 This implementation remains network free. Do not set a real credential or run a provider probe as
 part of validation. A later synthetic-public probe requires separate one-call approval, retry and

@@ -95,7 +95,7 @@ def test_adr137_pins_wire_revision_and_local_schema_validation() -> None:
     adapter = _read("app/ai/providers/gemini_interactions.py")
     project = _read("pyproject.toml")
     for phrase in (
-        '"/v1beta2/interactions"',
+        '"/v1/interactions"',
         '"2026-05-20"',
         '"background": False',
         '"store": False',
@@ -231,7 +231,7 @@ def test_adr139_request_wire_correction_is_single_variable_and_private() -> None
         "request_http_422_unclassified",
         "_ALLOWED_PROVIDER_ERROR_CODES",
         '"response_format": [',
-        '"/v1beta2/interactions"',
+        '"/v1/interactions"',
         '"2026-05-20"',
     ):
         assert phrase in adapter
@@ -245,11 +245,15 @@ def test_adr139_request_wire_correction_is_single_variable_and_private() -> None
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
-def test_adr140_path_correction_is_literal_and_network_free() -> None:
+def test_adr141_path_and_http_404_correction_is_literal_and_network_free() -> None:
     adapter = _read("app/ai/providers/gemini_interactions.py")
     tests = _read("tests/test_gemini_interactions.py")
-    assert '_PATH = "/v1beta2/interactions"' in adapter
+    assert '_PATH = "/v1/interactions"' in adapter
     assert '_PATH = "/v1beta/interactions"' not in adapter
+    assert '_PATH = "/v1beta2/interactions"' not in adapter
+    assert "request_http_404_unclassified" in adapter
+    assert "Configured model is unavailable" not in adapter
     assert '"2026-05-20"' in adapter
-    assert "generativelanguage.googleapis.com/v1beta2/interactions" in tests
+    assert "generativelanguage.googleapis.com/v1/interactions" in tests
+    assert "test_http_404_is_configuration_error_without_model_only_provenance" in tests
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

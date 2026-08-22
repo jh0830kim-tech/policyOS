@@ -1512,9 +1512,18 @@ release is introduced.
 
 ## Sprint 17 Gemini canonical path and HTTP-404 provenance governance
 
-**Status: Governed / Pending Review.** ADR-141 assigns one literal stable `/v1/interactions` path
+**Status: Governed / Merged.** ADR-141 assigns one literal stable `/v1/interactions` path
 and keeps HTTP 404 unclassified between path, model, and account resource. The next correction and
 separately approved probe change only the path. No schema or migration `20260808_0025` is required.
+
+### Gemini canonical path and HTTP-404 diagnostic correction
+
+**Status: Implemented / Validated, Pending Review.** The network-free adapter and tests now pin
+only `/v1/interactions`. HTTP 404 remains a non-retryable configuration failure with private closed
+category `request_http_404_unclassified` and no model-only attribution. Origin, revision, request
+body, classification, retry, fallback, cleanup, and local validation remain unchanged. No
+credential, provider traffic, public contract, persistence, schema, or migration `20260808_0025`
+is included.
 
 ## Sprint 17 Gemini request-wire and safe diagnostic correction
 

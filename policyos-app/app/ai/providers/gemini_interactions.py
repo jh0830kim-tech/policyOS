@@ -31,7 +31,7 @@ from app.ai.privacy import (
 )
 
 _ORIGIN = "https://generativelanguage.googleapis.com"
-_PATH = "/v1beta2/interactions"
+_PATH = "/v1/interactions"
 _API_REVISION = "2026-05-20"
 _MAX_SCHEMA_BYTES = 65_536
 _MAX_SCHEMA_DEPTH = 32
@@ -124,6 +124,7 @@ class _ResponseRejection(StrEnum):
 
 
 class _RequestRejection(StrEnum):
+    HTTP_404_UNCLASSIFIED = "request_http_404_unclassified"
     HTTP_400_INVALID_ARGUMENT = "request_http_400_invalid_argument"
     HTTP_400_FAILED_PRECONDITION = "request_http_400_failed_precondition"
     HTTP_400_OUT_OF_RANGE = "request_http_400_out_of_range"
@@ -614,10 +615,12 @@ def _map_http_error(
             False,
         )
     elif status == 404:
-        code, message, retryable = (
+        return _GeminiRequestRejectedError(
+            _RequestRejection.HTTP_404_UNCLASSIFIED,
             ModelErrorCode.CONFIGURATION,
-            "Configured model is unavailable",
-            False,
+            "Configured Gemini resource is unavailable",
+            started=started,
+            retry_count=retry_count,
         )
     elif status == 429:
         code, message, retryable = (
