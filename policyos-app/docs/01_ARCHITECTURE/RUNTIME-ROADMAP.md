@@ -1510,6 +1510,12 @@ The adapter correction and any second one-call smoke remain separate gates. No s
 `20260808_0025`, fallback, broader classification, production enablement, deployment, tag, or
 release is introduced.
 
+## Sprint 17 Gemini canonical path and HTTP-404 provenance governance
+
+**Status: Governed / Pending Review.** ADR-141 assigns one literal stable `/v1/interactions` path
+and keeps HTTP 404 unclassified between path, model, and account resource. The next correction and
+separately approved probe change only the path. No schema or migration `20260808_0025` is required.
+
 ## Sprint 17 Gemini request-wire and safe diagnostic correction
 
 **Status: Implemented / Validated, Pending Review.** The network-free adapter sends the existing

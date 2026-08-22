@@ -193,3 +193,6 @@ and fallback remain fixed. A live probe still requires separate one-call approva
 ADR-140 assigns the next evaluation profile one literal `/v1beta2/interactions` path. The path-only
 correction preserves the revision header, request body, model, schema, classification, retry, and
 fallback boundaries and still requires separate one-call approval.
+
+ADR-141 additionally requires a single stable path and prohibits model-only attribution of HTTP
+404 without authoritative provenance.
