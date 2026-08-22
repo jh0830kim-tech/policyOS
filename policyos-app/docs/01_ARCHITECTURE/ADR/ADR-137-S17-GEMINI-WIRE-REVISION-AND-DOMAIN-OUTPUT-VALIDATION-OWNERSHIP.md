@@ -110,3 +110,11 @@ allowlist adds only documented bounded `service_tier`; it is validated and disca
 The first approved live smoke returned public `invalid_response`. ADR-138 owns the subsequent
 content-free diagnostic correction; it does not retroactively accept the failed response or
 authorize another call.
+
+## ADR-139 request-wire probe amendment
+
+The second approved smoke returned public `invalid_request`. ADR-139 distinguishes provider HTTP
+400 and 422 only in a closed private category and governs one subsequent single-variable probe.
+That network-free correction represents the existing single structured-output format as an exact
+one-element top-level array while keeping `/v1beta/interactions`, `Api-Revision: 2026-05-20`, the
+model, schema, retry, fallback, and all output-validation ownership unchanged.

@@ -1519,3 +1519,17 @@ public non-retryable `invalid_response` code and add only an adapter-private bou
 
 No credential, external call, public contract, persistence, schema, migration `20260808_0025`,
 fallback, deployment, tag, or release is included.
+
+## Sprint 17 Gemini request-rejection diagnostic and wire-probe governance
+
+**Status: Governed / Pending Review.** The corrected one-call synthetic-public smoke reached the
+provider and failed closed with public non-retryable `invalid_request`. ADR-139 preserves that
+public boundary while allowing only a private closed category that distinguishes HTTP 400 from 422
+and an exact provider-status allowlist. Raw bodies, messages, field paths, prompts, schemas,
+credentials, and arbitrary provider strings remain unavailable.
+
+The network-free correction changes only `response_format` to an exact one-element array. The
+fixed `/v1beta/interactions` path, `Api-Revision: 2026-05-20`, model, schema, public-only ceiling,
+retry zero, and fallback zero remain unchanged for a separately approved single follow-up probe.
+No persistence, schema, migration `20260808_0025`, production enablement, deployment, tag, or
+release is introduced.

@@ -95,3 +95,11 @@ internal or confidential transmission, fallback, deployment, tag, and release re
 - Expose provider field values or validation traces through public errors or audit.
 - Retry the failed smoke automatically or switch model, endpoint, revision, or provider.
 - Add a database diagnostics table or migration `20260808_0025`.
+
+## ADR-139 request-rejection diagnostic boundary
+
+The corrected response parser's next approved smoke reached the provider but returned public
+`invalid_request`. ADR-139 owns the separate request-stage diagnostic. It may distinguish HTTP 400
+from 422 and a bounded provider-status allowlist, but it cannot reuse response-structure categories,
+retain provider content, or authorize retry. The next probe changes only the request
+`response_format` container to one element and remains a separately approved one-call operation.

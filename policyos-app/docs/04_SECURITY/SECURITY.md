@@ -1587,3 +1587,20 @@ prompt, response, credential, schema fragment, hidden reasoning, or arbitrary te
 
 The correction is credential-free and network-free. It changes no public error, classification,
 audit, persistence, schema, retry, fallback, or migration boundary.
+
+## Gemini request-rejection diagnostic and single-probe security boundary
+
+ADR-139 keeps provider HTTP 400 and 422 non-retryable and publicly bounded to `invalid_request`,
+except for the existing exact policy-block statuses. One private content-free category may encode
+only the HTTP status and a closed allowlisted reason. Missing, malformed, oversized, differently
+cased, or unknown provider status values collapse to `unclassified`.
+
+Provider bodies, messages, details, field paths, prompts, structured context, schemas, credentials,
+model input, raw responses, and arbitrary strings remain excluded from diagnostics, public errors,
+logs, audit, persistence, and snapshots. The category cannot authorize retry, fallback, acceptance,
+or another call.
+
+The next network-free correction changes only `response_format` to one exact array element. A
+separately approved probe keeps the fixed origin, `/v1beta/interactions`, revision header, model,
+schema, public classification, retry zero, and fallback zero, and stops after one call regardless
+of result. No schema or migration `20260808_0025` is introduced.
