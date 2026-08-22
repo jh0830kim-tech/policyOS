@@ -31,7 +31,7 @@ from app.ai.privacy import (
 )
 
 _ORIGIN = "https://generativelanguage.googleapis.com"
-_PATH = "/v1beta/interactions"
+_PATH = "/v1beta2/interactions"
 _API_REVISION = "2026-05-20"
 _MAX_SCHEMA_BYTES = 65_536
 _MAX_SCHEMA_DEPTH = 32

@@ -116,7 +116,7 @@ async def test_pinned_wire_maps_valid_structured_response_and_usage() -> None:
     assert transport.close_count == 1
 
     sent = transport.requests[0]
-    assert sent.url == "https://generativelanguage.googleapis.com/v1beta/interactions"
+    assert sent.url == "https://generativelanguage.googleapis.com/v1beta2/interactions"
     assert sent.headers["api-revision"] == "2026-05-20"
     assert sent.headers["x-goog-api-key"] == "synthetic-key"
     body = json.loads(sent.content)
