@@ -443,3 +443,10 @@ Credential lease contracts must bind the exact connector, destination, adapter c
 envelope, effect idempotency identity, permits, scope, attempt, classification, and lifetime
 without secret material or inference. Existing lifecycle payload evidence remains sufficient;
 ADR-124 adds no provider-operation table or migration `20260808_0025`.
+
+## ADR-135 active-submission clarification
+
+The CP9 active-transaction boundary preserves the initial atomicity required here. A deliverable
+submission carries the complete caller-supplied `RuntimeEffectAtomicWriteSet`; a generic outbox
+revision alone is not dispatchable work and cannot be converted later. Local-only submissions
+carry no outbox. Execution projection and effect-delivery lifecycle remain separate results.

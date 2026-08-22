@@ -101,3 +101,10 @@ effect, or credential handling.
 The pure binder receives request-scoped expected integration facts through the facade facts value
 and binds them into the trusted command or query before idempotency. It performs no database I/O;
 the facade later re-reads and locks the exact persisted binding inside its outer transaction.
+
+## ADR-135 deliverable-stage clarification
+
+The submission stage distinguishes a local-only base write set with no outbox from a deliverable
+`RuntimeEffectAtomicWriteSet`. Active Persistence stages exact base and initial-effect facts in the
+facade-owned session without nested transaction control. A base outbox without its caller-supplied
+initial-effect aggregate fails closed; no later dispatcher or inference is permitted.

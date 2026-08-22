@@ -1448,3 +1448,12 @@ entrypoint/runbook, controlled deployment and operations drill remain separately
 next gated activity is a local validation sprint. The single Alembic head remains
 `20260808_0024`; migration `20260808_0025`, new schema, dynamic destinations, another adapter
 family, tag, and release remain absent.
+
+## Sprint 17 outbox-to-effect atomic handoff correction
+
+**Status: Governed / Pending Review.** ADR-135 restores the ADR-086 atomic initial-effect model at
+the Runtime API boundary. A deliverable submission carries the complete caller-supplied
+`RuntimeEffectAtomicWriteSet`; a local-only submission has no outbox, and a generic outbox without
+initial-effect facts fails closed. No dispatcher, inferred conversion, combined status, schema,
+backfill, or migration `20260808_0025` is introduced. Contract and persistence correction gates
+must merge before vertical validation resumes.
