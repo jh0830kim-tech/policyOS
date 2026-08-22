@@ -156,6 +156,11 @@ change public model-gateway contracts, add persistence, or enable live traffic. 
 internal or confidential Gemini transmission, provider retention terms, production credentials,
 quota, billing, deployment, tag, or release remains a separate governance action.
 
+ADR-137 closes the deferred wire-revision and authoritative local output-validation ownership.
+The implementation uses the pinned REST `steps` profile and a direct Draft 2020-12 `jsonschema`
+validator; it does not add a provider SDK, public callback, Pydantic type carriage, schema
+persistence, or downstream-only acceptance.
+
 ## Rejected alternatives
 
 - Add Gemini to the generic allowlist and inherit internal-data eligibility.

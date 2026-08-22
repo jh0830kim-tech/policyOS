@@ -1470,3 +1470,16 @@ owner of the active session and root transaction; Persistence reads no clock and
 commit, roll back, close, or replace that transaction. PostgreSQL atomicity evidence covers
 rollback residue zero and Worker visibility only after commit. Resumed vertical validation remains
 the next gate.
+
+## Sprint 17 Gemini wire and output-validation governance
+
+ADR-137 pins the Gemini REST adapter to `/v1beta/interactions`, `Api-Revision: 2026-05-20`, the
+typed `steps` response profile, and explicit `store=false`/`background=false`. Wire drift,
+legacy output shapes, tools, stateful history, redirects, proxy inheritance, and provider fallback
+fail closed.
+
+The adapter implementation must directly depend on Draft 2020-12 `jsonschema`, validate a bounded
+caller schema before client construction, and validate one bounded JSON object before returning a
+provider-neutral response. Provider enforcement and downstream artifact validation are not the
+authoritative adapter gate. This adds no database schema or migration `20260808_0025`; Gemini
+remains disabled until the separate implementation and review gate completes.

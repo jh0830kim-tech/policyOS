@@ -116,3 +116,11 @@ Treat `deny_classification` as the expected result when an approved provider rec
 its explicit ceiling. Do not reclassify data, enable confidential transmission, or switch provider
 to bypass that result. Gemini remains synthetic-public-only even if the OpenAI confidential opt-in
 is enabled.
+
+### Gemini wire-drift response
+
+The approved adapter profile is `/v1beta/interactions` with `Api-Revision: 2026-05-20` and typed
+`steps`. An unknown response field, legacy `outputs`, multiple output items, unsupported content,
+or local Draft 2020-12 schema failure is a safe `invalid_response`, not an invitation to retry,
+switch model, relax validation, or parse provider messages. Disable Gemini and review the wire
+contract through governance before accepting a new revision.
