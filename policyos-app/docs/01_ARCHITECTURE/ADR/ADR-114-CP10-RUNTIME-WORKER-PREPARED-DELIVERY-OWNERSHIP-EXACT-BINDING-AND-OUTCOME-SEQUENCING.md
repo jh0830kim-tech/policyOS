@@ -296,3 +296,9 @@ For the Sprint 16 connector, the closed invokable revalidation result owns one e
 connector materialization request containing the prepared invocation and the exact issued opaque
 credential lease facts. The Worker neither reconstructs nor reacquires them. Its managed delivery
 factory accepts that request exactly once; blocked results contain no request and enter no Adapter.
+
+## ADR-135 initial-effect handoff clarification
+
+The Worker begins only from an exact durable `ENQUEUED` lifecycle head. It never consumes a
+generic outbox revision or constructs the initial effect. The API transaction owns atomic creation
+of the caller-supplied base and initial-effect aggregate; selection starts only after commit.

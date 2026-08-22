@@ -162,3 +162,15 @@ controlled deployment, observation/rollback operations drill, tag, and release r
 operator decisions. The next product step is a separately approved validation sprint using the
 bounded local vertical slice. The Alembic head remains the single `20260808_0024` head; migration
 `20260808_0025` is absent and no new authority, schema, or persistence owner is introduced.
+
+## ADR-135 atomic handoff correction gate
+
+The local validation sprint exposed a contract gap rather than a schema gap. A deliverable API
+submission must stage one exact caller-supplied `RuntimeEffectAtomicWriteSet` in the facade-owned
+transaction so base records, outbox, effect, `ENQUEUED` lifecycle, head, and transport receipt
+commit or roll back together. Generic outbox rows are evidence only and are not converted or
+backfilled. Execution projection and delivery lifecycle remain separate.
+
+Public-contract correction, active-persistence PostgreSQL evidence, and resumed vertical
+validation are separate gates. Live credentials, provider traffic, deployment, schema changes,
+and migration `20260808_0025` remain prohibited.

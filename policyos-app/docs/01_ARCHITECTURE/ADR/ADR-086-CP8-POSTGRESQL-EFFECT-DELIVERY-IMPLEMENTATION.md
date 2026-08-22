@@ -327,3 +327,10 @@ row or provider search. Logical connector result references remain a distinct pa
 This mapping creates no independently queryable provider-operation aggregate, connector
 provisioning table, or credential-use ledger. The four CP8 tables remain sufficient and no
 migration `20260808_0025`, backfill, normalization, or deduplication is approved.
+
+## ADR-135 active-transaction clarification
+
+The facade-owned transaction stages the existing base write set and exact initial-effect aggregate
+together through the same `AsyncSession` and root transaction. It may share bounded persistence
+internals but cannot call the fresh-session transaction owner or begin a second transaction.
+Generic outbox rows are never backfilled or consumed, and the existing tables remain sufficient.

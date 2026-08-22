@@ -316,3 +316,47 @@ def test_sprint17_closeout_is_complete_with_deployment_deferred() -> None:
         assert phrase in program
     assert "is not production enablement" in security
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr135_governs_atomic_outbox_to_effect_handoff_without_new_schema() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-135-S17-RUNTIME-OUTBOX-TO-EFFECT-INITIALIZATION-OWNERSHIP-AND-"
+        "ATOMIC-HANDOFF.md"
+    )
+    related = (
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-085-CP8-OUTBOX-PACKAGE-PLACEMENT-AND-EFFECT-DELIVERY-SEMANTICS.md"
+        ),
+        _read("docs/01_ARCHITECTURE/ADR/ADR-086-CP8-POSTGRESQL-EFFECT-DELIVERY-IMPLEMENTATION.md"),
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-092-CP9-RUNTIME-LOCAL-FACT-BINDING-AND-TRANSACTION-INTEGRATION.md"
+        ),
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-114-CP10-RUNTIME-WORKER-PREPARED-DELIVERY-OWNERSHIP-EXACT-"
+            "BINDING-AND-OUTCOME-SEQUENCING.md"
+        ),
+    )
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for phrase in (
+        "No dispatcher or inferred conversion",
+        "RuntimeEffectAtomicWriteSet",
+        "facade remains the sole owner",
+        "zero local effect mutation",
+        "no committed outbox-to-effect crash window",
+        "Execution projection and effect-delivery lifecycle remain separate",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in adr
+    for text in related:
+        assert "ADR-135" in text
+    assert "Sprint 17 outbox-to-effect atomic handoff correction" in roadmap
+    assert "ADR-135 atomic handoff correction gate" in program
+    assert "Sprint 17 atomic outbox-to-effect handoff security boundary" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

@@ -1470,3 +1470,14 @@ contract, log, audit fact, error, or stored record.
 identity, secret-manager vendor, endpoint activation, provider traffic, process deployment,
 operations drill, tag, and release require separate authorization. The closeout adds no authority,
 schema, backfill, or migration `20260808_0025`; the single head remains `20260808_0024`.
+
+## Sprint 17 atomic outbox-to-effect handoff security boundary
+
+ADR-135 prohibits reconstructing a deliverable effect from an older generic outbox row. One
+deliverable submission carries exact caller-supplied effect identity, envelope, lifecycle,
+receipt, tenant, organization, classification, lineage, revision, digest, and time facts and
+stages them with the base write set and transport receipt in the facade-owned transaction.
+
+No dispatcher, consumption cursor, hidden UUID, hidden clock, digest generation, latest-row
+selection, combined status, backfill, schema, or migration `20260808_0025` is authorized. Worker
+access begins only from the committed lifecycle head; rollback leaves no partial residue.
