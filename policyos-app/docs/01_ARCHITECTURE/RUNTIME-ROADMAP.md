@@ -1523,6 +1523,18 @@ oversized, case-substituted, or unknown provider status collapses to `unclassifi
 content is discarded. No external call, public contract, persistence, schema, or migration
 `20260808_0025` is included.
 
+## Sprint 17 Gemini API-version path governance
+
+**Status: Governed / Pending Review.** The single ADR-139 probe failed closed as HTTP 400 with an
+unclassified private request diagnostic. ADR-140 does not infer a rejected field. It assigns the
+next profile one literal `/v1beta2/interactions` path and prohibits dynamic version selection or
+fallback to `/v1beta/interactions`.
+
+The path is the only probe variable. Revision header, response-format array, model, schema,
+classification, retry, fallback, storage, background, and validation boundaries remain fixed. No
+credential, external call, public contract, persistence, schema, or migration `20260808_0025` is
+included.
+
 ## Sprint 17 Gemini response wire correction implementation
 
 **Status: Implemented / Validated, Pending Review.** The network-free adapter now accepts the

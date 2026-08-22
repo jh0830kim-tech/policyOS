@@ -1617,3 +1617,14 @@ messages, details, field paths, arbitrary statuses, prompts, schemas, credential
 responses are discarded and cannot enter public errors, logs, audit, persistence, or snapshots.
 Unknown and untrusted values collapse to `unclassified`. This correction is credential-free and
 network-free and adds no public contract, schema, or migration `20260808_0025`.
+
+## Gemini API-version path security boundary
+
+ADR-140 permits one literal `/v1beta2/interactions` path only. Configuration, environment,
+callers, provider responses, redirects, and health results cannot select, substitute, negotiate,
+or fall back between API versions. The fixed origin and all credential, classification, timeout,
+retry, storage, background, proxy, and cleanup controls remain unchanged.
+
+The next probe changes no request content or diagnostic disclosure. Raw provider bodies, messages,
+prompts, schemas, and credentials remain excluded from logs, audit, persistence, and errors. No
+schema or migration `20260808_0025` is introduced.

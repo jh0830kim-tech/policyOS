@@ -461,3 +461,45 @@ def test_adr139_governs_safe_request_rejection_and_one_variable_probe() -> None:
     assert "Gemini request-rejection safe diagnostic and wire-probe governance gate" in program
     assert "Gemini request-rejection diagnostic and single-probe security boundary" in security
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr140_governs_one_literal_api_version_path_probe() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-140-S17-GEMINI-INTERACTIONS-API-VERSION-PATH-OWNERSHIP-AND-SINGLE-"
+        "VARIABLE-PROBE.md"
+    )
+    related = (
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-136-S17-GEMINI-PROVIDER-MODEL-CREDENTIAL-AND-EVALUATION-OWNERSHIP.md"
+        ),
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-137-S17-GEMINI-WIRE-REVISION-AND-DOMAIN-OUTPUT-VALIDATION-OWNERSHIP.md"
+        ),
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-139-S17-GEMINI-REQUEST-REJECTION-SAFE-DIAGNOSTIC-AND-WIRE-PROBE-"
+            "GOVERNANCE.md"
+        ),
+    )
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for phrase in (
+        "`/v1beta2/interactions`",
+        "`Api-Revision: 2026-05-20`",
+        "change only the path",
+        "provider fallback zero",
+        "stop after the first result",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in adr
+    for text in related:
+        assert "ADR-140" in text
+    assert "Sprint 17 Gemini API-version path governance" in roadmap
+    assert "Gemini API-version path governance gate" in program
+    assert "Gemini API-version path security boundary" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
