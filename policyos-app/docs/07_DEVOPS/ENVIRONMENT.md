@@ -125,3 +125,8 @@ The initial approved classification ceiling is synthetic `public` only. Automate
 network free. `RUN_GEMINI_LIVE_TESTS=1` is a temporary staging-only opt-in for one separately
 approved call with application and SDK retry disabled; it is intentionally absent from
 `.env.example`.
+
+Provider selection does not imply a shared classification ceiling. Deployment configuration cannot
+widen Gemini beyond synthetic `public`, and the existing global confidential opt-in applies only
+after the selected provider's immutable classification set allows that classification. The initial
+Gemini implementation reuses bounded `httpx`; it adds no provider SDK or ambient retry layer.

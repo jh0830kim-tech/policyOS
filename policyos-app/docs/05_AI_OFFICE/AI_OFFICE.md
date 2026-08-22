@@ -65,3 +65,8 @@ or hidden reasoning.
 Gemini input, output, cached-input, and total tokens reuse the generic usage fields. Thinking or
 tool-use tokens remain represented only in the provider total and are not inferred, priced, or
 stored separately. Provider audit remains metadata only.
+
+The transmission policy uses immutable provider-specific classification sets. Gemini has only
+`public`; OpenAI retains `public` and `internal` plus its existing separately governed
+confidential opt-in. An approved provider receiving data outside its set records
+`deny_classification` before any client or network operation.

@@ -31,7 +31,10 @@ def test_adr136_governs_gemini_without_schema_or_traffic() -> None:
 
     for rejected in (
         "Add Gemini to the generic allowlist and inherit internal-data eligibility",
+        "Reuse `deny_provider`, `deny_confidential`, or `deny_restricted`",
+        "Let a global confidential opt-in widen Gemini",
         "Let the SDK discover whichever Google API key is present",
+        "Add a provider SDK when the existing bounded `httpx` transport is sufficient",
         "Enable SDK retry in addition to PolicyOS application retry",
         "Reuse the manual connectivity smoke as application or production authorization",
     ):
@@ -43,3 +46,30 @@ def test_adr136_governs_gemini_without_schema_or_traffic() -> None:
     assert "`GOOGLE_API_KEY` is also present" in environment
     assert "synthetic `public` request" in runbook
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr136_defines_exact_provider_classification_denial() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-136-S17-GEMINI-PROVIDER-MODEL-CREDENTIAL-AND-EVALUATION-OWNERSHIP.md"
+    )
+    office = _read("docs/05_AI_OFFICE/AI_OFFICE.md")
+    environment = _read("docs/07_DEVOPS/ENVIRONMENT.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+    runbook = _read("RUNBOOK.md")
+
+    for phrase in (
+        "immutable explicit allowed-classification set",
+        "Gemini's set contains only `public`",
+        "`deny_classification`",
+        "global confidential opt-in cannot widen",
+        "existing `httpx` dependency instead of adding a Gemini SDK",
+        "`trust_env=False`",
+        "request-local exactly-once client close",
+    ):
+        assert phrase in adr
+
+    assert "immutable provider-specific classification sets" in office
+    assert "shared classification ceiling" in environment
+    assert "Provider-specific immutable classification sets" in security
+    assert "Treat `deny_classification` as the expected result" in runbook
