@@ -179,3 +179,11 @@ Do not print or persist a response to diagnose this boundary. Apply the network-
 correction and pass CI first; a second synthetic-public one-call smoke requires a new explicit
 approval. Provider fallback, model or revision substitution, broader classification, production
 enablement, schema changes, and migration `20260808_0025` remain prohibited.
+
+### Gemini response wire correction operation
+
+The network-free correction requires no environment changes. Run the focused adapter and
+governance tests without `GEMINI_API_KEY` and without `RUN_GEMINI_LIVE_TESTS`. Optional response
+metadata is validated locally and private diagnostic categories remain bounded and content-free.
+Do not use them to trigger retry or provider fallback. Any second live smoke requires a separate
+explicit approval.

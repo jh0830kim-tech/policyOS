@@ -200,3 +200,22 @@ def test_adr138_governs_optional_fields_usage_and_safe_diagnostics() -> None:
     assert "Gemini optional response metadata and safe diagnostic security boundary" in security
     assert "Gemini optional response and safe diagnostic governance" in environment
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr138_response_wire_correction_is_narrow_and_private() -> None:
+    adapter = _read("app/ai/providers/gemini_interactions.py")
+
+    for phrase in (
+        '"service_tier"',
+        'frozenset({"deferred", "flex", "priority", "standard"})',
+        '"total_input_tokens"',
+        '"total_output_tokens"',
+        '"total_tokens"',
+        "class _ResponseRejection(StrEnum):",
+        "self.diagnostic_reason = reason.value",
+        "ModelErrorCode.INVALID_RESPONSE",
+    ):
+        assert phrase in adapter
+
+    assert "diagnostic_reason" not in _read("app/ai/model_gateway.py")
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

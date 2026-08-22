@@ -133,3 +133,11 @@ Gemini credential. Tests use an in-process HTTP transport and must not set
 `RUN_GEMINI_LIVE_TESTS`, contact Google, or emit request and response bodies. A safe
 `invalid_request` before client construction identifies an unsupported caller schema; a safe
 `invalid_response` after a mock response identifies wire, identity, usage, or schema drift.
+
+### Gemini safe response diagnostics
+
+The corrected parser accepts only the documented closed `service_tier` enum and the three
+required aggregate usage counters. Absent cached, thought, and tool counters remain unknown.
+An `invalid_response` may carry an adapter-private bounded validation-stage category for local
+diagnosis; it never contains provider values or authorizes a retry. Do not print the raw response
+to investigate it. A second live smoke remains separately approved.

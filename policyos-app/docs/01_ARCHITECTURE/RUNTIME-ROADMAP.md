@@ -1509,3 +1509,13 @@ content-free rejection category while preserving the public error code.
 The adapter correction and any second one-call smoke remain separate gates. No schema, migration
 `20260808_0025`, fallback, broader classification, production enablement, deployment, tag, or
 release is introduced.
+
+## Sprint 17 Gemini response wire correction implementation
+
+**Status: Implemented / Validated, Pending Review.** The network-free adapter now accepts the
+documented closed `service_tier` enum, requires only the authoritative aggregate input, output,
+and total token counters, and preserves absent optional counters as unknown. Rejections retain the
+public non-retryable `invalid_response` code and add only an adapter-private bounded stage category.
+
+No credential, external call, public contract, persistence, schema, migration `20260808_0025`,
+fallback, deployment, tag, or release is included.

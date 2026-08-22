@@ -133,6 +133,63 @@ async def test_pinned_wire_maps_valid_structured_response_and_usage() -> None:
     assert "previous_interaction_id" not in body
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("service_tier", ["standard", "flex", "priority", "deferred"])
+async def test_documented_service_tier_and_absent_optional_usage_are_accepted(
+    service_tier: str,
+) -> None:
+    usage = {
+        "total_input_tokens": 12,
+        "total_output_tokens": 4,
+        "total_tokens": 16,
+    }
+    transport = transport_for(success_payload(service_tier=service_tier, usage=usage))
+
+    result = await GeminiInteractionsGateway(
+        "synthetic-key", model=MODEL, transport=transport
+    ).generate(request())
+
+    assert result.usage.cached_input_tokens is None
+    assert result.usage.input_tokens == 12
+    assert result.usage.output_tokens == 4
+    assert result.usage.total_tokens == 16
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("changes", "diagnostic_reason"),
+    [
+        ({"service_tier": "unexpected"}, "service_tier"),
+        ({"usage": {"total_input_tokens": 1}}, "usage_shape"),
+        (
+            {
+                "usage": {
+                    "total_input_tokens": 1,
+                    "total_output_tokens": 1,
+                    "total_tokens": 2,
+                    "total_tool_use_tokens": 1,
+                }
+            },
+            "usage_value",
+        ),
+    ],
+)
+async def test_safe_bounded_response_diagnostics_are_private_and_fail_closed(
+    changes: dict, diagnostic_reason: str
+) -> None:
+    transport = transport_for(success_payload(**changes))
+
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway("synthetic-key", model=MODEL, transport=transport).generate(
+            request()
+        )
+
+    assert caught.value.code is ModelErrorCode.INVALID_RESPONSE
+    assert caught.value.retryable is False
+    assert caught.value.diagnostic_reason == diagnostic_reason
+    assert "synthetic-key" not in str(caught.value)
+
+
 def test_registry_constructs_gemini_with_exact_configuration() -> None:
     transport = transport_for()
     gateway = create_model_gateway(
