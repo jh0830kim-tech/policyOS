@@ -61,6 +61,26 @@ Existing tenant, organization, user, task, permission, redaction, and provider-p
 mandatory. Prompt text, structured context, output, raw response, hidden reasoning, credentials,
 and provider error messages remain excluded from audit and logs.
 
+The provider-policy contract owns one immutable explicit allowed-classification set per approved
+provider. OpenAI retains `public` and `internal` eligibility, with `confidential` still governed
+by its existing separate opt-in and `restricted` denied. Gemini's set contains only `public`.
+An approved provider presented with a classification outside its set returns the new safe policy
+decision `deny_classification`. It is not mislabeled as confidential, restricted, or unknown
+provider denial. A global confidential opt-in cannot widen a provider's explicit set.
+
+Evaluation remains fail-closed in this order: exact cross-organization binding, approved provider,
+organization permission, user permission, restricted denial, provider-specific classification set,
+then any provider-specific confidential opt-in. The policy copies and freezes caller-supplied
+configuration; callers, environment values, requests, and responses cannot mutate the set.
+
+### HTTP implementation ownership
+
+The initial adapter uses PolicyOS's existing `httpx` dependency instead of adding a Gemini SDK.
+This keeps the official origin, one fixed Interactions path, `trust_env=False`, redirect denial,
+zero transport retries, bounded request/response bytes, and request-local exactly-once client close
+under one implementation owner. The reference to disabled SDK retry remains a required invariant:
+no SDK retry layer may be introduced later without another governance decision.
+
 ### Structured response validation
 
 The adapter sends the caller-supplied JSON Schema through Gemini structured-output configuration
@@ -139,7 +159,10 @@ quota, billing, deployment, tag, or release remains a separate governance action
 ## Rejected alternatives
 
 - Add Gemini to the generic allowlist and inherit internal-data eligibility.
+- Reuse `deny_provider`, `deny_confidential`, or `deny_restricted` for internal Gemini data.
+- Let a global confidential opt-in widen Gemini beyond its explicit classification set.
 - Let the SDK discover whichever Google API key is present.
+- Add a provider SDK when the existing bounded `httpx` transport is sufficient.
 - Select the first configured model or accept a provider-substituted model.
 - Enable SDK retry in addition to PolicyOS application retry.
 - Treat HTTP success or schema-shaped JSON as authoritative domain validity.

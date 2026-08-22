@@ -1517,3 +1517,8 @@ The API key, prompt, context, raw response, hidden reasoning, provider error det
 signature cannot enter public contracts, persistence, audit, logs, errors, or snapshots. The
 request-scoped async client closes exactly once on every exit. Safe audit reuses bounded generic
 metadata; no schema, backfill, or migration `20260808_0025` is authorized.
+
+Provider-specific immutable classification sets prevent the generic allowlist from silently
+broadening Gemini transmission. A Gemini request classified internal, confidential, or restricted
+fails before client construction with safe `deny_classification` semantics where applicable.
+Neither organization confidential opt-in nor runtime configuration can widen that set.

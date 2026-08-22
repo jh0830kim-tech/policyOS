@@ -111,3 +111,8 @@ or provider error body. Clear the opt-in and process credential after the check.
 For authentication, permission, policy-block, malformed-output, model-substitution, or timeout
 events, inspect only PolicyOS safe error codes and metadata audit. Disable Gemini rather than
 switching provider or model implicitly.
+
+Treat `deny_classification` as the expected result when an approved provider receives data above
+its explicit ceiling. Do not reclassify data, enable confidential transmission, or switch provider
+to bypass that result. Gemini remains synthetic-public-only even if the OpenAI confidential opt-in
+is enabled.
