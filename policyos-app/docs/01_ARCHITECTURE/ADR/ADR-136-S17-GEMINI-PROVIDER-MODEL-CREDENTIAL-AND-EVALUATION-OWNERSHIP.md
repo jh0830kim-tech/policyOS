@@ -187,3 +187,9 @@ ADR-139 keeps HTTP 400 and 422 public mappings non-retryable while allowing only
 status-and-reason category. The next wire probe changes only `response_format` to one exact
 single-element array; endpoint, revision header, model, schema, classification, credential, retry,
 and fallback remain fixed. A live probe still requires separate one-call approval.
+
+## ADR-140 API-version path boundary
+
+ADR-140 assigns the next evaluation profile one literal `/v1beta2/interactions` path. The path-only
+correction preserves the revision header, request body, model, schema, classification, retry, and
+fallback boundaries and still requires separate one-call approval.

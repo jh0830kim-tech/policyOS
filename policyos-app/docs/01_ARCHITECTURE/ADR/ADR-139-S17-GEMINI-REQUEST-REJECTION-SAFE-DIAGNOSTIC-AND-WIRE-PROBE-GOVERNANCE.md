@@ -142,3 +142,9 @@ confidential transmission, fallback, deployment, tag, and release remain prohibi
 - Accept both object and array request formats through runtime fallback.
 - Retry automatically after `invalid_request` or `policy_blocked`.
 - Add a diagnostics table, audit field, schema change, or migration `20260808_0025`.
+
+## ADR-140 follow-up boundary
+
+The single ADR-139 probe returned `request_http_400_unclassified`; it did not prove a rejected
+field. ADR-140 governs the next path-only correction to `/v1beta2/interactions`. No header, model,
+schema, input, response-format, retry, fallback, or diagnostic relaxation accompanies that change.

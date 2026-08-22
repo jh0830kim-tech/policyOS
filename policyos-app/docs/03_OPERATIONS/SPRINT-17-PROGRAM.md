@@ -274,3 +274,13 @@ and collapses all missing, malformed, oversized, case-substituted, or unknown va
 Public error and retry semantics remain unchanged. Credential use, provider traffic, a follow-up
 probe, public contracts, persistence, schema, and migration `20260808_0025` remain outside this
 gate. A single live probe still requires separate explicit approval after authoritative CI.
+
+## Gemini API-version path governance gate
+
+**Status: Governed / Pending Review.** ADR-140 governs a network-free path-only correction from
+`/v1beta/interactions` to `/v1beta2/interactions`. The existing revision header and entire request
+body remain unchanged so the next separately approved one-call probe has exactly one variable.
+
+CI and tests must prove one literal path, no negotiation or fallback, one request, and unchanged
+public error, classification, retry, client-lifetime, and local-validation behavior. This gate adds
+no credential use, provider traffic, persistence, schema, or migration `20260808_0025`.

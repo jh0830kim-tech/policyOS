@@ -118,3 +118,9 @@ The second approved smoke returned public `invalid_request`. ADR-139 distinguish
 That network-free correction represents the existing single structured-output format as an exact
 one-element top-level array while keeping `/v1beta/interactions`, `Api-Revision: 2026-05-20`, the
 model, schema, retry, fallback, and all output-validation ownership unchanged.
+
+## ADR-140 path-only amendment
+
+The ADR-139 probe preserved this profile and returned HTTP 400 without an allowlisted provider
+status. ADR-140 changes only the next profile path to `/v1beta2/interactions`; the revision header,
+one-element response format, typed steps response, and authoritative local validation remain fixed.
