@@ -305,3 +305,15 @@ HTTP 404 remains public non-retryable `configuration_error` with private categor
 `request_http_404_unclassified`, without provider detail or model-only provenance. No credential,
 external call, public contract, persistence, schema, or migration `20260808_0025` is included. A
 later one-call synthetic-public probe remains separately approved.
+## Gemini logical model and provider wire resource governance gate
+
+**Status: Governed / Pending Review.** ADR-142 assigns caller-visible authorization, lineage, and
+audit identity to the exact logical `model_id`, and assigns request serialization plus provider
+response-echo validation to a separately supplied exact provider wire resource. `models/` prefix
+generation, stripping, alias resolution, registry-latest selection, response-derived replacement,
+and fallback are prohibited.
+
+The following correction gate is network free and may change only the explicitly approved config,
+registry wiring, adapter, tests, and operational documentation needed to carry and compare both
+facts. A later probe changes only the model resource and still requires separate one-call approval.
+No schema, backfill, persistence change, or migration `20260808_0025` is introduced.

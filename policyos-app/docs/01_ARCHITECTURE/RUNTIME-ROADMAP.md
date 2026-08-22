@@ -1580,3 +1580,12 @@ fixed `/v1beta/interactions` path, `Api-Revision: 2026-05-20`, model, schema, pu
 retry zero, and fallback zero remain unchanged for a separately approved single follow-up probe.
 No persistence, schema, migration `20260808_0025`, production enablement, deployment, tag, or
 release is introduced.
+## Sprint 17 Gemini logical-model and wire-resource governance
+
+ADR-142 governs the separation of the PolicyOS logical `model_id` from the Gemini provider wire
+model resource. Both are explicit immutable facts; neither may be derived, normalized, prefixed,
+stripped, selected from a response, or substituted through fallback. The next implementation gate
+must add the smallest explicit carriage and exact binding needed by configuration, registry wiring,
+request serialization, response validation, and safe audit identity. It remains credential-free
+and network-free until a separately approved single-variable probe. No persistence change or
+migration `20260808_0025` is required.

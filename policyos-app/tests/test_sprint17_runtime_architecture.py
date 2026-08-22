@@ -282,7 +282,12 @@ def test_adr134_private_backend_implementation_is_explicit_and_private() -> None
         "remaining <= timedelta(0)",
     ):
         assert phrase in source
-    for forbidden in ("datetime.now", "uuid4", "trust_env=True", "follow_redirects=True"):
+    for forbidden in (
+        "datetime.now",
+        "uuid4",
+        "trust_env=True",
+        "follow_redirects=True",
+    ):
         assert forbidden not in source
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
@@ -523,4 +528,34 @@ def test_adr140_governs_one_literal_api_version_path_probe() -> None:
     assert "Sprint 17 Gemini API-version path governance" in roadmap
     assert "Gemini API-version path governance gate" in program
     assert "Gemini API-version path security boundary" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr142_separates_logical_model_from_provider_wire_resource() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-142-S17-GEMINI-LOGICAL-MODEL-IDENTITY-AND-PROVIDER-WIRE-RESOURCE-OWNERSHIP.md"
+    )
+    for phrase in (
+        "logical `model_id`",
+        "provider wire model resource",
+        "must not derive either value",
+        "exact pair",
+        "response echo",
+        "single-variable",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in adr
+    for name in ("ADR-136", "ADR-137", "ADR-141"):
+        path = next((ROOT / "docs/01_ARCHITECTURE/ADR").glob(f"{name}-*.md"))
+        assert "ADR-142" in _read(path.relative_to(ROOT).as_posix())
+    assert "Sprint 17 Gemini logical-model and wire-resource governance" in _read(
+        "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md"
+    )
+    assert "Gemini logical model and provider wire resource governance gate" in _read(
+        "docs/03_OPERATIONS/SPRINT-17-PROGRAM.md"
+    )
+    assert "Gemini logical-model and wire-resource security boundary" in _read(
+        "docs/04_SECURITY/SECURITY.md"
+    )
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
