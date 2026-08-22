@@ -1451,9 +1451,17 @@ family, tag, and release remain absent.
 
 ## Sprint 17 outbox-to-effect atomic handoff correction
 
-**Status: Governed / Pending Review.** ADR-135 restores the ADR-086 atomic initial-effect model at
+**Status: Public Contracts Implemented / Pending Review.** ADR-135 restores the ADR-086 atomic
+initial-effect model at
 the Runtime API boundary. A deliverable submission carries the complete caller-supplied
 `RuntimeEffectAtomicWriteSet`; a local-only submission has no outbox, and a generic outbox without
 initial-effect facts fails closed. No dispatcher, inferred conversion, combined status, schema,
 backfill, or migration `20260808_0025` is introduced. Contract and persistence correction gates
 must merge before vertical validation resumes.
+
+The public submission-stage contract now admits only the closed local-only
+`RuntimeAtomicWriteSet` and deliverable `RuntimeEffectAtomicWriteSet` variants. It unwraps the
+validated deliverable base only for exact API persistence-binding and logical-result checks;
+initial-effect identity, envelope, lifecycle, receipt, scope, lineage, revision, digest, and time
+facts remain caller supplied. Active-session effect persistence and PostgreSQL atomicity evidence
+remain the next separate gate.
