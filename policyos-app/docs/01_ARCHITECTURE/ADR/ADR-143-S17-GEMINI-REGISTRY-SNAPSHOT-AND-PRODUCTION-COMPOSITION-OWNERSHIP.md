@@ -57,3 +57,12 @@ backfill, normalization, schema, or migration `20260808_0025`. Alembic remains a
 - Query or cache the latest registry row.
 - Let a provider response select or repair model identity.
 - Move the private adapter across public boundaries in this gate.
+
+## ADR-144 route-composition amendment
+
+ADR-144 resolves the concrete owner that this ADR left implicit. The application-construction
+caller supplies one immutable AI Office dependency bundle, the application factory binds and
+prebuilds one office composition, and an artifacts-router factory receives that exact composition.
+`OfficeApplicationService` cannot reconstruct composition from settings per request. Missing or
+partial Gemini dependencies fail application construction rather than creating mutable
+`app.state`, module-global authority, synthetic snapshots, latest lookup, or endpoint fallback.

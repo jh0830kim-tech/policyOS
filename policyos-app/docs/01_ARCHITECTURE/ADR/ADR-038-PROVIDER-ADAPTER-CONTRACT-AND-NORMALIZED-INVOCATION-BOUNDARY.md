@@ -47,3 +47,10 @@ ADR-143 does not merge the legacy office `ModelGateway` with the normalized invo
 It permits a narrow composition bridge that validates one exact selected registration and passes
 only its logical and provider-facing names into the private Gemini gateway. The bridge cannot
 route, persist, refresh a registry, create a permit, or bypass the normalized invocation boundary.
+
+## ADR-144 AI Office composition amendment
+
+ADR-144 closes the construction topology around that bridge. One immutable application dependency
+bundle supplies the exact ADR-143 facts to a prebuilt office composition, and an artifacts-router
+factory receives that composition explicitly. Request handlers cannot rebuild a gateway from
+settings, use mutable `app.state`, discover a registry, or substitute provider authority.

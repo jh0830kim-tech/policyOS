@@ -1597,3 +1597,14 @@ snapshot and exact logical selection enter the application factory. A pure binde
 revision, active provider/model state, provider family, and exact registration, then supplies the
 logical model and provider wire resource to the private Gemini gateway. Settings, responses, and
 adapters cannot create registry authority. No schema or migration `20260808_0025` is required.
+
+## Sprint 17 AI Office dependency-bundle and route-composition governance
+
+ADR-144 closes the remaining application topology. One immutable AI Office production dependency
+bundle enters the application factory, which validates provider-mode cardinality, runs the pure
+registry binder, builds one office composition, and injects it into an artifacts-router factory.
+The route and `OfficeApplicationService` cannot rebuild composition from settings or use mutable
+`app.state`, module-global registry authority, synthetic snapshots, or first/latest lookup.
+Missing or partial Gemini dependencies fail application construction before credential access or
+network I/O. The production correction remains a separate gate; no schema or migration
+`20260808_0025` is introduced.

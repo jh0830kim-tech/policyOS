@@ -70,6 +70,39 @@ def test_adr143_governs_registry_snapshot_production_composition() -> None:
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_adr144_governs_ai_office_dependency_bundle_and_route_composition() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-144-S17-AI-OFFICE-PRODUCTION-DEPENDENCY-BUNDLE-AND-ROUTE-"
+        "COMPOSITION-OWNERSHIP.md"
+    )
+    for phrase in (
+        "immutable AI Office production dependency bundle",
+        "artifacts-router factory",
+        "prebuilt composition",
+        "application lifetime",
+        "before the router is exposed",
+        "before credential access",
+        "mutable `app.state`",
+        "module-global",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in adr
+    for name in ("ADR-038", "ADR-136", "ADR-142", "ADR-143"):
+        path = next((ROOT / "docs/01_ARCHITECTURE/ADR").glob(f"{name}-*.md"))
+        assert "ADR-144" in _read(path.relative_to(ROOT).as_posix())
+    assert "Sprint 17 AI Office dependency-bundle and route-composition governance" in _read(
+        "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md"
+    )
+    assert "AI Office production dependency-bundle and route-composition governance gate" in _read(
+        "docs/03_OPERATIONS/SPRINT-17-PROGRAM.md"
+    )
+    assert "Gemini AI Office dependency-bundle and route-composition security boundary" in _read(
+        "docs/04_SECURITY/SECURITY.md"
+    )
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_adr141_governs_stable_path_and_closed_http_404_provenance() -> None:
     adr = _read(
         "docs/01_ARCHITECTURE/ADR/"
