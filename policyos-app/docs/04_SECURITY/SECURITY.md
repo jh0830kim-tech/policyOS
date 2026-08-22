@@ -1492,3 +1492,15 @@ rules, and only its exact base state and audit facts are used for API logical-re
 No effect identity, envelope, lifecycle, receipt, tenant, organization, classification, lineage,
 revision, digest, reference, or time is generated or inferred. This gate adds no persistence
 behavior, schema, backfill, dispatcher, combined status, or migration `20260808_0025`.
+
+## Sprint 17 active-session initial-effect persistence boundary
+
+The transaction-neutral initial-effect staging helper receives only the validated caller-supplied
+aggregate and approved stage time. It cannot read a clock, begin or nest a transaction, commit,
+roll back, close, replace a session, select a latest row, or reconstruct an effect from outbox
+evidence. The active-session adapter verifies the exact captured root transaction before use.
+
+Base records, outbox, effect, lifecycle revision one, lifecycle head, logical result when present,
+and transport receipt either commit in the facade-owned transaction or leave zero residue.
+External readers and Workers cannot observe the initial lifecycle before commit. This boundary
+adds no secret, authority, schema, backfill, dispatcher, or migration `20260808_0025`.

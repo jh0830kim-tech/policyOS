@@ -376,7 +376,41 @@ def test_adr135_submission_stage_contracts_are_closed_without_persistence_change
         "payload_time = base_write_set.requested_at",
     ):
         assert phrase in contracts
-    assert "Public Contracts Implemented / Pending Review" in roadmap
+    assert "Active Persistence Implemented / Pending Review" in roadmap
     assert "ADR-135 submission-stage public contracts" in program
     assert "Sprint 17 closed submission-stage contract boundary" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr135_active_session_effect_persistence_is_transaction_neutral() -> None:
+    active = _read("app/runtime/persistence/active_transaction.py")
+    delivery = _read("app/runtime/persistence/delivery_transaction.py")
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    helper = "_persist_runtime_effect_atomic_write_set"
+    assert helper in active
+    assert delivery.count(f"async def {helper}(") == 1
+    helper_body = delivery.split(f"async def {helper}(", 1)[1].split("def _transaction_receipt", 1)[
+        0
+    ]
+    for forbidden in (
+        ".begin(",
+        ".commit(",
+        ".rollback(",
+        ".close(",
+        "validate_runtime_clock_reading",
+    ):
+        assert forbidden not in helper_body
+    for phrase in (
+        "RuntimeEffect(",
+        "RuntimeEffectLifecycleRevision(",
+        "RuntimeEffectLifecycleHead(",
+        "await session.flush()",
+    ):
+        assert phrase in helper_body
+    assert "Active Persistence Implemented / Pending Review" in roadmap
+    assert "ADR-135 active-session effect persistence" in program
+    assert "Sprint 17 active-session initial-effect persistence boundary" in security
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

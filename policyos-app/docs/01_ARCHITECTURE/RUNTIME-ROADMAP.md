@@ -1451,7 +1451,7 @@ family, tag, and release remain absent.
 
 ## Sprint 17 outbox-to-effect atomic handoff correction
 
-**Status: Public Contracts Implemented / Pending Review.** ADR-135 restores the ADR-086 atomic
+**Status: Active Persistence Implemented / Pending Review.** ADR-135 restores the ADR-086 atomic
 initial-effect model at
 the Runtime API boundary. A deliverable submission carries the complete caller-supplied
 `RuntimeEffectAtomicWriteSet`; a local-only submission has no outbox, and a generic outbox without
@@ -1463,5 +1463,10 @@ The public submission-stage contract now admits only the closed local-only
 `RuntimeAtomicWriteSet` and deliverable `RuntimeEffectAtomicWriteSet` variants. It unwraps the
 validated deliverable base only for exact API persistence-binding and logical-result checks;
 initial-effect identity, envelope, lifecycle, receipt, scope, lineage, revision, digest, and time
-facts remain caller supplied. Active-session effect persistence and PostgreSQL atomicity evidence
-remain the next separate gate.
+facts remain caller supplied. Active-session Persistence now stages the validated base records,
+outbox, effect, lifecycle revision one, and lifecycle head through one transaction-neutral private
+helper shared with the existing fresh-session effect transaction. The facade remains the sole
+owner of the active session and root transaction; Persistence reads no clock and does not begin,
+commit, roll back, close, or replace that transaction. PostgreSQL atomicity evidence covers
+rollback residue zero and Worker visibility only after commit. Resumed vertical validation remains
+the next gate.

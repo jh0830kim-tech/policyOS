@@ -3,6 +3,9 @@
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
 
+from app.runtime.persistence.delivery_transaction import (
+    _persist_runtime_effect_atomic_write_set,
+)
 from app.runtime.persistence.errors import (
     RuntimePersistenceError,
     RuntimePersistenceTransactionError,
@@ -22,6 +25,7 @@ from app.runtime.ports import (
     RuntimeApiLogicalExecutionResultRevisionReadResult,
     RuntimeApiPersistenceBindingRead,
     RuntimeApiQueryProjectionLocator,
+    RuntimeEffectAtomicWriteSet,
     validate_runtime_atomic_write_set,
 )
 
@@ -110,12 +114,19 @@ class SQLAlchemyRuntimeApiActiveTransactionPersistence:
                     raise RuntimePersistenceTransactionError(
                         "submission stage requires one atomic write set"
                     )
-                validate_runtime_atomic_write_set(stage.write_set)
-                await _persist_runtime_atomic_write_set(
-                    self._session,
-                    stage.write_set,
-                    stored_at=stage.staged_at,
-                )
+                if isinstance(stage.write_set, RuntimeEffectAtomicWriteSet):
+                    await _persist_runtime_effect_atomic_write_set(
+                        self._session,
+                        stage.write_set,
+                        stored_at=stage.staged_at,
+                    )
+                else:
+                    validate_runtime_atomic_write_set(stage.write_set)
+                    await _persist_runtime_atomic_write_set(
+                        self._session,
+                        stage.write_set,
+                        stored_at=stage.staged_at,
+                    )
                 if isinstance(
                     stage.logical_execution_result,
                     RuntimeApiLogicalExecutionResultMutationPresent,

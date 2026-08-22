@@ -25,8 +25,17 @@ from app.models.identity import (
 from app.models.runtime_api_idempotency import RuntimeApiIdempotencyReceiptRecord
 from app.models.runtime_registry import RuntimeReconciliationRequestRecord
 from app.runtime.persistence import (
+    RuntimeEffect,
+    RuntimeEffectLifecycleHead,
+    RuntimeEffectLifecycleRevision,
     SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory,
+    SQLAlchemyRuntimeEffectDueRepository,
     SQLAlchemyRuntimeRegistryRepository,
+)
+from app.runtime.ports import (
+    RuntimeApiLocalWriteSetOperation,
+    RuntimeApiLocalWriteSetStage,
+    RuntimeApiLogicalExecutionResultMutationAbsent,
 )
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
@@ -64,10 +73,14 @@ from app.services.runtime_api_validation import (
 from app.services.runtime_permission_facts import RuntimePermissionDeniedError
 from app.services.runtime_tenant_binding import RuntimeScopeNotFoundError
 from tests.test_runtime_api_binding_contracts import (
+    active_transaction_context,
+    binding_for_effect_write_set,
     query_integration_facts,
     reconciliation_integration_facts,
     submission_integration_facts,
 )
+from tests.test_runtime_delivery_persistence_contracts import due_request, effect_write_set
+from tests.test_runtime_persistence import seed_atomic_heads
 
 NOW = datetime(2026, 8, 8, tzinfo=UTC)
 AUDIENCE = "policyos-api-test"
@@ -561,6 +574,91 @@ async def test_postgresql_concrete_reconciliation_stage_and_receipt_are_atomic(d
             )
             == 0
         )
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_postgresql_active_submission_stages_effect_in_caller_root_transaction(
+    database_url,
+):
+    engine = create_async_engine(database_url)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    write_set = await effect_write_set()
+    base = write_set.base_write_set
+    binding = binding_for_effect_write_set(write_set)
+    context = active_transaction_context()
+    stage = RuntimeApiLocalWriteSetStage(
+        local_write_set_id=uuid4(),
+        transport_receipt_id=uuid4(),
+        operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+        binding=binding,
+        write_set_digest_reference="write-set.active-effect",
+        logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
+        write_set=write_set,
+        staged_at=base.requested_at,
+    )
+    previous_state = base.state_record.model_copy(
+        update={"current_revision": base.expected_state_revision}
+    )
+    previous_audit = base.audit_trail.model_copy(
+        update={"trail_revision": base.expected_audit_revision}
+    )
+    async with factory() as session, session.begin():
+        await seed_atomic_heads(session, previous_state, previous_audit)
+
+    class RollbackProbe(RuntimeError):
+        pass
+
+    with pytest.raises(RollbackProbe):
+        async with factory() as session, session.begin():
+            root = session.get_transaction()
+            result = await SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory()(
+                session, context
+            ).stage_local_write_set(context, stage)
+            assert result.staged_mutation_count == 1
+            assert session.get_transaction() is root
+            assert not session.in_nested_transaction()
+            raise RollbackProbe
+
+    identity = write_set.initial_effect_enqueue.effect_identity
+    async with factory() as session:
+        assert await session.scalar(select(func.count(RuntimeEffect.runtime_effect_id))) == 0
+        assert (
+            await session.scalar(
+                select(func.count(RuntimeEffectLifecycleRevision.runtime_effect_id))
+            )
+            == 0
+        )
+        assert (
+            await session.scalar(select(func.count(RuntimeEffectLifecycleHead.runtime_effect_id)))
+            == 0
+        )
+
+    async with factory() as session, session.begin():
+        root = session.get_transaction()
+        await SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory()(
+            session, context
+        ).stage_local_write_set(context, stage)
+        assert session.get_transaction() is root
+        request = due_request(
+            tenant_id=identity.tenant_id,
+            organization_id=identity.organization_id,
+            classification=identity.classification,
+            observed_at=base.requested_at,
+            requested_at=base.requested_at,
+        )
+        async with factory() as observer:
+            assert (
+                await observer.scalar(
+                    select(func.count(RuntimeEffectLifecycleHead.runtime_effect_id))
+                )
+                == 0
+            )
+
+    async with factory() as session:
+        candidates = await SQLAlchemyRuntimeEffectDueRepository(session).select_due(request)
+        assert len(candidates) == 1
+        assert candidates[0].effect_identity == identity
     await engine.dispose()
 
 
