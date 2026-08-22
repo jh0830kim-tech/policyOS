@@ -124,3 +124,12 @@ The approved adapter profile is `/v1beta/interactions` with `Api-Revision: 2026-
 or local Draft 2020-12 schema failure is a safe `invalid_response`, not an invitation to retry,
 switch model, relax validation, or parse provider messages. Disable Gemini and review the wire
 contract through governance before accepting a new revision.
+
+### Gemini network-free adapter validation
+
+The reviewed adapter uses the pinned REST profile and direct Draft 2020-12 local validation. Run
+`pytest -q tests/test_gemini_interactions.py tests/test_gemini_provider_governance.py` without a
+Gemini credential. Tests use an in-process HTTP transport and must not set
+`RUN_GEMINI_LIVE_TESTS`, contact Google, or emit request and response bodies. A safe
+`invalid_request` before client construction identifies an unsupported caller schema; a safe
+`invalid_response` after a mock response identifies wire, identity, usage, or schema drift.

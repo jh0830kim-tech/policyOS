@@ -1549,3 +1549,18 @@ and schema mismatch fail closed without exposing schema details or raw provider 
 messages, raw bodies, credentials, prompts, hidden reasoning, and validation traces remain absent
 from logs, errors, audit, snapshots, and persistence. No schema or migration `20260808_0025` is
 introduced.
+
+### Gemini Interactions adapter implementation security boundary
+
+The implementation uses one fixed Google origin and path, an explicit API revision and API-key
+header, `trust_env=False`, redirect denial, zero transport retry, and one request-local managed
+client. Schema and public-classification failures occur before client construction. The adapter
+never accepts a caller URL, API revision, credential alias, provider fallback, tool, file, history,
+stream, stored interaction, background execution, or raw provider message.
+
+Only one bounded typed text output is decoded. Exact model and response identity, strict known
+transport fields, bounded integral usage, and authoritative local Draft 2020-12 validation are
+required before a provider-neutral result is returned. Credentials, prompts, raw bodies, hidden
+reasoning, provider messages, and validation traces remain outside persistence, audit, errors,
+logs, and snapshots. Network-free tests use synthetic values only; no schema or migration
+`20260808_0025` is introduced.

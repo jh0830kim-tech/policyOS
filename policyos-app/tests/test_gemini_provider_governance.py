@@ -92,7 +92,18 @@ def test_adr137_pins_wire_revision_and_local_schema_validation() -> None:
     assert "Gemini wire-revision and local-validation security boundary" in security
     assert "Gemini pinned wire and validator governance" in environment
     assert "Gemini wire-drift response" in runbook
-    assert not (ROOT / "app/ai/providers/gemini_interactions.py").exists()
+    adapter = _read("app/ai/providers/gemini_interactions.py")
+    project = _read("pyproject.toml")
+    for phrase in (
+        '"/v1beta/interactions"',
+        '"2026-05-20"',
+        '"background": False',
+        '"store": False',
+        "Draft202012Validator",
+        "trust_env=False",
+    ):
+        assert phrase in adapter
+    assert '"jsonschema>=4.23,<5"' in project
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
@@ -146,4 +157,5 @@ def test_gemini_config_and_privacy_contracts_are_implemented_without_adapter() -
     assert "Gemini config/privacy public-contract implementation" in environment
     assert "Gemini config/privacy contract security boundary" in security
     assert not (ROOT / "app/ai/providers/gemini.py").exists()
+    assert (ROOT / "app/ai/providers/gemini_interactions.py").exists()
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

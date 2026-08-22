@@ -213,3 +213,16 @@ The subsequent implementation gate is network free and may add only the adapter,
 dependency declaration, focused tests, architecture guard correction, and matching operations and
 security documentation. It cannot add a provider SDK, schema persistence, migration
 `20260808_0025`, live credentials, provider traffic, fallback, deployment, tag, or release.
+
+## Gemini Interactions adapter implementation gate
+
+**Status: Implemented / Validated, Pending Review.** The registry selects the Gemini adapter only
+from exact deployment configuration and injects one explicit secret value, model, bounded timeout,
+application retry policy, immutable public-only transmission policy, redactor, and optional audit
+sink. Every invocation creates and closes one `trust_env=False`, redirect-disabled `httpx` client.
+
+Request schemas are bounded, meta-validated, and compiled before client construction. Successful
+responses require the pinned revision, exact model and response identity, one typed text output,
+bounded integral usage, JSON decoding, and local Draft 2020-12 validation. Tests remain network
+free. Live smoke, production credentials, provider traffic, deployment, schema changes, and
+migration `20260808_0025` remain separately prohibited.
