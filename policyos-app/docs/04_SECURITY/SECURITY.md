@@ -1649,3 +1649,15 @@ non-retryable configuration error and adapter-private `request_http_404_unclassi
 Provider body, message, field path, identifiers, prompt, schema, credential, and raw response are
 not retained or disclosed. The correction makes no external call and adds no public contract,
 schema, persistence, or migration `20260808_0025`.
+## Gemini logical-model and wire-resource security boundary
+
+ADR-142 prevents provider wire naming from silently changing PolicyOS authority. The logical
+`model_id` remains the exact authorization, lineage, provider-neutral result, and audit identity.
+The provider wire resource is a separate explicit immutable fact used only for outbound model
+selection and exact provider response-echo validation. Neither fact may be generated from,
+normalized against, or replaced by the other.
+
+Missing, malformed, stale, substituted, cross-provider, or mismatched binding fails before an
+accepted result. Provider responses cannot select either identity. Diagnostics remain closed and
+content free; prompts, schemas, credentials, raw responses, and provider messages remain excluded.
+No credential use, external call, schema, or migration `20260808_0025` is authorized by this gate.

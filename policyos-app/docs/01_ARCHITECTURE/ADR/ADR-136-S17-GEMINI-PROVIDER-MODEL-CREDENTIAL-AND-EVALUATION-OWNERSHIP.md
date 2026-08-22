@@ -196,3 +196,11 @@ fallback boundaries and still requires separate one-call approval.
 
 ADR-141 additionally requires a single stable path and prohibits model-only attribution of HTTP
 404 without authoritative provenance.
+
+## ADR-142 logical and wire model identity amendment
+
+ADR-142 separates the caller-visible logical `model_id` from the provider wire model resource.
+Neither configuration nor the adapter may create `models/` prefixes, strip them, normalize model
+names, or infer one identity from the other. An exact reviewed binding must carry both values, and
+provider response identity is validated against the wire resource without replacing the logical
+identity recorded by PolicyOS.

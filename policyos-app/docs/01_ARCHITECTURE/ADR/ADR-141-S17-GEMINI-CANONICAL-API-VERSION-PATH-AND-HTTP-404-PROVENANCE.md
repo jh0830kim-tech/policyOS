@@ -51,3 +51,11 @@ schema, backfill, or migration `20260808_0025` is authorized; the head remains `
 - Try multiple paths sequentially.
 - Change path, model, header, or body together.
 - Add runtime path configuration or migration `20260808_0025`.
+
+## ADR-142 follow-up boundary
+
+The canonical path probe returned HTTP 400 with the closed private category
+`request_http_400_unclassified`. That result does not authorize a model alias transformation.
+ADR-142 governs a later model-resource-only correction: path, revision header, response format,
+schema, classification, retry, and fallback remain unchanged, while the logical model identity and
+the provider wire resource are supplied and validated as distinct exact facts.

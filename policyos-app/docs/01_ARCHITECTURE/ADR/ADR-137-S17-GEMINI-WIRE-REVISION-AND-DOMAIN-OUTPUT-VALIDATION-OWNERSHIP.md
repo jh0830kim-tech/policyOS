@@ -127,3 +127,11 @@ one-element response format, typed steps response, and authoritative local valid
 
 ADR-141 supersedes only path and HTTP-404 provenance ownership; this ADR's body, revision marker,
 typed response, and local validation remain fixed.
+
+## ADR-142 model-identity clarification
+
+The phrase "configured and requested model" means two separately supplied exact facts after
+ADR-142: the logical PolicyOS `model_id` and the provider wire model resource. The outbound model
+and provider response echo are compared with the exact wire resource. The provider-neutral result,
+authorization, audit, and lineage retain the exact logical `model_id`. No prefix construction,
+prefix stripping, alias lookup, fallback, or response-derived substitution is permitted.
