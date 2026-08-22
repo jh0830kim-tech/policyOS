@@ -290,3 +290,9 @@ no credential use, provider traffic, persistence, schema, or migration `20260808
 **Status: Implemented / Validated, Pending Review.** The adapter and credential-free tests now pin
 `/v1beta2/interactions` without changing any other request fact. A live probe remains separately
 approved; persistence, schema, and migration `20260808_0025` remain absent.
+
+## Gemini canonical path and HTTP-404 provenance governance gate
+
+**Status: Governed / Pending Review.** ADR-141 selects `/v1/interactions` as the sole next path,
+rejects model-only attribution of HTTP 404, and requires a network-free correction plus CI before
+another separately approved one-call probe.

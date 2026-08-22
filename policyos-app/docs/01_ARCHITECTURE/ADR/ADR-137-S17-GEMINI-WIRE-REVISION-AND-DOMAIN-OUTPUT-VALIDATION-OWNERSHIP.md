@@ -124,3 +124,6 @@ model, schema, retry, fallback, and all output-validation ownership unchanged.
 The ADR-139 probe preserved this profile and returned HTTP 400 without an allowlisted provider
 status. ADR-140 changes only the next profile path to `/v1beta2/interactions`; the revision header,
 one-element response format, typed steps response, and authoritative local validation remain fixed.
+
+ADR-141 supersedes only path and HTTP-404 provenance ownership; this ADR's body, revision marker,
+typed response, and local validation remain fixed.

@@ -94,3 +94,8 @@ release, and additional live calls remain prohibited.
 - Try `/v1beta` and `/v1beta2` sequentially at runtime.
 - Let configuration or provider responses choose an API version.
 - Add a diagnostics table, schema change, or migration `20260808_0025`.
+
+## Supersession note
+
+The `/v1beta2` probe returned a safe HTTP-404-derived configuration failure. ADR-141 supersedes
+the next-path decision while preserving this ADR's single-variable and stop rules.

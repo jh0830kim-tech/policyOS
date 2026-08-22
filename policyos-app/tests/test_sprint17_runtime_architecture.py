@@ -39,6 +39,27 @@ def test_adr131_governs_operator_enablement_without_runtime_registry() -> None:
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_adr141_governs_stable_path_and_closed_http_404_provenance() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-141-S17-GEMINI-CANONICAL-API-VERSION-PATH-AND-HTTP-404-PROVENANCE.md"
+    )
+    for phrase in (
+        "`/v1/interactions`",
+        "`request_http_404_unclassified`",
+        "model alone is unavailable",
+        "change only the literal path",
+        "and stop",
+        "migration `20260808_0025`",
+        "`20260808_0024`",
+    ):
+        assert phrase in adr
+    for name in ("ADR-136", "ADR-137", "ADR-140"):
+        path = next((ROOT / "docs/01_ARCHITECTURE/ADR").glob(f"{name}-*.md"))
+        assert "ADR-141" in _read(path.relative_to(ROOT).as_posix())
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_postgresql_connector_evidence_acceptance_is_explicit_and_secret_free() -> None:
     support = _read("tests/runtime_connector_acceptance_test_support.py")
     acceptance = _read("tests/test_runtime_connector_postgresql_acceptance.py")

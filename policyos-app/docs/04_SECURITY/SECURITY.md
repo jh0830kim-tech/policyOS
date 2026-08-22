@@ -1634,3 +1634,9 @@ schema or migration `20260808_0025` is introduced.
 The adapter and network-free tests now pin `/v1beta2/interactions`. The origin, revision header,
 request body, synthetic-public ceiling, retry, fallback, diagnostics, and local validation remain
 unchanged. No credential was read and no external request was made.
+
+### Gemini canonical path and HTTP-404 provenance boundary
+
+ADR-141 permits only `/v1/interactions` for the next profile. HTTP 404 remains a bounded
+configuration failure without model-only attribution, and provider-controlled detail is discarded.
+No fallback, credential use, schema, or migration `20260808_0025` is authorized.
