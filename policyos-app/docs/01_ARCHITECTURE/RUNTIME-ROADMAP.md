@@ -1483,3 +1483,17 @@ caller schema before client construction, and validate one bounded JSON object b
 provider-neutral response. Provider enforcement and downstream artifact validation are not the
 authoritative adapter gate. This adds no database schema or migration `20260808_0025`; Gemini
 remains disabled until the separate implementation and review gate completes.
+
+## Sprint 17 Gemini Interactions adapter implementation
+
+**Status: Implemented / Validated, Pending Review.** The provider registry now constructs one
+request-scoped, managed Gemini REST adapter only for exact `AI_PROVIDER=gemini` configuration.
+The adapter compiles and bounds the caller's object-root Draft 2020-12 schema before client
+construction, enforces the immutable synthetic-public classification ceiling, sends only the
+pinned non-streaming Interactions profile, and validates one exact typed `model_output` JSON object
+before creating `ModelResponse`.
+
+Network-free tests cover credential and model binding, schema complexity and remote-reference
+rejection, policy denial before I/O, response identity and wire substitution, usage bounds,
+safe HTTP error mapping, bounded application retry, cancellation, and exactly-once client cleanup.
+No live credential, provider traffic, persistence, schema, or migration `20260808_0025` is added.

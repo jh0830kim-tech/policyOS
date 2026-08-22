@@ -1,5 +1,6 @@
 """Provider factory kept outside agents so agents remain provider-neutral."""
 
+import httpx
 from openai import AsyncOpenAI
 
 from app.ai.model_gateway import (
@@ -9,11 +10,13 @@ from app.ai.model_gateway import (
     ModelGateway,
 )
 from app.ai.privacy import (
+    DataClassification,
     NoOpRedactor,
     ProviderAuditSink,
     ProviderTransmissionPolicy,
     RegexRedactor,
 )
+from app.ai.providers.gemini_interactions import GeminiInteractionsGateway
 from app.ai.providers.openai_responses import OpenAIResponsesGateway
 from app.core.config import Settings
 
@@ -22,6 +25,7 @@ def create_model_gateway(
     settings: Settings,
     *,
     client: AsyncOpenAI | None = None,
+    gemini_transport: httpx.AsyncBaseTransport | None = None,
     audit_sink: ProviderAuditSink | None = None,
 ) -> ModelGateway:
     if settings.ai_provider == "fake":
@@ -54,5 +58,25 @@ def create_model_gateway(
             ),
             redactor=redactor,
             audit_sink=audit_sink,
+        )
+    if settings.ai_provider == "gemini":
+        if settings.gemini_api_key is None or settings.gemini_model is None:
+            raise ModelConfigurationError("Gemini provider configuration is incomplete")
+        custom_terms = tuple(
+            term.strip() for term in settings.ai_redaction_custom_terms.split(",") if term.strip()
+        )
+        redactor = RegexRedactor(custom_terms) if settings.ai_redaction_enabled else NoOpRedactor()
+        return GeminiInteractionsGateway(
+            settings.gemini_api_key.get_secret_value(),
+            model=settings.gemini_model,
+            timeout_seconds=settings.gemini_timeout_seconds,
+            max_retries=settings.gemini_max_retries,
+            retry_backoff_seconds=settings.gemini_retry_backoff_seconds,
+            transmission_policy=ProviderTransmissionPolicy(
+                {"gemini": frozenset({DataClassification.PUBLIC})}
+            ),
+            redactor=redactor,
+            audit_sink=audit_sink,
+            transport=gemini_transport,
         )
     raise ModelConfigurationError(f"Unsupported model provider: {settings.ai_provider}")

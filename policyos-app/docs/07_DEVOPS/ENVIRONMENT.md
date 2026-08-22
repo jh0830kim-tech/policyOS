@@ -154,3 +154,15 @@ validation; it performs no network resolution, and remote references are rejecte
 This governance gate does not install the dependency, construct a client, use `GEMINI_API_KEY`, or
 send traffic. Gemini remains disabled until the separate adapter implementation passes network-free
 tests and review.
+
+### Gemini Interactions adapter implementation
+
+The implementation installs direct `jsonschema` support and wires the pinned REST adapter into the
+provider registry. Selecting Gemini still requires exact `GEMINI_API_KEY` and `GEMINI_MODEL`
+configuration with `GOOGLE_API_KEY` absent. The adapter accepts no configurable origin, path,
+revision, proxy, redirect, transport retry, storage, background execution, history, tool, or
+fallback setting.
+
+Automated validation is credential-free and network-free. Enabling `AI_PROVIDER=gemini` in an
+operator environment does not authorize internal or confidential transmission; only synthetic
+public evaluation is governed. The one-call live smoke remains a separate explicit operation.
