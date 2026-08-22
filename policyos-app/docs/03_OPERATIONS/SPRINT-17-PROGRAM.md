@@ -188,3 +188,16 @@ unchanged.
 This contract-only gate performs no active-session effect persistence or PostgreSQL mutation.
 Those behaviors and resumed vertical validation remain separately reviewed gates. The Alembic
 head remains `20260808_0024`, and migration `20260808_0025` remains absent.
+
+## ADR-135 active-session effect persistence and PostgreSQL atomicity
+
+Active-transaction Persistence now accepts the closed deliverable stage and uses the same bounded
+row-staging helper as the existing fresh-session effect transaction. The helper validates and
+stages the exact base records, outbox, effect, lifecycle revision one, and lifecycle head without
+owning a transaction or reading a clock. The facade-owned root transaction remains unchanged and
+the existing idempotency layer stages the transport receipt in that same transaction.
+
+Focused PostgreSQL evidence covers outer rollback residue zero, unchanged root-transaction
+identity, pre-commit invisibility to Worker due selection, and complete `ENQUEUED` visibility
+after commit. Existing fresh-session effect commit and replay behavior remains in the combined
+regression. No schema, backfill, dispatcher, or migration `20260808_0025` is introduced.

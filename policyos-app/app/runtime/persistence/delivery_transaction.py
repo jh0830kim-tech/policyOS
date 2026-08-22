@@ -46,6 +46,85 @@ _EFFECT_CONSTRAINTS = {
 }
 
 
+async def _persist_runtime_effect_atomic_write_set(
+    session: AsyncSession,
+    write_set: RuntimeEffectAtomicWriteSet,
+    *,
+    stored_at,
+) -> RuntimeTransactionReceipt:
+    """Stage one exact initial effect aggregate without owning its transaction."""
+
+    validate_runtime_effect_atomic_write_set(write_set)
+    transaction_receipt = await _persist_runtime_atomic_write_set(
+        session, write_set.base_write_set, stored_at=stored_at
+    )
+    initial = write_set.initial_effect_enqueue
+    identity = initial.effect_identity
+    lifecycle = initial.initial_lifecycle_record
+    session.add(
+        RuntimeEffect(
+            runtime_effect_receipt_id=initial.effect_receipt_fact.runtime_effect_receipt_id,
+            runtime_effect_id=identity.runtime_effect_id,
+            tenant_id=identity.tenant_id,
+            organization_id=identity.organization_id,
+            classification=identity.classification.value,
+            effect_idempotency_key=identity.effect_idempotency_key,
+            effect_fingerprint_digest_reference=identity.effect_fingerprint_digest_reference,
+            runtime_effect_delivery_envelope_id=(
+                initial.delivery_envelope.runtime_effect_delivery_envelope_id
+            ),
+            envelope_digest_reference=initial.delivery_envelope.envelope_digest_reference,
+            originating_outbox_enqueue_record_id=identity.originating_outbox_enqueue_record_id,
+            originating_transaction_id=identity.originating_transaction_id,
+            originating_transaction_receipt_id=identity.originating_transaction_receipt_id,
+            initial_effect_enqueue_payload=serialize_delivery_model(initial),
+            effect_receipt_fact_payload=serialize_delivery_model(initial.effect_receipt_fact),
+            stored_at=stored_at,
+        )
+    )
+    session.add(
+        RuntimeEffectLifecycleRevision(
+            runtime_effect_lifecycle_receipt_id=(
+                initial.lifecycle_receipt_fact.runtime_effect_lifecycle_receipt_id
+            ),
+            tenant_id=identity.tenant_id,
+            organization_id=identity.organization_id,
+            classification=identity.classification.value,
+            runtime_effect_id=identity.runtime_effect_id,
+            runtime_effect_lifecycle_record_id=(lifecycle.runtime_effect_lifecycle_record_id),
+            lifecycle_revision=1,
+            lifecycle_status=lifecycle.status.value,
+            lifecycle_digest_reference=lifecycle.lifecycle_digest_reference,
+            source_transaction_id=identity.originating_transaction_id,
+            lifecycle_append_request_id=None,
+            claim_request_id=None,
+            lifecycle_record_payload=serialize_delivery_model(lifecycle),
+            write_request_payload=serialize_delivery_model(initial),
+            receipt_fact_payload=serialize_delivery_model(initial.lifecycle_receipt_fact),
+            requested_at=write_set.base_write_set.requested_at,
+            stored_at=stored_at,
+        )
+    )
+    session.add(
+        RuntimeEffectLifecycleHead(
+            tenant_id=identity.tenant_id,
+            organization_id=identity.organization_id,
+            runtime_effect_id=identity.runtime_effect_id,
+            classification=identity.classification.value,
+            current_lifecycle_revision=1,
+            current_lifecycle_record_id=lifecycle.runtime_effect_lifecycle_record_id,
+            current_status=lifecycle.status.value,
+            current_lifecycle_digest_reference=lifecycle.lifecycle_digest_reference,
+            current_lifecycle_payload=serialize_delivery_model(lifecycle),
+            next_eligible_at=lifecycle.recorded_at,
+            latest_attempt_count=0,
+            updated_at=stored_at,
+        )
+    )
+    await session.flush()
+    return transaction_receipt
+
+
 def _transaction_receipt(row: RuntimeTransactionRecord) -> RuntimeTransactionReceipt:
     return RuntimeTransactionReceipt(
         runtime_transaction_receipt_id=row.runtime_transaction_receipt_id,
@@ -164,92 +243,13 @@ class SQLAlchemyRuntimeEffectAtomicTransaction:
                 "injected commit clock predates the atomic effect request"
             )
         initial = write_set.initial_effect_enqueue
-        identity = initial.effect_identity
-        lifecycle = initial.initial_lifecycle_record
         try:
             async with self._session.begin():
-                transaction_receipt = await _persist_runtime_atomic_write_set(
+                transaction_receipt = await _persist_runtime_effect_atomic_write_set(
                     self._session,
-                    write_set.base_write_set,
+                    write_set,
                     stored_at=reading.observed_at,
                 )
-                self._session.add(
-                    RuntimeEffect(
-                        runtime_effect_receipt_id=(
-                            initial.effect_receipt_fact.runtime_effect_receipt_id
-                        ),
-                        runtime_effect_id=identity.runtime_effect_id,
-                        tenant_id=identity.tenant_id,
-                        organization_id=identity.organization_id,
-                        classification=identity.classification.value,
-                        effect_idempotency_key=identity.effect_idempotency_key,
-                        effect_fingerprint_digest_reference=(
-                            identity.effect_fingerprint_digest_reference
-                        ),
-                        runtime_effect_delivery_envelope_id=(
-                            initial.delivery_envelope.runtime_effect_delivery_envelope_id
-                        ),
-                        envelope_digest_reference=(
-                            initial.delivery_envelope.envelope_digest_reference
-                        ),
-                        originating_outbox_enqueue_record_id=(
-                            identity.originating_outbox_enqueue_record_id
-                        ),
-                        originating_transaction_id=identity.originating_transaction_id,
-                        originating_transaction_receipt_id=(
-                            identity.originating_transaction_receipt_id
-                        ),
-                        initial_effect_enqueue_payload=serialize_delivery_model(initial),
-                        effect_receipt_fact_payload=serialize_delivery_model(
-                            initial.effect_receipt_fact
-                        ),
-                        stored_at=reading.observed_at,
-                    )
-                )
-                self._session.add(
-                    RuntimeEffectLifecycleRevision(
-                        runtime_effect_lifecycle_receipt_id=(
-                            initial.lifecycle_receipt_fact.runtime_effect_lifecycle_receipt_id
-                        ),
-                        tenant_id=identity.tenant_id,
-                        organization_id=identity.organization_id,
-                        classification=identity.classification.value,
-                        runtime_effect_id=identity.runtime_effect_id,
-                        runtime_effect_lifecycle_record_id=(
-                            lifecycle.runtime_effect_lifecycle_record_id
-                        ),
-                        lifecycle_revision=1,
-                        lifecycle_status=lifecycle.status.value,
-                        lifecycle_digest_reference=lifecycle.lifecycle_digest_reference,
-                        source_transaction_id=identity.originating_transaction_id,
-                        lifecycle_append_request_id=None,
-                        claim_request_id=None,
-                        lifecycle_record_payload=serialize_delivery_model(lifecycle),
-                        write_request_payload=serialize_delivery_model(initial),
-                        receipt_fact_payload=serialize_delivery_model(
-                            initial.lifecycle_receipt_fact
-                        ),
-                        requested_at=write_set.base_write_set.requested_at,
-                        stored_at=reading.observed_at,
-                    )
-                )
-                self._session.add(
-                    RuntimeEffectLifecycleHead(
-                        tenant_id=identity.tenant_id,
-                        organization_id=identity.organization_id,
-                        runtime_effect_id=identity.runtime_effect_id,
-                        classification=identity.classification.value,
-                        current_lifecycle_revision=1,
-                        current_lifecycle_record_id=(lifecycle.runtime_effect_lifecycle_record_id),
-                        current_status=lifecycle.status.value,
-                        current_lifecycle_digest_reference=(lifecycle.lifecycle_digest_reference),
-                        current_lifecycle_payload=serialize_delivery_model(lifecycle),
-                        next_eligible_at=lifecycle.recorded_at,
-                        latest_attempt_count=0,
-                        updated_at=reading.observed_at,
-                    )
-                )
-                await self._session.flush()
         except IntegrityError as exc:
             constraint = getattr(getattr(exc, "orig", None), "constraint_name", None)
             if constraint is None:
