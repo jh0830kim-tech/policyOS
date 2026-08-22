@@ -5,6 +5,7 @@ import json
 import math
 from collections.abc import Mapping
 from datetime import UTC, datetime
+from enum import StrEnum
 from time import perf_counter
 from typing import Any
 
@@ -41,8 +42,19 @@ _MAX_RESPONSE_BYTES = 1_048_576
 _MAX_TOKEN_COUNT = 2_147_483_647
 _MAX_RETRY_AFTER_SECONDS = 60.0
 _ALLOWED_RESPONSE_FIELDS = frozenset(
-    {"created", "id", "model", "object", "status", "steps", "updated", "usage"}
+    {
+        "created",
+        "id",
+        "model",
+        "object",
+        "service_tier",
+        "status",
+        "steps",
+        "updated",
+        "usage",
+    }
 )
+_ALLOWED_SERVICE_TIERS = frozenset({"deferred", "flex", "priority", "standard"})
 _ALLOWED_STEP_FIELDS = frozenset({"content", "type"})
 _ALLOWED_CONTENT_FIELDS = frozenset({"text", "type"})
 _ALLOWED_USAGE_FIELDS = frozenset(
@@ -62,12 +74,9 @@ _ALLOWED_USAGE_FIELDS = frozenset(
 )
 _REQUIRED_USAGE_FIELDS = frozenset(
     {
-        "total_cached_tokens",
         "total_input_tokens",
         "total_output_tokens",
-        "total_thought_tokens",
         "total_tokens",
-        "total_tool_use_tokens",
     }
 )
 _MODALITY_USAGE_FIELDS = frozenset(
@@ -85,6 +94,29 @@ _UNSUPPORTED_SCHEMA_KEYWORDS = frozenset(
         "$vocabulary",
     }
 )
+
+
+class _ResponseRejection(StrEnum):
+    REDIRECT = "redirect"
+    RESPONSE_BOUNDS = "response_bounds"
+    TOP_LEVEL_FIELDS = "top_level_fields"
+    COMPLETION = "completion"
+    IDENTITY = "identity"
+    SERVICE_TIER = "service_tier"
+    STEPS = "steps"
+    STEP = "step"
+    CONTENT = "content"
+    TEXT = "text"
+    OUTPUT_JSON = "output_json"
+    LOCAL_SCHEMA = "local_schema"
+    USAGE_SHAPE = "usage_shape"
+    USAGE_VALUE = "usage_value"
+
+
+class _GeminiInvalidResponseError(ModelGatewayError):
+    def __init__(self, reason: _ResponseRejection, message: str) -> None:
+        self.diagnostic_reason = reason.value
+        super().__init__(ModelErrorCode.INVALID_RESPONSE, message, retryable=False)
 
 
 class GeminiInteractionsGateway:
@@ -235,8 +267,8 @@ class GeminiInteractionsGateway:
                         try:
                             result = await client.post(_PATH, headers=headers, json=body)
                             if result.is_redirect:
-                                raise _safe_error(
-                                    ModelErrorCode.INVALID_RESPONSE,
+                                raise _invalid_response(
+                                    _ResponseRejection.REDIRECT,
                                     "Model provider redirect was rejected",
                                 )
                             if result.status_code >= 400:
@@ -386,55 +418,62 @@ def _map_success(
 ) -> ModelResponse:
     content = response.content
     if len(content) > _MAX_RESPONSE_BYTES:
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model response exceeds bounds")
+        raise _invalid_response(_ResponseRejection.RESPONSE_BOUNDS, "Model response exceeds bounds")
     try:
         payload = response.json()
     except (ValueError, UnicodeError) as exc:
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model response is invalid") from exc
+        raise _invalid_response(
+            _ResponseRejection.TOP_LEVEL_FIELDS, "Model response is invalid"
+        ) from exc
     if not isinstance(payload, dict) or set(payload) - _ALLOWED_RESPONSE_FIELDS:
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model response is invalid")
+        raise _invalid_response(_ResponseRejection.TOP_LEVEL_FIELDS, "Model response is invalid")
     if payload.get("object") != "interaction" or payload.get("status") != "completed":
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model response did not complete")
+        raise _invalid_response(_ResponseRejection.COMPLETION, "Model response did not complete")
     response_id = _bounded_text(payload.get("id"), 500)
     model = _bounded_text(payload.get("model"), 200)
     if response_id is None or model != request.model_id:
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model response identity is invalid")
+        raise _invalid_response(_ResponseRejection.IDENTITY, "Model response identity is invalid")
+    service_tier = payload.get("service_tier")
+    if service_tier is not None and service_tier not in _ALLOWED_SERVICE_TIERS:
+        raise _invalid_response(
+            _ResponseRejection.SERVICE_TIER, "Model response service tier is invalid"
+        )
     steps = payload.get("steps")
     if not isinstance(steps, list) or len(steps) != 1:
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model response steps are invalid")
+        raise _invalid_response(_ResponseRejection.STEPS, "Model response steps are invalid")
     step = steps[0]
     if (
         not isinstance(step, dict)
         or set(step) - _ALLOWED_STEP_FIELDS
         or step.get("type") != "model_output"
     ):
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model response step is invalid")
+        raise _invalid_response(_ResponseRejection.STEP, "Model response step is invalid")
     items = step.get("content")
     if not isinstance(items, list) or len(items) != 1:
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model response content is invalid")
+        raise _invalid_response(_ResponseRejection.CONTENT, "Model response content is invalid")
     item = items[0]
     if (
         not isinstance(item, dict)
         or set(item) - _ALLOWED_CONTENT_FIELDS
         or item.get("type") != "text"
     ):
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model response content is invalid")
+        raise _invalid_response(_ResponseRejection.CONTENT, "Model response content is invalid")
     text = item.get("text")
     if not isinstance(text, str) or not text or len(text.encode("utf-8")) > _MAX_RESPONSE_BYTES:
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model response content is invalid")
+        raise _invalid_response(_ResponseRejection.TEXT, "Model response content is invalid")
     try:
         structured = json.loads(text)
     except (json.JSONDecodeError, UnicodeError) as exc:
-        raise _safe_error(
-            ModelErrorCode.INVALID_RESPONSE, "Model response JSON is invalid"
+        raise _invalid_response(
+            _ResponseRejection.OUTPUT_JSON, "Model response JSON is invalid"
         ) from exc
     if not isinstance(structured, dict):
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model response must be an object")
+        raise _invalid_response(_ResponseRejection.OUTPUT_JSON, "Model response must be an object")
     try:
         validator.validate(structured)
     except ValidationError as exc:
-        raise _safe_error(
-            ModelErrorCode.INVALID_RESPONSE, "Model response schema is invalid"
+        raise _invalid_response(
+            _ResponseRejection.LOCAL_SCHEMA, "Model response schema is invalid"
         ) from exc
     usage = _map_usage(payload.get("usage"), model, started, retry_count)
     return ModelResponse(
@@ -457,21 +496,22 @@ def _map_usage(
         or set(value) - _ALLOWED_USAGE_FIELDS
         or not _REQUIRED_USAGE_FIELDS.issubset(value)
     ):
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model usage is invalid")
-    input_tokens = _token(value.get("total_input_tokens"))
-    output_tokens = _token(value.get("total_output_tokens"))
-    cached_tokens = _token(value.get("total_cached_tokens"))
-    total_tokens = _token(value.get("total_tokens"))
-    _token(value.get("total_thought_tokens"))
-    if _token(value.get("total_tool_use_tokens")) != 0:
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model usage is invalid")
+        raise _invalid_response(_ResponseRejection.USAGE_SHAPE, "Model usage is invalid")
+    input_tokens = _token(value["total_input_tokens"])
+    output_tokens = _token(value["total_output_tokens"])
+    cached_tokens = _optional_token(value, "total_cached_tokens")
+    total_tokens = _token(value["total_tokens"])
+    _optional_token(value, "total_thought_tokens")
+    tool_tokens = _optional_token(value, "total_tool_use_tokens")
+    if tool_tokens not in (None, 0):
+        raise _invalid_response(_ResponseRejection.USAGE_VALUE, "Model usage is invalid")
     for field in _MODALITY_USAGE_FIELDS:
         if field in value:
             _validate_modality_usage(value[field])
     if value.get("tool_use_tokens_by_modality") not in (None, []):
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model usage is invalid")
+        raise _invalid_response(_ResponseRejection.USAGE_VALUE, "Model usage is invalid")
     if value.get("grounding_tool_count") not in (None, []):
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model usage is invalid")
+        raise _invalid_response(_ResponseRejection.USAGE_VALUE, "Model usage is invalid")
     return UsageMetadata(
         provider="gemini",
         model=model,
@@ -486,20 +526,26 @@ def _map_usage(
 
 def _token(value: Any) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= _MAX_TOKEN_COUNT:
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model usage is invalid")
+        raise _invalid_response(_ResponseRejection.USAGE_VALUE, "Model usage is invalid")
     return value
+
+
+def _optional_token(value: dict[str, Any], field: str) -> int | None:
+    if field not in value:
+        return None
+    return _token(value[field])
 
 
 def _validate_modality_usage(value: Any) -> None:
     if not isinstance(value, list) or len(value) > 10:
-        raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model usage is invalid")
+        raise _invalid_response(_ResponseRejection.USAGE_VALUE, "Model usage is invalid")
     for item in value:
         if (
             not isinstance(item, dict)
             or set(item) != {"modality", "tokens"}
             or item.get("modality") not in _ALLOWED_MODALITIES
         ):
-            raise _safe_error(ModelErrorCode.INVALID_RESPONSE, "Model usage is invalid")
+            raise _invalid_response(_ResponseRejection.USAGE_VALUE, "Model usage is invalid")
         _token(item.get("tokens"))
 
 
@@ -602,6 +648,10 @@ def _retry_after(value: str | None) -> float | None:
 
 def _bounded_text(value: Any, maximum: int) -> str | None:
     return value if isinstance(value, str) and 0 < len(value) <= maximum else None
+
+
+def _invalid_response(reason: _ResponseRejection, message: str) -> ModelGatewayError:
+    return _GeminiInvalidResponseError(reason, message)
 
 
 def _safe_error(code: ModelErrorCode, message: str) -> ModelGatewayError:

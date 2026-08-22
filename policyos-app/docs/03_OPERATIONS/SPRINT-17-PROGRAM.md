@@ -238,3 +238,13 @@ and credentials remain unavailable to diagnostics.
 Network-free adapter correction, CI review, and a separately approved second live smoke follow in
 that order. This gate adds no production traffic, public contract, persistence, schema, or
 migration `20260808_0025`.
+
+## Gemini response wire and safe diagnostic correction
+
+**Status: Implemented / Validated, Pending Review.** Network-free tests cover every allowed
+`service_tier`, absent optional usage counters, missing required aggregate counters, malformed
+usage, and bounded private rejection categories. The adapter performs no diagnostic retry and
+does not expose provider values through the public error.
+
+This correction adds no credential use, provider traffic, public contract, persistence, schema,
+or migration `20260808_0025`. A second live smoke remains a separate approval gate.

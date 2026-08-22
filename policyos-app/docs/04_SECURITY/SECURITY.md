@@ -1577,3 +1577,13 @@ only the validation stage and cannot contain provider values, prompt or response
 fragments, credentials, hidden reasoning, arbitrary text, or stack traces. It is not persisted,
 does not broaden audit, and cannot authorize retry, fallback, reclassification, or another live
 call. No schema or migration `20260808_0025` is introduced.
+
+## Gemini response wire correction security evidence
+
+The implemented parser validates and discards `service_tier`, preserves missing optional usage as
+unknown, and rejects malformed or non-zero tool usage before constructing a provider-neutral
+result. Its private diagnostic is selected from a closed enum and contains no provider value,
+prompt, response, credential, schema fragment, hidden reasoning, or arbitrary text.
+
+The correction is credential-free and network-free. It changes no public error, classification,
+audit, persistence, schema, retry, fallback, or migration boundary.
