@@ -53,3 +53,15 @@ Partial/insufficient evidence, material gaps, unresolved conflicts, incomplete o
 The governed Knowledge Platform release candidate is covered by a synthetic, network-free E2E flow from login and organization RBAC through combined internal RAG/fake MCP routing, cited evidence merge, conflict/gap and confidence assessment, eight-agent Chief Secretary orchestration, reviewable Work Package/artifact persistence, and safe API output. All fixture facts are explicitly fictional. Default CI forbids real OpenAI, remote MCP, and subprocess MCP calls.
 
 Release operation requires Alembic head `20260720_0013`, reviewed environment settings, backup/rollback, retention dry-run, legal-hold protection, privacy incident handling, and provider/MCP outage procedures. See `RELEASE_NOTES_v0.4.md` and `RUNBOOK.md`. Production pgvector/ANN, real government connectors, workers, Redis coordination, scheduled cleanup, SIEM integrations, and live staging verification remain deferred.
+
+## Gemini provider evaluation boundary
+
+ADR-136 permits a future Gemini adapter only through the existing provider-neutral model gateway.
+The initial adapter is limited to synthetic `public` data, one exact deployment-configured model,
+strict structured JSON output, downstream domain validation, SDK retry zero, and request-scoped
+credential/client cleanup. It does not request tools, files, stored history, background execution,
+or hidden reasoning.
+
+Gemini input, output, cached-input, and total tokens reuse the generic usage fields. Thinking or
+tool-use tokens remain represented only in the provider total and are not inferred, priced, or
+stored separately. Provider audit remains metadata only.
