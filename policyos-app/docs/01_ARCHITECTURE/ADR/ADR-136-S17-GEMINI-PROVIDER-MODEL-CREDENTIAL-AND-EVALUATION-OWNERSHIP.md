@@ -180,3 +180,10 @@ ADR-138 governs the documented optional response metadata and usage cardinality 
 first fail-closed live smoke. Public `invalid_response` semantics remain unchanged; any bounded
 structural diagnostic is private, content free, non-persistent, and cannot trigger retry or
 fallback.
+
+## ADR-139 request-rejection probe boundary
+
+ADR-139 keeps HTTP 400 and 422 public mappings non-retryable while allowing only a closed private
+status-and-reason category. The next wire probe changes only `response_format` to one exact
+single-element array; endpoint, revision header, model, schema, classification, credential, retry,
+and fallback remain fixed. A live probe still requires separate one-call approval.

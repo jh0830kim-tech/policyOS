@@ -248,3 +248,17 @@ does not expose provider values through the public error.
 
 This correction adds no credential use, provider traffic, public contract, persistence, schema,
 or migration `20260808_0025`. A second live smoke remains a separate approval gate.
+
+## Gemini request-rejection safe diagnostic and wire-probe governance gate
+
+**Status: Governed / Pending Review.** The second explicitly approved synthetic-public smoke used
+one call, application retry zero, and no fallback, then returned safe `invalid_request`. ADR-139
+does not infer the rejected field. It closes request diagnostics to HTTP 400 or 422 crossed with
+`INVALID_ARGUMENT`, `FAILED_PRECONDITION`, `OUT_OF_RANGE`, the existing policy-block statuses, or
+`unclassified`; provider values and arbitrary text are discarded.
+
+The following implementation gate is network free and changes only the private request diagnostic
+and the single structured-output `response_format` container to one exact array element. A later
+live probe requires separate approval and must stop after exactly one call. Endpoint, revision,
+model, schema, classification, credential, retry, and fallback substitutions are prohibited. This
+gate adds no public contract, persistence, schema, or migration `20260808_0025`.

@@ -414,3 +414,50 @@ def test_adr135_active_session_effect_persistence_is_transaction_neutral() -> No
     assert "ADR-135 active-session effect persistence" in program
     assert "Sprint 17 active-session initial-effect persistence boundary" in security
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr139_governs_safe_request_rejection_and_one_variable_probe() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-139-S17-GEMINI-REQUEST-REJECTION-SAFE-DIAGNOSTIC-AND-WIRE-PROBE-"
+        "GOVERNANCE.md"
+    )
+    related = (
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-136-S17-GEMINI-PROVIDER-MODEL-CREDENTIAL-AND-EVALUATION-OWNERSHIP.md"
+        ),
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-137-S17-GEMINI-WIRE-REVISION-AND-DOMAIN-OUTPUT-VALIDATION-OWNERSHIP.md"
+        ),
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-138-S17-GEMINI-DOCUMENTED-OPTIONAL-RESPONSE-FIELDS-USAGE-"
+            "CARDINALITY-AND-SAFE-REJECTION-DIAGNOSTICS.md"
+        ),
+    )
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for phrase in (
+        "HTTP 400 and 422 remain safe non-retryable public `invalid_request`",
+        "`INVALID_ARGUMENT`",
+        "`FAILED_PRECONDITION`",
+        "`OUT_OF_RANGE`",
+        "request_http_400_<reason>",
+        "request_http_422_<reason>",
+        "array containing exactly one object",
+        "`/v1beta/interactions`",
+        "`Api-Revision: 2026-05-20`",
+        "stop after that result without a second call",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in adr
+    for text in related:
+        assert "ADR-139" in text
+    assert "Sprint 17 Gemini request-rejection diagnostic and wire-probe governance" in roadmap
+    assert "Gemini request-rejection safe diagnostic and wire-probe governance gate" in program
+    assert "Gemini request-rejection diagnostic and single-probe security boundary" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
