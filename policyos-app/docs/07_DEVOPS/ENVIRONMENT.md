@@ -166,3 +166,16 @@ fallback setting.
 Automated validation is credential-free and network-free. Enabling `AI_PROVIDER=gemini` in an
 operator environment does not authorize internal or confidential transmission; only synthetic
 public evaluation is governed. The one-call live smoke remains a separate explicit operation.
+
+### Gemini optional response and safe diagnostic governance
+
+The first approved live smoke completed one provider call with application retry zero and failed
+closed as `invalid_response`; its temporary User credential and model configuration were removed.
+ADR-138 permits no automatic replay. The correction accepts only documented bounded
+`service_tier`, treats absent cached/thought/tool usage as unknown, and exposes at most one private
+content-free structural category while keeping the public error unchanged.
+
+Do not print or persist a response to diagnose this boundary. Apply the network-free adapter
+correction and pass CI first; a second synthetic-public one-call smoke requires a new explicit
+approval. Provider fallback, model or revision substitution, broader classification, production
+enablement, schema changes, and migration `20260808_0025` remain prohibited.

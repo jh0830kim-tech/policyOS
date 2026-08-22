@@ -226,3 +226,15 @@ responses require the pinned revision, exact model and response identity, one ty
 bounded integral usage, JSON decoding, and local Draft 2020-12 validation. Tests remain network
 free. Live smoke, production credentials, provider traffic, deployment, schema changes, and
 migration `20260808_0025` remain separately prohibited.
+
+## Gemini documented optional response and safe diagnostic correction gate
+
+**Status: Governed / Pending Review.** The approved live smoke consumed exactly one call and
+returned safe `invalid_response` with retry zero. ADR-138 keeps the response profile closed while
+governing optional `service_tier`, nullable cached/thought/tool usage counters, and one private
+bounded structural rejection category. Raw response, prompt, schema fragments, provider messages,
+and credentials remain unavailable to diagnostics.
+
+Network-free adapter correction, CI review, and a separately approved second live smoke follow in
+that order. This gate adds no production traffic, public contract, persistence, schema, or
+migration `20260808_0025`.

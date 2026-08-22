@@ -100,3 +100,13 @@ implicit compatibility fallback.
 - Omit or dynamically choose the API revision.
 - Ignore unknown transport fields to tolerate silent provider drift.
 - Persist raw response or validation details for later inspection.
+
+## ADR-138 documented optional-field amendment
+
+Input, output, and total usage counters remain required. Cached-input, thought, and tool-use
+counters are optional but validated when present and never synthesized. The closed top-level
+allowlist adds only documented bounded `service_tier`; it is validated and discarded.
+
+The first approved live smoke returned public `invalid_response`. ADR-138 owns the subsequent
+content-free diagnostic correction; it does not retroactively accept the failed response or
+authorize another call.

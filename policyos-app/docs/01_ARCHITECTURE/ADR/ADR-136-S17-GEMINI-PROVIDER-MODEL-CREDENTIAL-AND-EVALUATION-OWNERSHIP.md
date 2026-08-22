@@ -173,3 +173,10 @@ persistence, or downstream-only acceptance.
 - Treat HTTP success or schema-shaped JSON as authoritative domain validity.
 - Persist raw output, provider messages, hidden reasoning, or new token subcategories.
 - Reuse the manual connectivity smoke as application or production authorization.
+
+## ADR-138 live-smoke correction boundary
+
+ADR-138 governs the documented optional response metadata and usage cardinality exposed by the
+first fail-closed live smoke. Public `invalid_response` semantics remain unchanged; any bounded
+structural diagnostic is private, content free, non-persistent, and cannot trigger retry or
+fallback.
