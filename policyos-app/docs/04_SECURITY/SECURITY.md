@@ -1628,3 +1628,9 @@ retry, storage, background, proxy, and cleanup controls remain unchanged.
 The next probe changes no request content or diagnostic disclosure. Raw provider bodies, messages,
 prompts, schemas, and credentials remain excluded from logs, audit, persistence, and errors. No
 schema or migration `20260808_0025` is introduced.
+
+### Gemini API-version path correction evidence
+
+The adapter and network-free tests now pin `/v1beta2/interactions`. The origin, revision header,
+request body, synthetic-public ceiling, retry, fallback, diagnostics, and local validation remain
+unchanged. No credential was read and no external request was made.

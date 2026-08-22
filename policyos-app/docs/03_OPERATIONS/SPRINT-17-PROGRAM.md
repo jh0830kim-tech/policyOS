@@ -277,10 +277,16 @@ gate. A single live probe still requires separate explicit approval after author
 
 ## Gemini API-version path governance gate
 
-**Status: Governed / Pending Review.** ADR-140 governs a network-free path-only correction from
+**Status: Governed / Merged.** ADR-140 governs a network-free path-only correction from
 `/v1beta/interactions` to `/v1beta2/interactions`. The existing revision header and entire request
 body remain unchanged so the next separately approved one-call probe has exactly one variable.
 
 CI and tests must prove one literal path, no negotiation or fallback, one request, and unchanged
 public error, classification, retry, client-lifetime, and local-validation behavior. This gate adds
 no credential use, provider traffic, persistence, schema, or migration `20260808_0025`.
+
+### Gemini API-version path correction implementation
+
+**Status: Implemented / Validated, Pending Review.** The adapter and credential-free tests now pin
+`/v1beta2/interactions` without changing any other request fact. A live probe remains separately
+approved; persistence, schema, and migration `20260808_0025` remain absent.
