@@ -143,6 +143,7 @@ from app.services.runtime_api_validation import (
     validate_runtime_api_persistence_resolution,
     validate_runtime_api_registry_resolution_admission,
 )
+from tests.test_runtime_delivery_persistence_contracts import effect_write_set
 
 NOW = datetime(2026, 8, 9, 1, 2, tzinfo=UTC)
 TENANT = UUID("00000000-0000-0000-0000-000000000001")
@@ -679,6 +680,83 @@ def atomic_write_set(
         expected_audit_revision=item.audit_trail.expected_revision,
         commit_facts=None,
         requested_at=NOW,
+    )
+
+
+def binding_for_effect_write_set(write_set) -> RuntimeApiPersistenceBindingRead:
+    base = write_set.base_write_set
+    scope = base.idempotency_reservation.scope
+    item = binding_for_scope(scope.tenant_id, scope.organization_id, scope.classification)
+    facts = item.registry_resolution_admission
+    common = {
+        "tenant_id": scope.tenant_id,
+        "organization_id": scope.organization_id,
+        "classification": scope.classification,
+        "root_lineage_id": scope.root_lineage_id,
+        "root_lineage_digest_reference": scope.root_lineage_digest_reference,
+    }
+    snapshot = facts.snapshot.model_copy(
+        update={**common, "registry_revision": scope.registry_revision}
+    )
+    snapshot_reference = facts.resolution_request.snapshot_reference.model_copy(
+        update={
+            "registry_revision": scope.registry_revision,
+            "tenant_id": scope.tenant_id,
+            "organization_id": scope.organization_id,
+            "classification": scope.classification,
+        }
+    )
+    reservation = base.idempotency_reservation
+    resolution_request = facts.resolution_request.model_copy(
+        update={
+            **common,
+            "snapshot_reference": snapshot_reference,
+            "action_identity": RuntimeActionIdentity(
+                action_definition_id=reservation.action_definition_id,
+                action=reservation.action,
+                action_version=reservation.action_version,
+            ),
+        }
+    )
+    resolution_decision = facts.resolution_decision.model_copy(
+        update={**common, "snapshot_reference": snapshot_reference}
+    )
+    admission = facts.admission_decision.model_copy(
+        update={
+            **common,
+            "runtime_admission_decision_id": scope.runtime_admission_decision_id,
+            "runtime_execution_request_id": scope.runtime_execution_request_id,
+            "registry_revision": scope.registry_revision,
+        }
+    )
+    return item.model_copy(
+        update={
+            "execution_request": record(scope.runtime_execution_request_id.int),
+            "authority_bundle": record(scope.runtime_authority_bundle_id.int),
+            "admission": record(scope.runtime_admission_decision_id.int),
+            "execution_plan": record(scope.execution_plan_id.int),
+            "execution_state": record(
+                base.state_record.runtime_execution_state_record_id.int,
+                revision=base.expected_state_revision,
+            ),
+            "audit_trail": record(
+                base.audit_trail.runtime_audit_trail_id.int,
+                revision=base.expected_audit_revision,
+            ),
+            "registry": item.registry.model_copy(
+                update={"registry_revision": scope.registry_revision}
+            ),
+            "registry_resolution_admission": facts.model_copy(
+                update={
+                    "snapshot": snapshot,
+                    "resolution_request": resolution_request,
+                    "resolution_decision": resolution_decision,
+                    "admission_decision": admission,
+                }
+            ),
+            "scope": item.scope.model_copy(update=common),
+            "requested_at": base.requested_at,
+        }
     )
 
 
@@ -1583,17 +1661,68 @@ def test_closed_write_set_discriminator_and_payload_fail_closed() -> None:
             RuntimeApiLocalWriteSetStage.model_validate({**common, **values})
 
 
-def test_closed_write_set_forbids_outbox_and_exact_binding_substitution() -> None:
-    with pytest.raises(ValidationError, match="outbox"):
+def test_closed_submission_write_set_variants_fail_closed() -> None:
+    deliverable = asyncio.run(effect_write_set())
+    persisted = binding_for_effect_write_set(deliverable)
+    local_only = atomic_write_set()
+    local_stage = RuntimeApiLocalWriteSetStage(
+        local_write_set_id=uid(70),
+        transport_receipt_id=uid(71),
+        operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+        binding=binding(),
+        write_set_digest_reference="write-set.local-only",
+        logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
+        write_set=local_only,
+        staged_at=NOW,
+    )
+    deliverable_stage = RuntimeApiLocalWriteSetStage(
+        local_write_set_id=uid(72),
+        transport_receipt_id=uid(73),
+        operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+        binding=persisted,
+        write_set_digest_reference="write-set.deliverable",
+        logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
+        write_set=deliverable,
+        staged_at=deliverable.base_write_set.requested_at,
+    )
+    assert local_stage.write_set is local_only
+    assert deliverable_stage.write_set is deliverable
+
+    with pytest.raises(ValidationError, match="initial effect facts"):
         RuntimeApiLocalWriteSetStage(
-            local_write_set_id=uid(70),
-            transport_receipt_id=uid(71),
+            local_write_set_id=uid(74),
+            transport_receipt_id=uid(75),
             operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
-            binding=binding(),
-            write_set_digest_reference="write-set.digest",
+            binding=persisted,
+            write_set_digest_reference="write-set.outbox-only",
             logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
-            write_set=atomic_write_set(outbox=object()),
-            staged_at=NOW,
+            write_set=deliverable.base_write_set,
+            staged_at=deliverable.base_write_set.requested_at,
+        )
+
+    substituted = deliverable.model_copy(
+        update={
+            "initial_effect_enqueue": deliverable.initial_effect_enqueue.model_copy(
+                update={
+                    "outbox_enqueue_record": (
+                        deliverable.initial_effect_enqueue.outbox_enqueue_record.model_copy(
+                            update={"destination_reference": "destination.substituted"}
+                        )
+                    )
+                }
+            )
+        }
+    )
+    with pytest.raises(ValidationError):
+        RuntimeApiLocalWriteSetStage(
+            local_write_set_id=uid(76),
+            transport_receipt_id=uid(77),
+            operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+            binding=persisted,
+            write_set_digest_reference="write-set.substituted",
+            logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
+            write_set=substituted,
+            staged_at=deliverable.base_write_set.requested_at,
         )
 
 

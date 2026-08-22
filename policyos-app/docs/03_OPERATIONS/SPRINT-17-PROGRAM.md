@@ -174,3 +174,17 @@ backfilled. Execution projection and delivery lifecycle remain separate.
 Public-contract correction, active-persistence PostgreSQL evidence, and resumed vertical
 validation are separate gates. Live credentials, provider traffic, deployment, schema changes,
 and migration `20260808_0025` remain prohibited.
+
+## ADR-135 submission-stage public contracts
+
+The Runtime API submission stage now accepts exactly one local-only `RuntimeAtomicWriteSet` with
+no outbox or one complete caller-supplied `RuntimeEffectAtomicWriteSet`. A base outbox without its
+matching initial-effect aggregate fails closed. Deliverable validation reuses the CP8 exact
+effect, envelope, lifecycle-revision-one, receipt, transaction, scope, classification, lineage,
+revision, digest, and time bindings before the base facts are compared with the API persistence
+binding. Reconciliation, query non-mutation, facade signatures, and transaction ownership are
+unchanged.
+
+This contract-only gate performs no active-session effect persistence or PostgreSQL mutation.
+Those behaviors and resumed vertical validation remain separately reviewed gates. The Alembic
+head remains `20260808_0024`, and migration `20260808_0025` remains absent.

@@ -1481,3 +1481,14 @@ stages them with the base write set and transport receipt in the facade-owned tr
 No dispatcher, consumption cursor, hidden UUID, hidden clock, digest generation, latest-row
 selection, combined status, backfill, schema, or migration `20260808_0025` is authorized. Worker
 access begins only from the committed lifecycle head; rollback leaves no partial residue.
+
+## Sprint 17 closed submission-stage contract boundary
+
+The Runtime API stage accepts only a local-only base write set with no outbox or a complete
+caller-supplied effect atomic write set. A generic outbox without exact initial-effect facts is
+rejected before persistence. The deliverable aggregate is validated by the existing CP8 binding
+rules, and only its exact base state and audit facts are used for API logical-result validation.
+
+No effect identity, envelope, lifecycle, receipt, tenant, organization, classification, lineage,
+revision, digest, reference, or time is generated or inferred. This gate adds no persistence
+behavior, schema, backfill, dispatcher, combined status, or migration `20260808_0025`.

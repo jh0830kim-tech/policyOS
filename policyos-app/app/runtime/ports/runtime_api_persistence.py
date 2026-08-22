@@ -11,6 +11,10 @@ from app.ai.privacy import DataClassification
 from app.runtime.authority import RuntimeAdmissionDecision, RuntimeAuthorityDecisionStatus
 from app.runtime.ports._base import BoundedId, PositiveInt, RuntimePortModel, aware, canonical
 from app.runtime.ports.delivery import RuntimeEffectReconciliationRequest
+from app.runtime.ports.delivery_persistence import RuntimeEffectAtomicWriteSet
+from app.runtime.ports.delivery_persistence_validation import (
+    validate_runtime_effect_atomic_write_set,
+)
 from app.runtime.ports.domain import RuntimeAtomicWriteSet
 from app.runtime.registry import (
     RuntimeActionRegistrySnapshot,
@@ -265,7 +269,7 @@ class RuntimeApiLocalWriteSetStage(RuntimePortModel):
         RuntimeApiLogicalExecutionResultMutationAbsent
         | RuntimeApiLogicalExecutionResultMutationPresent
     )
-    write_set: RuntimeAtomicWriteSet | None = None
+    write_set: RuntimeAtomicWriteSet | RuntimeEffectAtomicWriteSet | None = None
     reconciliation_request: RuntimeEffectReconciliationRequest | None = None
     staged_at: datetime
 
@@ -284,13 +288,13 @@ class RuntimeApiLocalWriteSetStage(RuntimePortModel):
         if self.operation is RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION:
             if self.write_set is None or self.reconciliation_request is not None:
                 raise ValueError("submission requires exactly one atomic write set")
-            _validate_submission_write_set(self.binding, self.write_set)
+            base_write_set = _validate_submission_write_set(self.binding, self.write_set)
             _validate_submission_logical_result(
                 self.binding,
-                self.write_set,
+                base_write_set,
                 self.logical_execution_result,
             )
-            payload_time = self.write_set.requested_at
+            payload_time = base_write_set.requested_at
         else:
             if self.reconciliation_request is None or self.write_set is not None:
                 raise ValueError("reconciliation requires exactly one reconciliation request")
@@ -403,11 +407,16 @@ def _validate_exact_binding(binding: RuntimeApiPersistenceBindingRead) -> None:
 
 def _validate_submission_write_set(
     binding: RuntimeApiPersistenceBindingRead,
-    write_set: RuntimeAtomicWriteSet,
-) -> None:
-    if write_set.outbox_enqueue_record is not None:
-        raise ValueError("Runtime API submission cannot enqueue an outbox effect")
-    scope = write_set.idempotency_reservation.scope
+    write_set: RuntimeAtomicWriteSet | RuntimeEffectAtomicWriteSet,
+) -> RuntimeAtomicWriteSet:
+    if isinstance(write_set, RuntimeEffectAtomicWriteSet):
+        validate_runtime_effect_atomic_write_set(write_set)
+        base_write_set = write_set.base_write_set
+    else:
+        base_write_set = write_set
+        if base_write_set.outbox_enqueue_record is not None:
+            raise ValueError("deliverable Runtime API submission requires initial effect facts")
+    scope = base_write_set.idempotency_reservation.scope
     expected = binding.scope
     if (
         scope.tenant_id,
@@ -432,18 +441,19 @@ def _validate_submission_write_set(
     ):
         raise ValueError("atomic write set differs from exact persistence binding")
     if (
-        write_set.expected_state_revision != binding.execution_state.expected_revision
-        or write_set.expected_audit_revision != binding.audit_trail.expected_revision
+        base_write_set.expected_state_revision != binding.execution_state.expected_revision
+        or base_write_set.expected_audit_revision != binding.audit_trail.expected_revision
     ):
         raise ValueError("atomic write set uses stale expected revisions")
     identity = binding.registry_resolution_admission.resolution_request.action_identity
-    reservation = write_set.idempotency_reservation
+    reservation = base_write_set.idempotency_reservation
     if (
         reservation.action_definition_id,
         reservation.action,
         reservation.action_version,
     ) != (identity.action_definition_id, identity.action, identity.action_version):
         raise ValueError("atomic write set action differs from resolved action")
+    return base_write_set
 
 
 def _validate_reconciliation_write_set(

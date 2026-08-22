@@ -360,3 +360,23 @@ def test_adr135_governs_atomic_outbox_to_effect_handoff_without_new_schema() -> 
     assert "ADR-135 atomic handoff correction gate" in program
     assert "Sprint 17 atomic outbox-to-effect handoff security boundary" in security
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr135_submission_stage_contracts_are_closed_without_persistence_changes() -> None:
+    contracts = _read("app/runtime/ports/runtime_api_persistence.py")
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for phrase in (
+        "RuntimeAtomicWriteSet | RuntimeEffectAtomicWriteSet | None",
+        "validate_runtime_effect_atomic_write_set(write_set)",
+        "deliverable Runtime API submission requires initial effect facts",
+        "base_write_set = write_set.base_write_set",
+        "payload_time = base_write_set.requested_at",
+    ):
+        assert phrase in contracts
+    assert "Public Contracts Implemented / Pending Review" in roadmap
+    assert "ADR-135 submission-stage public contracts" in program
+    assert "Sprint 17 closed submission-stage contract boundary" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
