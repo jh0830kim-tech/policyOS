@@ -293,6 +293,15 @@ approved; persistence, schema, and migration `20260808_0025` remain absent.
 
 ## Gemini canonical path and HTTP-404 provenance governance gate
 
-**Status: Governed / Pending Review.** ADR-141 selects `/v1/interactions` as the sole next path,
+**Status: Governed / Merged.** ADR-141 selects `/v1/interactions` as the sole next path,
 rejects model-only attribution of HTTP 404, and requires a network-free correction plus CI before
 another separately approved one-call probe.
+
+## Gemini canonical path and HTTP-404 diagnostic correction gate
+
+**Status: Implemented / Validated, Pending Review.** The adapter now uses only
+`/v1/interactions`; network-free tests reject `/v1beta`, `/v1beta2`, negotiation, and fallback.
+HTTP 404 remains public non-retryable `configuration_error` with private category
+`request_http_404_unclassified`, without provider detail or model-only provenance. No credential,
+external call, public contract, persistence, schema, or migration `20260808_0025` is included. A
+later one-call synthetic-public probe remains separately approved.

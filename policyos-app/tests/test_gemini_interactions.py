@@ -116,7 +116,7 @@ async def test_pinned_wire_maps_valid_structured_response_and_usage() -> None:
     assert transport.close_count == 1
 
     sent = transport.requests[0]
-    assert sent.url == "https://generativelanguage.googleapis.com/v1beta2/interactions"
+    assert sent.url == "https://generativelanguage.googleapis.com/v1/interactions"
     assert sent.headers["api-revision"] == "2026-05-20"
     assert sent.headers["x-goog-api-key"] == "synthetic-key"
     body = json.loads(sent.content)
@@ -382,6 +382,27 @@ async def test_safe_http_error_mapping(status, provider_status, code, retryable)
     assert caught.value.code is code
     assert caught.value.retryable is retryable
     assert "synthetic-key" not in str(caught.value)
+    assert transport.close_count == 1
+
+
+@pytest.mark.asyncio
+async def test_http_404_is_configuration_error_without_model_only_provenance() -> None:
+    transport = transport_for(
+        {"error": {"message": "private-provider-message", "status": "NOT_FOUND"}},
+        status=404,
+    )
+
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway("synthetic-key", model=MODEL, transport=transport).generate(
+            request()
+        )
+
+    assert caught.value.code is ModelErrorCode.CONFIGURATION
+    assert caught.value.retryable is False
+    assert caught.value.diagnostic_reason == "request_http_404_unclassified"
+    assert "model" not in str(caught.value).lower()
+    assert "private-provider-message" not in str(caught.value)
+    assert len(transport.requests) == 1
     assert transport.close_count == 1
 
 

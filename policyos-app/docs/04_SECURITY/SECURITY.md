@@ -1640,3 +1640,12 @@ unchanged. No credential was read and no external request was made.
 ADR-141 permits only `/v1/interactions` for the next profile. HTTP 404 remains a bounded
 configuration failure without model-only attribution, and provider-controlled detail is discarded.
 No fallback, credential use, schema, or migration `20260808_0025` is authorized.
+
+### Gemini canonical path correction evidence
+
+The adapter and credential-free tests pin exactly `/v1/interactions`; `/v1beta`, `/v1beta2`,
+negotiation, redirects, and fallback cannot select another path. HTTP 404 exposes only the existing
+non-retryable configuration error and adapter-private `request_http_404_unclassified` category.
+Provider body, message, field path, identifiers, prompt, schema, credential, and raw response are
+not retained or disclosed. The correction makes no external call and adds no public contract,
+schema, persistence, or migration `20260808_0025`.

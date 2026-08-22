@@ -119,7 +119,7 @@ is enabled.
 
 ### Gemini wire-drift response
 
-The approved adapter profile is `/v1beta2/interactions` with `Api-Revision: 2026-05-20` and typed
+The approved adapter profile is `/v1/interactions` with `Api-Revision: 2026-05-20` and typed
 `steps`. An unknown response field, legacy `outputs`, multiple output items, unsupported content,
 or local Draft 2020-12 schema failure is a safe `invalid_response`, not an invitation to retry,
 switch model, relax validation, or parse provider messages. Disable Gemini and review the wire
@@ -151,6 +151,8 @@ the exact HTTP status with `invalid_argument`, `failed_precondition`, `out_of_ra
 path, prompt, schema, or credential.
 
 The corrected request carries one structured-output `response_format` array element while keeping
-the configured model, schema, `/v1beta2/interactions`, and `Api-Revision: 2026-05-20` fixed. This
+the configured model, schema, `/v1/interactions`, and `Api-Revision: 2026-05-20` fixed. HTTP 404 is
+a non-retryable configuration failure with private category `request_http_404_unclassified`; it
+does not prove model-only unavailability and provider detail remains discarded. This
 network-free correction does not authorize a live call. Any later smoke requires separate approval,
 uses one call with retry and fallback zero, and stops after the first result.
