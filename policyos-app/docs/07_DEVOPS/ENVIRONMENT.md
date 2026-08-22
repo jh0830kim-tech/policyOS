@@ -130,3 +130,15 @@ Provider selection does not imply a shared classification ceiling. Deployment co
 widen Gemini beyond synthetic `public`, and the existing global confidential opt-in applies only
 after the selected provider's immutable classification set allows that classification. The initial
 Gemini implementation reuses bounded `httpx`; it adds no provider SDK or ambient retry layer.
+
+### Gemini config/privacy public-contract implementation
+
+`AI_PROVIDER=gemini` requires a non-empty, trimmed `GEMINI_API_KEY` and an explicit,
+trimmed `GEMINI_MODEL`. The key is represented as a secret value and excluded from settings
+serialization and representation. `GOOGLE_API_KEY` is rejected rather than treated as an alias,
+so deployment configuration has one credential owner. Timeout, retry count, and retry backoff are
+bounded public configuration; this checkpoint does not create a Gemini adapter or network path.
+
+The provider transmission policy uses immutable provider-specific classification sets. Gemini's
+set is exactly `public`; internal and confidential inputs return `deny_classification`, restricted
+inputs retain `deny_restricted`, and the global confidential opt-in cannot widen Gemini.

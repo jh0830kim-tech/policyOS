@@ -1522,3 +1522,16 @@ Provider-specific immutable classification sets prevent the generic allowlist fr
 broadening Gemini transmission. A Gemini request classified internal, confidential, or restricted
 fails before client construction with safe `deny_classification` semantics where applicable.
 Neither organization confidential opt-in nor runtime configuration can widen that set.
+
+### Gemini config/privacy contract security boundary
+
+Gemini configuration has one explicit credential owner: the secret-wrapped `GEMINI_API_KEY`.
+Settings representations and serialized dumps exclude the credential, and the ambient
+`GOOGLE_API_KEY` alias is rejected. Model identity and resilience controls are explicit and
+bounded; this checkpoint adds no adapter, network call, provider SDK, schema, backfill, or
+migration `20260808_0025`.
+
+The transmission policy copies provider-specific classification sets into an immutable mapping.
+Gemini is limited to synthetic `public` data. Internal and confidential inputs fail with
+`deny_classification`, restricted inputs retain `deny_restricted`, and no global opt-in can widen
+the provider-specific ceiling.

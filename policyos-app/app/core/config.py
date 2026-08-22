@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal, Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.ai.privacy import DataClassification
@@ -34,6 +34,16 @@ class Settings(BaseSettings):
     openai_max_retries: int = Field(default=2, ge=0, le=10)
     openai_retry_backoff_seconds: float = Field(default=0.5, ge=0, le=30)
     openai_store_responses: bool = False
+    gemini_api_key: SecretStr | None = Field(
+        default=None, min_length=1, max_length=4096, repr=False, exclude=True
+    )
+    google_api_key: SecretStr | None = Field(
+        default=None, max_length=4096, repr=False, exclude=True
+    )
+    gemini_model: str | None = Field(default=None, strict=True, min_length=1, max_length=200)
+    gemini_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
+    gemini_max_retries: int = Field(default=2, ge=0, le=10)
+    gemini_retry_backoff_seconds: float = Field(default=0.5, ge=0, le=30)
     ai_default_data_classification: DataClassification = DataClassification.INTERNAL
     ai_allow_confidential_external_provider: bool = False
     ai_provider_audit_retention_days: int = Field(default=365, ge=1)
@@ -161,12 +171,22 @@ class Settings(BaseSettings):
                 "SECRET_KEY must be a unique, cryptographically random value of at least "
                 "32 bytes outside development and test environments"
             )
-        if self.ai_provider not in {"fake", "disabled", "openai"}:
+        if self.ai_provider not in {"fake", "disabled", "openai", "gemini"}:
             raise ValueError(f"Unsupported AI_PROVIDER: {self.ai_provider}")
         if is_production and self.ai_provider == "fake":
             self.ai_provider = "disabled"
         if self.ai_provider == "openai" and not self.openai_api_key:
             raise ValueError("OPENAI_API_KEY is required when AI_PROVIDER=openai")
+        if self.ai_provider == "gemini":
+            if self.gemini_api_key is None:
+                raise ValueError("GEMINI_API_KEY is required when AI_PROVIDER=gemini")
+            gemini_api_key = self.gemini_api_key.get_secret_value()
+            if not gemini_api_key or gemini_api_key != gemini_api_key.strip():
+                raise ValueError("GEMINI_API_KEY must be non-empty and trimmed")
+            if self.google_api_key is not None:
+                raise ValueError("GEMINI_API_KEY is the sole credential owner")
+            if self.gemini_model is None or self.gemini_model != self.gemini_model.strip():
+                raise ValueError("GEMINI_MODEL is required, bounded, and trimmed")
         if self.knowledge_chunk_target_characters > self.knowledge_chunk_max_characters:
             raise ValueError("Knowledge chunk target cannot exceed maximum")
         if self.knowledge_chunk_min_characters > self.knowledge_chunk_target_characters:
