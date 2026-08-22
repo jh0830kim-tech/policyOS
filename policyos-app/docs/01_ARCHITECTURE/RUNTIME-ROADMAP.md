@@ -1497,3 +1497,15 @@ Network-free tests cover credential and model binding, schema complexity and rem
 rejection, policy denial before I/O, response identity and wire substitution, usage bounds,
 safe HTTP error mapping, bounded application retry, cancellation, and exactly-once client cleanup.
 No live credential, provider traffic, persistence, schema, or migration `20260808_0025` is added.
+
+## Sprint 17 Gemini documented optional-field and diagnostic governance
+
+**Status: Governed / Pending Review.** The first separately approved synthetic-public live smoke
+made one call with retry zero and failed closed as `invalid_response`. No provider content or
+credential was retained. ADR-138 adds only documented bounded `service_tier` handling, makes
+cached/thought/tool usage counters optional without zero inference, and permits one adapter-private
+content-free rejection category while preserving the public error code.
+
+The adapter correction and any second one-call smoke remain separate gates. No schema, migration
+`20260808_0025`, fallback, broader classification, production enablement, deployment, tag, or
+release is introduced.

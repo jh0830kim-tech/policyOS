@@ -1564,3 +1564,16 @@ required before a provider-neutral result is returned. Credentials, prompts, raw
 reasoning, provider messages, and validation traces remain outside persistence, audit, errors,
 logs, and snapshots. Network-free tests use synthetic values only; no schema or migration
 `20260808_0025` is introduced.
+
+## Gemini optional response metadata and safe diagnostic security boundary
+
+ADR-138 does not relax unknown-field rejection. It adds only documented bounded `service_tier`,
+validates it against a closed enum, and discards it before provider-neutral result construction.
+Missing optional cached, thought, or tool-use token counters remain unknown rather than being
+inferred as zero; present values remain bounded and a non-zero tool-use count fails closed.
+
+The public error remains `invalid_response`. A private bounded structural category may identify
+only the validation stage and cannot contain provider values, prompt or response content, schema
+fragments, credentials, hidden reasoning, arbitrary text, or stack traces. It is not persisted,
+does not broaden audit, and cannot authorize retry, fallback, reclassification, or another live
+call. No schema or migration `20260808_0025` is introduced.

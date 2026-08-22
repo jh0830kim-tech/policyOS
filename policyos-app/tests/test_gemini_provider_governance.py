@@ -159,3 +159,44 @@ def test_gemini_config_and_privacy_contracts_are_implemented_without_adapter() -
     assert not (ROOT / "app/ai/providers/gemini.py").exists()
     assert (ROOT / "app/ai/providers/gemini_interactions.py").exists()
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr138_governs_optional_fields_usage_and_safe_diagnostics() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-138-S17-GEMINI-DOCUMENTED-OPTIONAL-RESPONSE-FIELDS-USAGE-CARDINALITY-"
+        "AND-SAFE-REJECTION-DIAGNOSTICS.md"
+    )
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+    environment = _read("docs/07_DEVOPS/ENVIRONMENT.md")
+
+    for phrase in (
+        "`service_tier`",
+        "`standard`, `flex`, `priority`, or `deferred`",
+        "remain unknown and are not synthesized as zero",
+        "`total_input_tokens`, `total_output_tokens`, and `total_tokens`",
+        "public error remains the existing non-retryable `invalid_response`",
+        "private bounded rejection category",
+        "never cause a second call",
+        "migration `20260808_0025`",
+        "single Alembic head remains `20260808_0024`",
+    ):
+        assert phrase in adr
+
+    for rejected in (
+        "Ignore every unknown provider response field",
+        "Persist or print the raw response",
+        "Treat all missing usage members as zero",
+        "Make every documented optional interaction field",
+        "Retry the failed smoke automatically",
+        "Add a database diagnostics table",
+    ):
+        assert rejected in adr
+
+    assert "Gemini documented optional-field and diagnostic governance" in roadmap
+    assert "Gemini documented optional response and safe diagnostic correction gate" in program
+    assert "Gemini optional response metadata and safe diagnostic security boundary" in security
+    assert "Gemini optional response and safe diagnostic governance" in environment
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
