@@ -48,6 +48,54 @@ def test_adr136_governs_gemini_without_schema_or_traffic() -> None:
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_adr137_pins_wire_revision_and_local_schema_validation() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-137-S17-GEMINI-WIRE-REVISION-AND-DOMAIN-OUTPUT-VALIDATION-OWNERSHIP.md"
+    )
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+    environment = _read("docs/07_DEVOPS/ENVIRONMENT.md")
+    runbook = _read("RUNBOOK.md")
+
+    for phrase in (
+        "`/v1beta/interactions`",
+        "`Api-Revision: 2026-05-20`",
+        "`store=false`",
+        "`background=false`",
+        "typed `steps` revision",
+        "Draft 2020-12 validator",
+        "Only local `#/$defs/...` references are allowed",
+        "zero client and network calls",
+        "safe non-retryable `invalid_response`",
+        "migration `20260808_0025`",
+        "single Alembic head remains",
+        "`20260808_0024`",
+    ):
+        assert phrase in adr
+
+    for rejected in (
+        "Trust Gemini structured-output enforcement without local validation",
+        "make downstream agent validation the only acceptance boundary",
+        "Add a mutable callback, Pydantic class, or validator object to `ModelRequest`",
+        "Implement a partial JSON Schema evaluator inside the adapter",
+        "Resolve remote schema references",
+        "Accept both legacy `outputs` and current `steps` wire shapes",
+        "Omit or dynamically choose the API revision",
+        "Ignore unknown transport fields",
+    ):
+        assert rejected in adr
+
+    assert "Gemini wire and output-validation governance" in roadmap
+    assert "Gemini wire and local validation correction gate" in program
+    assert "Gemini wire-revision and local-validation security boundary" in security
+    assert "Gemini pinned wire and validator governance" in environment
+    assert "Gemini wire-drift response" in runbook
+    assert not (ROOT / "app/ai/providers/gemini_interactions.py").exists()
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_adr136_defines_exact_provider_classification_denial() -> None:
     adr = _read(
         "docs/01_ARCHITECTURE/ADR/"

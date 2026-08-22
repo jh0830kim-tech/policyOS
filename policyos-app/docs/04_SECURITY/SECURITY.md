@@ -1535,3 +1535,17 @@ The transmission policy copies provider-specific classification sets into an imm
 Gemini is limited to synthetic `public` data. Internal and confidential inputs fail with
 `deny_classification`, restricted inputs retain `deny_restricted`, and no global opt-in can widen
 the provider-specific ceiling.
+
+## Gemini wire-revision and local-validation security boundary
+
+ADR-137 prevents provider wire drift from weakening output validation. The adapter sends only the
+pinned non-streaming REST profile with storage, background execution, tools, history, redirects,
+environment proxy trust, and fallback disabled. It accepts exactly one typed model-output text
+item and rejects legacy, unknown, multiple, or non-text output variants.
+
+One bounded Draft 2020-12 schema is meta-validated and compiled before client construction. Remote
+references, unsupported vocabularies, excessive depth or nodes, malformed output, non-object JSON,
+and schema mismatch fail closed without exposing schema details or raw provider data. Provider
+messages, raw bodies, credentials, prompts, hidden reasoning, and validation traces remain absent
+from logs, errors, audit, snapshots, and persistence. No schema or migration `20260808_0025` is
+introduced.

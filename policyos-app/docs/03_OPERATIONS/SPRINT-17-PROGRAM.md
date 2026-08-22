@@ -201,3 +201,15 @@ Focused PostgreSQL evidence covers outer rollback residue zero, unchanged root-t
 identity, pre-commit invisibility to Worker due selection, and complete `ENQUEUED` visibility
 after commit. Existing fresh-session effect commit and replay behavior remains in the combined
 regression. No schema, backfill, dispatcher, or migration `20260808_0025` is introduced.
+
+## Gemini wire and local validation correction gate
+
+**Status: Governed / Pending Review.** ADR-137 fixes the one approved Interactions endpoint,
+revision header, typed `steps` response, storage/background denial, and strict transport-field
+handling. A direct Draft 2020-12 `jsonschema` dependency owns bounded request-schema compilation
+and local response validation before `ModelResponse` construction.
+
+The subsequent implementation gate is network free and may add only the adapter, registry wiring,
+dependency declaration, focused tests, architecture guard correction, and matching operations and
+security documentation. It cannot add a provider SDK, schema persistence, migration
+`20260808_0025`, live credentials, provider traffic, fallback, deployment, tag, or release.
