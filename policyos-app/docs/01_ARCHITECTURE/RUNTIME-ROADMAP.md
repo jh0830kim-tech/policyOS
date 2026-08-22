@@ -1589,3 +1589,11 @@ must add the smallest explicit carriage and exact binding needed by configuratio
 request serialization, response validation, and safe audit identity. It remains credential-free
 and network-free until a separately approved single-variable probe. No persistence change or
 migration `20260808_0025` is required.
+
+## Sprint 17 Gemini registry-snapshot production composition governance
+
+ADR-143 closes the production owner of ADR-142 facts. One caller-supplied immutable model-registry
+snapshot and exact logical selection enter the application factory. A pure binder validates
+revision, active provider/model state, provider family, and exact registration, then supplies the
+logical model and provider wire resource to the private Gemini gateway. Settings, responses, and
+adapters cannot create registry authority. No schema or migration `20260808_0025` is required.
