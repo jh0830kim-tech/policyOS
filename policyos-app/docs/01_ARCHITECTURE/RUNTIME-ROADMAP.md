@@ -1622,3 +1622,14 @@ The route and `OfficeApplicationService` cannot rebuild composition from setting
 Missing or partial Gemini dependencies fail application construction before credential access or
 network I/O. The production correction remains a separate gate; no schema or migration
 `20260808_0025` is introduced.
+## Sprint 17 AI Office production composition correction
+
+The ADR-143 through ADR-145 construction boundary is implemented as an immutable, secret-free
+application blueprint and one provider-bound request execution scope factory. Application startup
+validates exact provider-mode bundle cardinality and Gemini registry/logical/wire identity before
+publishing the artifacts router. Only work-package mutation opens a fresh scope; read-only artifact
+operations do not create a gateway, credential, client, or audit capability. The request database
+session owns the provider audit sink and the scope exits before that session dependency ends.
+
+This correction adds no registry lookup, application-state service locator, schema, backfill, or
+migration `20260808_0025`. External credentials and live provider calls remain outside this gate.

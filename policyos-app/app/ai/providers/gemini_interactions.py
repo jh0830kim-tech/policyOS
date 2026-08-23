@@ -90,7 +90,11 @@ _REQUIRED_USAGE_FIELDS = frozenset(
     }
 )
 _MODALITY_USAGE_FIELDS = frozenset(
-    {"cached_tokens_by_modality", "input_tokens_by_modality", "output_tokens_by_modality"}
+    {
+        "cached_tokens_by_modality",
+        "input_tokens_by_modality",
+        "output_tokens_by_modality",
+    }
 )
 _ALLOWED_MODALITIES = frozenset({"audio", "document", "image", "text", "video"})
 _UNSUPPORTED_SCHEMA_KEYWORDS = frozenset(
@@ -171,6 +175,7 @@ class GeminiInteractionsGateway:
         api_key: str,
         *,
         model: str,
+        provider_model_name: str | None = None,
         timeout_seconds: float = 30.0,
         max_retries: int = 0,
         retry_backoff_seconds: float = 0.5,
@@ -183,6 +188,9 @@ class GeminiInteractionsGateway:
             raise ValueError("Gemini credential must be non-empty and trimmed")
         if not model or model != model.strip() or len(model) > 200:
             raise ValueError("Gemini model must be non-empty, bounded, and trimmed")
+        wire_model = model if provider_model_name is None else provider_model_name
+        if not wire_model or wire_model != wire_model.strip() or len(wire_model) > 200:
+            raise ValueError("Gemini wire model must be non-empty, bounded, and trimmed")
         if not 0 < timeout_seconds <= 300:
             raise ValueError("Gemini timeout must be positive and bounded")
         if not 0 <= max_retries <= 10:
@@ -191,6 +199,7 @@ class GeminiInteractionsGateway:
             raise ValueError("Gemini retry backoff must be bounded")
         self._api_key = api_key
         self._model = model
+        self._provider_model_name = wire_model
         self._timeout_seconds = timeout_seconds
         self._max_retries = max_retries
         self._retry_backoff_seconds = retry_backoff_seconds
@@ -288,7 +297,7 @@ class GeminiInteractionsGateway:
         body = {
             "background": False,
             "input": model_input,
-            "model": self._model,
+            "model": self._provider_model_name,
             "response_format": [
                 {
                     "mime_type": "application/json",
@@ -330,6 +339,7 @@ class GeminiInteractionsGateway:
                             return _map_success(
                                 result,
                                 request,
+                                self._provider_model_name,
                                 validator,
                                 started,
                                 retry_count,
@@ -458,6 +468,7 @@ def _compile_output_schema(schema: dict[str, Any] | None) -> Draft202012Validato
 def _map_success(
     response: httpx.Response,
     request: ModelRequest,
+    provider_model_name: str,
     validator: Draft202012Validator,
     started: float,
     retry_count: int,
@@ -477,7 +488,7 @@ def _map_success(
         raise _invalid_response(_ResponseRejection.COMPLETION, "Model response did not complete")
     response_id = _bounded_text(payload.get("id"), 500)
     model = _bounded_text(payload.get("model"), 200)
-    if response_id is None or model != request.model_id:
+    if response_id is None or model != provider_model_name:
         raise _invalid_response(_ResponseRejection.IDENTITY, "Model response identity is invalid")
     service_tier = payload.get("service_tier")
     if service_tier is not None and service_tier not in _ALLOWED_SERVICE_TIERS:
@@ -521,9 +532,9 @@ def _map_success(
         raise _invalid_response(
             _ResponseRejection.LOCAL_SCHEMA, "Model response schema is invalid"
         ) from exc
-    usage = _map_usage(payload.get("usage"), model, started, retry_count)
+    usage = _map_usage(payload.get("usage"), request.model_id, started, retry_count)
     return ModelResponse(
-        model_id=model,
+        model_id=request.model_id,
         transmission_context=request.transmission_context,
         structured_output=structured,
         usage=usage,
@@ -643,7 +654,11 @@ def _map_http_error(
     elif status in {400, 422}:
         return _request_rejection_error(response, started, retry_count)
     else:
-        code, message, retryable = ModelErrorCode.UNKNOWN, "Model provider failed", False
+        code, message, retryable = (
+            ModelErrorCode.UNKNOWN,
+            "Model provider failed",
+            False,
+        )
     return _timed_error(
         code,
         message,

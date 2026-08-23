@@ -3,8 +3,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.ai.production import (
+    AIOfficeProductionDependencyBundle,
+    bind_ai_office_production,
+)
 from app.api.routes.ai_tasks import router as ai_tasks_router
-from app.api.routes.artifacts import router as artifacts_router
+from app.api.routes.artifacts import create_artifacts_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.connectors import router as connectors_router
 from app.api.routes.health import router as health_router
@@ -24,12 +28,15 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 def create_app(
     runtime_dependencies: RuntimeApiProductionDependencyBundle | None = None,
+    *,
+    ai_office_dependencies: AIOfficeProductionDependencyBundle | None = None,
 ) -> FastAPI:
     if runtime_dependencies is not None and not isinstance(
         runtime_dependencies, RuntimeApiProductionDependencyBundle
     ):
         raise TypeError("Runtime production dependency bundle differs")
     settings = get_settings()
+    ai_office_production = bind_ai_office_production(settings, ai_office_dependencies)
     application = FastAPI(
         title=settings.app_name,
         version=get_version(),
@@ -39,7 +46,7 @@ def create_app(
     application.include_router(health_router)
     application.include_router(auth_router, prefix="/api/v1")
     application.include_router(connectors_router, prefix="/api/v1")
-    application.include_router(artifacts_router, prefix="/api/v1")
+    application.include_router(create_artifacts_router(ai_office_production), prefix="/api/v1")
     application.include_router(ai_tasks_router, prefix="/api/v1")
     application.include_router(policy_candidates_router, prefix="/api/v1")
     application.include_router(providers_router, prefix="/api/v1")

@@ -9,10 +9,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.ai.privacy import DataClassification
-from app.core.config import Settings
 from app.core.security import hash_password
 from app.db.session import get_db
-from app.knowledge.router.domain import KnowledgeEvidence, KnowledgeRoute, KnowledgeSourceResponse
+from app.knowledge.router.domain import (
+    KnowledgeEvidence,
+    KnowledgeRoute,
+    KnowledgeSourceResponse,
+)
 from app.main import app
 from app.models.ai_execution import AgentRunRecord, AITaskRecord
 from app.models.artifact import ArtifactRecord, WorkPackageRecord
@@ -21,7 +24,10 @@ from app.security.access import KnowledgeAccessPolicyService
 from app.security.dlp import DeterministicDLPScanner
 from app.security.rate_limit import InMemoryRateLimiter, SecurityRateLimitError
 from app.security.suspicious import DeterministicSuspiciousContentDetector
-from app.services.knowledge_router import InMemoryKnowledgeRouterAuditSink, KnowledgeRouterService
+from app.services.knowledge_router import (
+    InMemoryKnowledgeRouterAuditSink,
+    KnowledgeRouterService,
+)
 from app.services.office_application import OfficeApplicationService
 from app.services.security_governance import ArchiveDeletionService, GovernanceError
 from tests.smoke.test_sprint5_release import SmokeSession
@@ -113,21 +119,22 @@ def test_sprint6_login_to_knowledge_office_artifacts(monkeypatch):
         is_active=True,
     )
     membership = Membership(
-        id=uuid.uuid4(), organization_id=organization_id, user_id=user.id, status="active"
+        id=uuid.uuid4(),
+        organization_id=organization_id,
+        user_id=user.id,
+        status="active",
     )
     session = SmokeSession(user, membership)
     knowledge_router, audit = router()
-    settings = Settings(_env_file=None, app_env="test", ai_provider="fake")
 
     class KnowledgeOfficeService(OfficeApplicationService):
-        def __init__(self, db, configured_settings):
-            super().__init__(db, configured_settings, knowledge_router=knowledge_router)
+        def __init__(self, db, composition):
+            super().__init__(db, composition, knowledge_router=knowledge_router)
 
     async def override_db():
         yield session
 
     app.dependency_overrides[get_db] = override_db
-    monkeypatch.setattr("app.api.routes.artifacts.get_settings", lambda: settings)
     monkeypatch.setattr("app.api.routes.artifacts.OfficeApplicationService", KnowledgeOfficeService)
     started = perf_counter()
     with TestClient(app) as client:
@@ -199,7 +206,8 @@ async def test_source_failures_preserve_partial_status_warning_and_stale_fallbac
         allow_stale=True,
     )
     package = await service.route(
-        query, granted_permissions=frozenset({"knowledge.read", "mcp.read", "mcp.execute"})
+        query,
+        granted_permissions=frozenset({"knowledge.read", "mcp.read", "mcp.execute"}),
     )
     assert package.evidence and package.execution_summary.status == "partial"
     assert "source_failed" in package.warnings and package.execution_summary.fallback_count == 1

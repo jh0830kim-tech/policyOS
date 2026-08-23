@@ -8,7 +8,12 @@ from uuid import uuid4
 import httpx
 import pytest
 
-from app.ai.model_gateway import ModelErrorCode, ModelGatewayError, ModelRequest, OutputFormat
+from app.ai.model_gateway import (
+    ModelErrorCode,
+    ModelGatewayError,
+    ModelRequest,
+    OutputFormat,
+)
 from app.ai.privacy import DataClassification, ProviderTransmissionContext
 from app.ai.providers.gemini_interactions import GeminiInteractionsGateway
 from app.ai.providers.registry import create_model_gateway
@@ -136,6 +141,23 @@ async def test_pinned_wire_maps_valid_structured_response_and_usage() -> None:
 
 
 @pytest.mark.asyncio
+async def test_logical_model_identity_is_distinct_from_exact_wire_resource() -> None:
+    logical_model = "office.gemini.flash"
+    wire_model = "models/gemini-3.7-flash"
+    transport = transport_for(success_payload(model=wire_model))
+    result = await GeminiInteractionsGateway(
+        "synthetic-key",
+        model=logical_model,
+        provider_model_name=wire_model,
+        transport=transport,
+    ).generate(request().model_copy(update={"model_id": logical_model}))
+
+    assert result.model_id == logical_model
+    assert result.usage.model == logical_model
+    assert json.loads(transport.requests[0].content)["model"] == wire_model
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("service_tier", ["standard", "flex", "priority", "deferred"])
 async def test_documented_service_tier_and_absent_optional_usage_are_accepted(
     service_tier: str,
@@ -217,9 +239,15 @@ def test_registry_constructs_gemini_with_exact_configuration() -> None:
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "classification",
-    [DataClassification.INTERNAL, DataClassification.CONFIDENTIAL, DataClassification.RESTRICTED],
+    [
+        DataClassification.INTERNAL,
+        DataClassification.CONFIDENTIAL,
+        DataClassification.RESTRICTED,
+    ],
 )
-async def test_non_public_classification_fails_before_client_and_network(classification) -> None:
+async def test_non_public_classification_fails_before_client_and_network(
+    classification,
+) -> None:
     transport = transport_for()
     with pytest.raises(ModelGatewayError) as caught:
         await GeminiInteractionsGateway("synthetic-key", model=MODEL, transport=transport).generate(

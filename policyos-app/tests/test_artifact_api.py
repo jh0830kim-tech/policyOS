@@ -19,10 +19,16 @@ from app.services.office_application import OfficeExecutionError
 def identity() -> tuple[User, Membership, uuid.UUID]:
     organization_id = uuid.uuid4()
     user = User(
-        id=uuid.uuid4(), email="artifact@example.com", display_name="Reviewer", is_active=True
+        id=uuid.uuid4(),
+        email="artifact@example.com",
+        display_name="Reviewer",
+        is_active=True,
     )
     membership = Membership(
-        id=uuid.uuid4(), organization_id=organization_id, user_id=user.id, status="active"
+        id=uuid.uuid4(),
+        organization_id=organization_id,
+        user_id=user.id,
+        status="active",
     )
     return user, membership, organization_id
 
@@ -139,8 +145,9 @@ def test_authorized_user_executes_work_package_application_service(monkeypatch) 
     )
 
     class StubService:
-        def __init__(self, *_args, **_kwargs):
-            pass
+        def __init__(self, _db, composition):
+            assert composition.provider == "fake"
+            assert composition.model_id == "fake"
 
         async def execute_work_package(self, payload, **kwargs):
             assert payload.package_type == "policy_package"

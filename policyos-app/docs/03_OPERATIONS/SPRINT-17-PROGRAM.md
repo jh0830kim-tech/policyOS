@@ -356,3 +356,17 @@ operation and exits before the request session ends. The service receives the co
 explicitly and cannot read settings, build a gateway or select registry facts. A separately
 approved production correction must remain network free and add no schema or migration
 `20260808_0025`.
+## AI Office production composition correction gate
+
+Status: implemented locally, validation required before publication.
+
+- The application factory accepts the optional AI Office dependency bundle explicitly while
+  preserving the Runtime bundle's positional compatibility.
+- Fake and disabled modes use reviewed network-free request factories. OpenAI and Gemini require
+  exact external factory cardinality; Gemini additionally requires one exact immutable registry
+  snapshot and logical selection.
+- Work-package mutation creates one database-bound provider audit sink, enters one fresh managed
+  execution composition, completes the application service operation, and exits exactly once.
+- Artifact reads and reviews do not enter provider execution scope.
+- No production credential, external provider call, PostgreSQL schema change, or migration
+  `20260808_0025` is included.
