@@ -134,6 +134,34 @@ def test_adr145_governs_request_scoped_gateway_audit_and_execution_composition()
     assert "Gemini AI Office request-scoped gateway and audit security boundary" in _read(
         "docs/04_SECURITY/SECURITY.md"
     )
+
+
+def test_ai_office_production_composition_is_request_scoped_and_explicit() -> None:
+    production = _read("app/ai/production.py")
+    composition = _read("app/ai/composition.py")
+    artifacts = _read("app/api/routes/artifacts.py")
+    service = _read("app/services/office_application.py")
+    main = _read("app/main.py")
+    gemini = _read("app/ai/providers/gemini_interactions.py")
+
+    for required in (
+        "class OfficeCompositionBlueprint",
+        "class AIOfficeProductionDependencyBundle",
+        "class OfficeRequestExecutionScopeFactory",
+        "def bind_ai_office_production",
+    ):
+        assert required in production
+    assert "build_office_composition_from_gateway" in composition
+    assert "def create_artifacts_router" in artifacts
+    assert "ProviderAuditRepository(db)" in artifacts
+    assert "request_execution_scope_factory.open" in artifacts
+    assert "get_settings" not in artifacts
+    assert "build_office_composition" not in service
+    assert "create_model_gateway" not in service
+    assert "ai_office_dependencies" in main
+    assert "provider_model_name" in gemini
+    assert "app.state" not in production
+    assert "20260808_0025" not in production
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 

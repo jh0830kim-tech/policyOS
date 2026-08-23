@@ -12,8 +12,14 @@ from app.agents.sns_manager import SNSManagerAgent
 from app.agents.speech_writer import SpeechWriterAgent
 from app.agents.statistics import StatisticsAgent
 from app.ai.domain import AgentIdentifier
+from app.ai.model_gateway import ModelGateway
 from app.ai.privacy import ProviderAuditSink
-from app.ai.prompts import FilePromptSource, PromptDefinition, PromptRegistry, PromptStatus
+from app.ai.prompts import (
+    FilePromptSource,
+    PromptDefinition,
+    PromptRegistry,
+    PromptStatus,
+)
 from app.ai.providers.registry import create_model_gateway
 from app.ai.registry import AgentRegistry
 from app.ai.specialist_agents import LegalReviewAgent, PolicyResearchAgent
@@ -49,6 +55,28 @@ def build_office_composition(
     client: AsyncOpenAI | None = None,
 ) -> OfficeComposition:
     gateway = create_model_gateway(settings, client=client, audit_sink=audit_sink)
+    model_id = settings.openai_model if settings.ai_provider == "openai" else "fake"
+    if settings.ai_provider == "gemini":
+        model_id = settings.gemini_model or ""
+    return build_office_composition_from_gateway(
+        gateway,
+        provider=settings.ai_provider,
+        model_id=model_id,
+    )
+
+
+def build_office_composition_from_gateway(
+    gateway: ModelGateway,
+    *,
+    provider: str,
+    model_id: str,
+) -> OfficeComposition:
+    """Build one request-scoped composition from an already governed gateway."""
+
+    if not provider or provider != provider.strip():
+        raise ValueError("Office provider must be non-empty and trimmed")
+    if not model_id or model_id != model_id.strip():
+        raise ValueError("Office model identity must be non-empty and trimmed")
     prompts = PromptRegistry(FilePromptSource(Path("prompts")))
     for agent_id, filename in PROMPT_FILES.items():
         prompts.register(
@@ -60,7 +88,6 @@ def build_office_composition(
                 source_path=filename,
             )
         )
-    model_id = settings.openai_model if settings.ai_provider == "openai" else "fake"
     agents = [
         PolicyResearchAgent(gateway, prompts, prompt_version=PROMPT_VERSION, model_id=model_id),
         LegalReviewAgent(gateway, prompts, prompt_version=PROMPT_VERSION, model_id=model_id),
@@ -76,6 +103,13 @@ def build_office_composition(
         workflow=OfficeWorkflowService(registry),
         registry=registry,
         prompts=prompts,
-        provider=settings.ai_provider,
+        provider=provider,
         model_id=model_id,
     )
+
+
+__all__ = (
+    "OfficeComposition",
+    "build_office_composition",
+    "build_office_composition_from_gateway",
+)

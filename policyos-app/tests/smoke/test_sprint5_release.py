@@ -17,6 +17,7 @@ from app.models.ai_execution import AgentRunRecord, AITaskRecord
 from app.models.artifact import ArtifactRecord, WorkPackageRecord
 from app.models.identity import Membership, User
 from app.models.provider_audit import ProviderAuditRecord
+from app.services.office_application import OfficeApplicationService
 from app.services.provider_privacy import ProviderAuditRepository
 
 
@@ -96,7 +97,9 @@ def clear_dependency_overrides() -> AsyncIterator[None]:
 
 
 @pytest.mark.smoke
-def test_login_to_mocked_openai_work_package_persists_release_records(monkeypatch) -> None:
+def test_login_to_mocked_openai_work_package_persists_release_records(
+    monkeypatch,
+) -> None:
     organization_id = uuid.uuid4()
     user = User(
         id=uuid.uuid4(),
@@ -126,14 +129,17 @@ def test_login_to_mocked_openai_work_package_persists_release_records(monkeypatc
         client=provider_client,
     )
 
+    class ComposedOfficeService(OfficeApplicationService):
+        def __init__(self, db, _composition):
+            super().__init__(db, composition)
+
     async def override_db() -> AsyncIterator[SmokeSession]:
         yield session
 
     app.dependency_overrides[get_db] = override_db
-    monkeypatch.setattr("app.api.routes.artifacts.get_settings", lambda: settings)
     monkeypatch.setattr(
-        "app.services.office_application.build_office_composition",
-        lambda *_args, **_kwargs: composition,
+        "app.api.routes.artifacts.OfficeApplicationService",
+        ComposedOfficeService,
     )
 
     with TestClient(app) as client:
@@ -168,8 +174,7 @@ def test_login_to_mocked_openai_work_package_persists_release_records(monkeypatc
     assert all(artifact.status == "needs_review" for artifact in artifacts)
     assert all(audit.success and audit.policy_decision == "allow" for audit in audits)
     assert all(
-        "owner@example.org" not in str(call["input"])
-        for call in provider_client.responses.calls
+        "owner@example.org" not in str(call["input"]) for call in provider_client.responses.calls
     )
     persisted = " ".join(str(vars(item)) for item in session.objects)
     assert "smoke-test-password" not in persisted

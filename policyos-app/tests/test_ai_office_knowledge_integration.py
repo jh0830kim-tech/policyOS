@@ -3,6 +3,7 @@ from datetime import date
 
 import pytest
 
+from app.ai.composition import build_office_composition
 from app.ai.privacy import DataClassification
 from app.core.config import Settings
 from app.knowledge.router.domain import (
@@ -17,7 +18,10 @@ from app.knowledge.router.domain import (
 )
 from app.models.artifact import WorkPackageRecord
 from app.schemas.artifact import WorkPackageCreate
-from app.services.office_application import OfficeApplicationService, OfficeExecutionError
+from app.services.office_application import (
+    OfficeApplicationService,
+    OfficeExecutionError,
+)
 from tests.test_office_application import FakeSession
 
 
@@ -109,7 +113,9 @@ async def test_knowledge_aware_office_persists_links_and_citations():
         effective_date="2026-01-01T00:00:00Z",
     )
     record = await OfficeApplicationService(
-        session, Settings(_env_file=None), knowledge_router=Router()
+        session,
+        build_office_composition(Settings(_env_file=None)),
+        knowledge_router=Router(),
     ).execute_work_package(payload, organization_id=uuid.uuid4(), user_id=uuid.uuid4())
     assert (
         record.knowledge_query_id
@@ -123,7 +129,9 @@ async def test_no_evidence_stops_agent_execution_safely():
     session = FakeSession()
     with pytest.raises(OfficeExecutionError) as error:
         await OfficeApplicationService(
-            session, Settings(_env_file=None), knowledge_router=Router(False)
+            session,
+            build_office_composition(Settings(_env_file=None)),
+            knowledge_router=Router(False),
         ).execute_work_package(
             WorkPackageCreate(package_type="legal_package", instruction="법률 근거"),
             organization_id=uuid.uuid4(),

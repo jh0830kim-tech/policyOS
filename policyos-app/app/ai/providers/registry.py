@@ -27,6 +27,8 @@ def create_model_gateway(
     client: AsyncOpenAI | None = None,
     gemini_transport: httpx.AsyncBaseTransport | None = None,
     audit_sink: ProviderAuditSink | None = None,
+    logical_model_id: str | None = None,
+    provider_model_name: str | None = None,
 ) -> ModelGateway:
     if settings.ai_provider == "fake":
         return FakeModelGateway()
@@ -68,7 +70,8 @@ def create_model_gateway(
         redactor = RegexRedactor(custom_terms) if settings.ai_redaction_enabled else NoOpRedactor()
         return GeminiInteractionsGateway(
             settings.gemini_api_key.get_secret_value(),
-            model=settings.gemini_model,
+            model=logical_model_id or settings.gemini_model,
+            provider_model_name=provider_model_name or settings.gemini_model,
             timeout_seconds=settings.gemini_timeout_seconds,
             max_retries=settings.gemini_max_retries,
             retry_backoff_seconds=settings.gemini_retry_backoff_seconds,

@@ -11,17 +11,15 @@ from app.ai.artifacts import (
     ArtifactReviewStatus,
     OfficeWorkPackage,
 )
-from app.ai.composition import OfficeComposition, build_office_composition
+from app.ai.composition import OfficeComposition
 from app.ai.domain import AgentContext, AgentStatus, AgentTask
 from app.ai.knowledge_evidence import OfficeEvidencePackage
 from app.ai.workflows import AGENT_CAPABILITIES, WORKFLOW_ROUTES
-from app.core.config import Settings
 from app.knowledge.router.domain import KnowledgeQuery
 from app.models.artifact import WorkPackageRecord
 from app.schemas.artifact import WorkPackageCreate
 from app.services.ai_execution import AIExecutionRepository
 from app.services.artifacts import ArtifactRepository
-from app.services.provider_privacy import ProviderAuditRepository
 
 
 class OfficeExecutionError(Exception):
@@ -36,17 +34,12 @@ class OfficeApplicationService:
     def __init__(
         self,
         db: AsyncSession,
-        settings: Settings,
+        composition: OfficeComposition,
         *,
-        composition: OfficeComposition | None = None,
         knowledge_router: object | None = None,
     ) -> None:
         self.db = db
-        self.settings = settings
-        self.composition = composition or build_office_composition(
-            settings,
-            audit_sink=ProviderAuditRepository(db),
-        )
+        self.composition = composition
         self.executions = AIExecutionRepository(db)
         self.artifacts = ArtifactRepository(db)
         self.knowledge_router = knowledge_router
@@ -105,7 +98,9 @@ class OfficeApplicationService:
             if routed.sufficiency == "insufficient" and not routed.evidence:
                 await self.db.rollback()
                 raise OfficeExecutionError(
-                    "evidence_unavailable", "Required knowledge evidence is unavailable", 503
+                    "evidence_unavailable",
+                    "Required knowledge evidence is unavailable",
+                    503,
                 )
         task = self._task(payload, task_record.id, organization_id, user_id, evidence_package)
         route = self.composition.workflow.plan(task)

@@ -1697,3 +1697,16 @@ fallback input. Missing, extra, stale, substituted, cross-provider or identity-m
 before router publication or provider I/O. Mutable `app.state`, globals, ambient sessions,
 production no-op audit, cross-request reuse and hidden identity/time generation remain prohibited.
 No public payload, persistence, schema or migration `20260808_0025` is added.
+## Gemini AI Office production composition security boundary
+
+AI Office application construction now fails closed on missing, extra, stale, disabled,
+cross-provider, revision-mismatched, or identity-substituted production dependencies. The immutable
+application bundle and blueprint contain no credential, provider client, database session, request,
+response, or mutable registry. Gemini logical model identity and the provider wire resource are
+validated separately and are never repaired by prefixing, lookup, response data, or fallback.
+
+Only the authenticated work-package mutation enters a fresh provider-bound request scope. Its
+provider audit sink is created from the request `AsyncSession`; the factory cannot replace, close,
+commit, roll back, or retain that session. Scope exit occurs before the request database dependency
+ends. Raw credentials, prompts, schemas, provider responses, provider messages, and SQL detail
+remain excluded from public errors, logs, audit metadata, and persistence.

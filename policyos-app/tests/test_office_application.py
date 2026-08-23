@@ -22,7 +22,10 @@ from app.models.ai_execution import AgentRunRecord, AITaskRecord
 from app.models.artifact import ArtifactRecord, WorkPackageRecord
 from app.models.provider_audit import ProviderAuditRecord
 from app.schemas.artifact import WorkPackageCreate
-from app.services.office_application import OfficeApplicationService, OfficeExecutionError
+from app.services.office_application import (
+    OfficeApplicationService,
+    OfficeExecutionError,
+)
 from app.services.provider_privacy import ProviderAuditRepository
 
 
@@ -99,12 +102,19 @@ def records(session, record_type):
     return [item for item in session.objects if isinstance(item, record_type)]
 
 
+def service(session, settings, *, composition=None):
+    return OfficeApplicationService(
+        session,
+        composition or build_office_composition(settings),
+    )
+
+
 @pytest.mark.smoke
 @pytest.mark.asyncio
 async def test_fake_provider_executes_full_office_and_persists_consistent_state():
     session = FakeSession()
     settings = Settings(_env_file=None, ai_provider="fake")
-    package = await OfficeApplicationService(session, settings).execute_work_package(
+    package = await service(session, settings).execute_work_package(
         payload(), organization_id=uuid4(), user_id=uuid4()
     )
     assert package.status == "needs_review"
@@ -133,7 +143,7 @@ async def test_mocked_openai_persists_usage_audit_and_redacts_before_transmissio
         audit_sink=ProviderAuditRepository(session),
         client=client,
     )
-    await OfficeApplicationService(session, settings, composition=composition).execute_work_package(
+    await service(session, settings, composition=composition).execute_work_package(
         payload("policy_package"), organization_id=uuid4(), user_id=uuid4()
     )
     assert len(client.responses.calls) == 4
@@ -159,9 +169,7 @@ async def test_restricted_openai_request_is_blocked_without_network_and_marked_f
         settings, audit_sink=ProviderAuditRepository(session), client=client
     )
     with pytest.raises(OfficeExecutionError) as caught:
-        await OfficeApplicationService(
-            session, settings, composition=composition
-        ).execute_work_package(
+        await service(session, settings, composition=composition).execute_work_package(
             payload("policy_package", classification="restricted"),
             organization_id=uuid4(),
             user_id=uuid4(),
@@ -212,9 +220,9 @@ async def test_provider_failures_map_to_safe_application_errors(error, expected_
         settings, audit_sink=ProviderAuditRepository(session), client=client
     )
     with pytest.raises(OfficeExecutionError) as caught:
-        await OfficeApplicationService(
-            session, settings, composition=composition
-        ).execute_work_package(payload("policy_package"), organization_id=uuid4(), user_id=uuid4())
+        await service(session, settings, composition=composition).execute_work_package(
+            payload("policy_package"), organization_id=uuid4(), user_id=uuid4()
+        )
     assert caught.value.code == expected_code
     assert caught.value.http_status == http_status
     assert caught.value.safe_message != str(error)
@@ -234,9 +242,9 @@ async def test_partial_agent_failure_is_needs_review_not_false_success():
             retryable=True,
         )
     )
-    package = await OfficeApplicationService(
-        session, settings, composition=composition
-    ).execute_work_package(payload("policy_package"), organization_id=uuid4(), user_id=uuid4())
+    package = await service(session, settings, composition=composition).execute_work_package(
+        payload("policy_package"), organization_id=uuid4(), user_id=uuid4()
+    )
     assert package.status == "needs_review"
     assert "Partial" in package.summary
     assert len([run for run in records(session, AgentRunRecord) if run.status == "failed"]) == 1
@@ -247,7 +255,7 @@ async def test_idempotency_is_scoped_to_existing_organization_package():
     session = FakeSession()
     existing = WorkPackageRecord(id=uuid4(), organization_id=uuid4(), client_request_id="same-key")
     session.scalar_result = existing
-    result = await OfficeApplicationService(
+    result = await service(
         session, Settings(_env_file=None, ai_provider="fake")
     ).execute_work_package(
         payload(),
@@ -276,9 +284,9 @@ async def test_cancellation_marks_task_package_and_runs_cancelled():
 
     cancelled_composition = replace(composition, workflow=CancelWorkflow())
     with pytest.raises(asyncio.CancelledError):
-        await OfficeApplicationService(
-            session, settings, composition=cancelled_composition
-        ).execute_work_package(payload("policy_package"), organization_id=uuid4(), user_id=uuid4())
+        await service(session, settings, composition=cancelled_composition).execute_work_package(
+            payload("policy_package"), organization_id=uuid4(), user_id=uuid4()
+        )
     assert records(session, AITaskRecord)[0].status == "cancelled"
     assert records(session, WorkPackageRecord)[0].status == "cancelled"
     assert all(run.status == "cancelled" for run in records(session, AgentRunRecord))
@@ -301,9 +309,9 @@ async def test_total_provider_unavailable_marks_package_task_and_runs_failed():
         composition.registry.get(agent_id)._gateway = FakeModelGateway(error=unavailable)
 
     with pytest.raises(OfficeExecutionError) as caught:
-        await OfficeApplicationService(
-            session, settings, composition=composition
-        ).execute_work_package(payload(), organization_id=uuid4(), user_id=uuid4())
+        await service(session, settings, composition=composition).execute_work_package(
+            payload(), organization_id=uuid4(), user_id=uuid4()
+        )
 
     assert caught.value.code == "provider_unavailable"
     assert caught.value.http_status == 503

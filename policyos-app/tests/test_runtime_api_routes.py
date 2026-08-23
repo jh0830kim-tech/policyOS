@@ -1,3 +1,4 @@
+import inspect
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
@@ -10,7 +11,10 @@ from app.core.auth_claims import VerifiedAccessTokenClaims
 from app.db.session import get_db
 from app.main import create_app
 from app.services import runtime_api_production as production_module
-from app.services.runtime_api_contracts import RuntimeApiPublicStatus, RuntimeApiStatusProjection
+from app.services.runtime_api_contracts import (
+    RuntimeApiPublicStatus,
+    RuntimeApiStatusProjection,
+)
 from app.services.runtime_api_idempotency import RuntimeApiIdempotencyPersistenceError
 from app.services.runtime_api_production import RuntimeApiRateLimited
 from app.services.runtime_api_protocols import RuntimeApiProductionDependencyBundle
@@ -39,6 +43,14 @@ def _client() -> TestClient:
     application.dependency_overrides[get_runtime_verified_claims] = _claims
     application.dependency_overrides[get_db] = _db
     return TestClient(application)
+
+
+def test_ai_office_dependency_is_keyword_only_without_changing_runtime_position() -> None:
+    parameters = tuple(inspect.signature(create_app).parameters.values())
+    assert parameters[0].name == "runtime_dependencies"
+    assert parameters[0].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+    assert parameters[1].name == "ai_office_dependencies"
+    assert parameters[1].kind is inspect.Parameter.KEYWORD_ONLY
 
 
 class _Scope:
@@ -201,7 +213,11 @@ def test_runtime_routes_accept_exact_selector_and_header_and_cleanup(monkeypatch
                 "reconciliation_reference": "reconciliation:one",
             },
         )
-    assert [submit.status_code, query.status_code, reconciliation.status_code] == [200, 200, 200]
+    assert [submit.status_code, query.status_code, reconciliation.status_code] == [
+        200,
+        200,
+        200,
+    ]
     assert entry.calls == ["submit", "query", "reconcile"]
     assert events == ["enter", "exit", "enter", "exit", "enter", "exit"]
 
