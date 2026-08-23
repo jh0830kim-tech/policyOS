@@ -220,3 +220,10 @@ construct one prebuilt office composition before publishing the artifacts router
 partial Gemini dependencies fail application construction before credential access. Per-request
 settings lookup, gateway reconstruction, mutable `app.state`, and module-global registry authority
 are prohibited; request-scoped credentials and clients remain private invocation resources.
+
+## ADR-145 gateway and audit lifetime amendment
+
+ADR-145 clarifies that the application lifetime retains only a secret-free immutable blueprint and
+provider-bound request-scope factory. Each work-package mutation supplies its request DB-bound
+`ProviderAuditSink` and receives one fresh managed execution composition. Raw Gemini credential,
+HTTP client, gateway and audit sink cannot escape that scope or be cached in application state.

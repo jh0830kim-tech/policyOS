@@ -54,3 +54,10 @@ ADR-144 closes the construction topology around that bridge. One immutable appli
 bundle supplies the exact ADR-143 facts to a prebuilt office composition, and an artifacts-router
 factory receives that composition explicitly. Request handlers cannot rebuild a gateway from
 settings, use mutable `app.state`, discover a registry, or substitute provider authority.
+
+## ADR-145 request-scope execution amendment
+
+ADR-145 separates the secret-free application blueprint from one fresh managed request execution
+composition. A provider-bound factory accepts only the exact request `ProviderAuditSink` and owns
+the request-scoped gateway, credential materialization, client and cleanup. It cannot select or
+repair registry, provider, model, permit, or normalized invocation authority.

@@ -105,3 +105,11 @@ migration `20260808_0025` is required. Alembic remains at the single head `20260
 - Treat missing Gemini composition as an endpoint-time fallback or substitute another provider.
 - Put a request-scoped credential or provider client in the application-lifetime bundle.
 - Add registry persistence or migration `20260808_0025` for this construction-only boundary.
+
+## ADR-145 request-scope correction
+
+The phrase "prebuilt office composition" in this ADR means a prevalidated, secret-free immutable
+`OfficeCompositionBlueprint` plus one exact provider-bound request execution scope factory. It does
+not authorize an application-lifetime gateway, raw credential, provider client, DB session or
+audit sink. ADR-145 defines the exact bundle fields, provider-mode cardinality, managed factory
+signature and request-scope audit ownership required before production correction.

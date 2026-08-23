@@ -341,3 +341,18 @@ access, or network I/O. A separately approved production correction gate may cha
 factory signature and internal route composition while preserving provider-neutral contracts,
 Runtime facade signatures, HTTP payloads, the single Alembic head `20260808_0024`, and the absence
 of migration `20260808_0025`.
+
+## AI Office request-scoped gateway, audit and execution-composition governance gate
+
+**Status: Governed / Validated, Pending Review.** ADR-145 narrows the application-lifetime object to
+one secret-free `OfficeCompositionBlueprint` and an exact provider-bound request execution scope
+factory. Gemini requires the factory, immutable registry snapshot and logical selection; OpenAI
+requires only the factory; fake and disabled accept no external bundle and use only their reviewed
+network-free factory.
+
+For each work-package mutation, the artifacts route creates one request DB-bound
+`ProviderAuditRepository`, enters one fresh managed execution composition, awaits the Office
+operation and exits before the request session ends. The service receives the composition
+explicitly and cannot read settings, build a gateway or select registry facts. A separately
+approved production correction must remain network free and add no schema or migration
+`20260808_0025`.
