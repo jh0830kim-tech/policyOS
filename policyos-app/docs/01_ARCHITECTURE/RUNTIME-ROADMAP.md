@@ -1304,6 +1304,20 @@ No database transaction spans credential, secret, transport, response, outcome-f
 work. Provider-sandbox and PostgreSQL acceptance remain separate. No schema or migration
 `20260808_0025` is introduced.
 
+## Sprint 17 AI Office request-scoped gateway and audit governance
+
+ADR-145 corrects ADR-144's composition lifetime. Application construction retains one
+secret-free immutable blueprint and validates one exact provider-bound request execution scope
+factory. Each work-package mutation supplies its request DB-bound `ProviderAuditSink` and receives
+one fresh managed execution composition containing the gateway, credential materialization and
+provider client. Those resources are cleaned exactly once before the request session ends and
+cannot enter mutable `app.state`, globals, ambient sessions or application-lifetime objects.
+
+The bundle's exact provider-mode cardinality, factory identity echoes, construction binding and
+route/service ordering are governed. The production correction remains a separate network-free
+gate. Existing provider-audit persistence is sufficient; no schema or migration
+`20260808_0025` is introduced.
+
 ## Sprint 17 PostgreSQL connector evidence acceptance
 
 **Status: Implemented / Validated, Pending Review.** A production-managed connector delivery now

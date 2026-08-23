@@ -66,3 +66,10 @@ prebuilds one office composition, and an artifacts-router factory receives that 
 `OfficeApplicationService` cannot reconstruct composition from settings per request. Missing or
 partial Gemini dependencies fail application construction rather than creating mutable
 `app.state`, module-global authority, synthetic snapshots, latest lookup, or endpoint fallback.
+
+## ADR-145 lifetime clarification
+
+The application factory still owns the one-time pure registry binding, but it stores the result in
+a secret-free immutable blueprint and validates a provider-bound request execution scope factory.
+The gateway, credential, client and request DB-bound audit sink exist only inside one managed
+request scope. That factory cannot inspect a snapshot or alter the logical/wire identity pair.

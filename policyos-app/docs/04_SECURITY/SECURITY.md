@@ -1683,3 +1683,17 @@ reconstruction, mutable `app.state`, module-global registry or service authority
 snapshots, first/latest selection, and endpoint fallback are prohibited. Request-scoped Gemini
 credentials and clients never enter the application-lifetime bundle. This gate adds no public
 payload, persistence, schema, or migration `20260808_0025`.
+
+## Gemini AI Office request-scoped gateway and audit security boundary
+
+ADR-145 prevents an application-lifetime Office composition from retaining a request DB session,
+provider audit sink, raw credential, gateway or provider client. Only one secret-free immutable
+blueprint and provider-bound managed factory survive application construction. Each work-package
+mutation supplies exactly one request-session-bound audit sink and receives one fresh execution
+composition that is disposed before the database dependency ends.
+
+The factory cannot receive settings, registry snapshots, selectors, sessions, credentials, URLs or
+fallback input. Missing, extra, stale, substituted, cross-provider or identity-mismatched facts fail
+before router publication or provider I/O. Mutable `app.state`, globals, ambient sessions,
+production no-op audit, cross-request reuse and hidden identity/time generation remain prohibited.
+No public payload, persistence, schema or migration `20260808_0025` is added.

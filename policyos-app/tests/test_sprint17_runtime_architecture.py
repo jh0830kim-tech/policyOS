@@ -103,6 +103,40 @@ def test_adr144_governs_ai_office_dependency_bundle_and_route_composition() -> N
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_adr145_governs_request_scoped_gateway_audit_and_execution_composition() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-145-S17-AI-OFFICE-REQUEST-SCOPED-GATEWAY-AUDIT-AND-EXECUTION-"
+        "COMPOSITION-OWNERSHIP.md"
+    )
+    for phrase in (
+        "`OfficeCompositionBlueprint`",
+        "`AIOfficeProductionDependencyBundle`",
+        "`request_execution_scope_factory: OfficeRequestExecutionScopeFactory`",
+        "`model_registry_snapshot: ModelRegistrySnapshot | None`",
+        "`logical_model_id: str | None`",
+        "open(audit_sink: ProviderAuditSink)",
+        "AsyncContextManager[OfficeExecutionComposition]",
+        "`ProviderAuditRepository(db)`",
+        "reverse-order exactly-once cleanup",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in adr
+    for name in ("ADR-038", "ADR-136", "ADR-143", "ADR-144"):
+        path = next((ROOT / "docs/01_ARCHITECTURE/ADR").glob(f"{name}-*.md"))
+        assert "ADR-145" in _read(path.relative_to(ROOT).as_posix())
+    assert "Sprint 17 AI Office request-scoped gateway and audit governance" in _read(
+        "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md"
+    )
+    assert "AI Office request-scoped gateway, audit and execution-composition governance gate" in (
+        _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    )
+    assert "Gemini AI Office request-scoped gateway and audit security boundary" in _read(
+        "docs/04_SECURITY/SECURITY.md"
+    )
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_adr141_governs_stable_path_and_closed_http_404_provenance() -> None:
     adr = _read(
         "docs/01_ARCHITECTURE/ADR/"
