@@ -212,3 +212,11 @@ caller-supplied immutable registry snapshot and one exact logical model selectio
 validates the selected active Gemini registration and supplies its exact
 `RegisteredModel.provider_model_name` as the wire resource. Registry discovery, latest lookup,
 synthetic snapshots, and a second wire-model configuration are prohibited.
+
+## ADR-144 application-construction amendment
+
+ADR-144 requires the application factory to receive one immutable AI Office dependency bundle and
+construct one prebuilt office composition before publishing the artifacts router. Missing or
+partial Gemini dependencies fail application construction before credential access. Per-request
+settings lookup, gateway reconstruction, mutable `app.state`, and module-global registry authority
+are prohibited; request-scoped credentials and clients remain private invocation resources.

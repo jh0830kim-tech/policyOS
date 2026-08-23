@@ -111,3 +111,11 @@ ADR-143 assigns snapshot injection to the production application factory and exa
 validation to a pure composition binder. The binder accepts the immutable snapshot plus the
 caller-supplied logical selection, returns the registered logical/wire pair, and performs no I/O
 or inference. The private Gemini gateway receives both exact values and never the snapshot.
+
+## ADR-144 application-topology closure
+
+ADR-144 supplies the required construction topology: the exact snapshot and logical selection enter
+one immutable application dependency bundle, the pure binder runs before router publication, and a
+prebuilt office composition is injected into an artifacts-router factory. Request-time settings,
+mutable application state, module globals, and synthetic or latest registry selection cannot own
+either identity.

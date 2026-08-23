@@ -326,3 +326,18 @@ selected active Gemini registration's logical `model_id` and exact `provider_mod
 Missing, stale, disabled, cross-provider, revision-mismatched, or substituted facts fail before
 credential access or network I/O. Registry persistence, discovery, fallback, schema, and migration
 `20260808_0025` remain prohibited.
+
+## AI Office production dependency-bundle and route-composition governance gate
+
+**Status: Governed / Validated, Pending Review.** ADR-144 requires one immutable AI Office bundle
+at application construction. The application factory validates exact provider-mode cardinality,
+binds the caller-supplied registry snapshot and logical selection, builds one office composition,
+and gives it to an artifacts-router factory. Request-time settings lookup, gateway reconstruction,
+mutable `app.state`, module-global registry state, synthetic snapshots, and first/latest selection
+are prohibited.
+
+Missing or partial Gemini dependencies fail construction before router publication, credential
+access, or network I/O. A separately approved production correction gate may change the application
+factory signature and internal route composition while preserving provider-neutral contracts,
+Runtime facade signatures, HTTP payloads, the single Alembic head `20260808_0024`, and the absence
+of migration `20260808_0025`.

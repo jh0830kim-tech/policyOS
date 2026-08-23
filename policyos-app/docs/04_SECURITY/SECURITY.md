@@ -1669,3 +1669,17 @@ snapshot and exact logical selection. A pure binder validates the exact active G
 model registration before credential access. The private gateway receives only validated logical
 and wire identities; it cannot inspect a registry, choose a model, or accept response-selected
 identity. No secret, registry serialization, schema, or migration `20260808_0025` is added.
+
+## Gemini AI Office dependency-bundle and route-composition security boundary
+
+ADR-144 requires one immutable, secret-free AI Office dependency bundle at application
+construction. The application factory validates provider-mode cardinality and exact ADR-143
+registry facts before publishing the artifacts router. Missing, partial, stale, disabled,
+duplicate, substituted, revision-mismatched, or cross-provider facts fail before credential access
+and network I/O.
+
+The route receives one prebuilt office composition. Per-request settings lookup, gateway
+reconstruction, mutable `app.state`, module-global registry or service authority, synthetic
+snapshots, first/latest selection, and endpoint fallback are prohibited. Request-scoped Gemini
+credentials and clients never enter the application-lifetime bundle. This gate adds no public
+payload, persistence, schema, or migration `20260808_0025`.
