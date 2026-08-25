@@ -4,7 +4,9 @@
 **Date:** 2026-08-11
 **Depends on:** ADR-075, ADR-078, ADR-084, ADR-091 through ADR-097, and migration `20260808_0022`
 **Clarified by:** ADR-099, which defines a distinct logical execution-result identity and
-persistence owner instead of treating action-level adapter results as that logical record.
+persistence owner instead of treating action-level adapter results as that logical record; and
+ADR-146, which separates immutable execution-request source classification from the effective
+state, audit, logical-result, and effect classification.
 
 ## Context
 
@@ -95,9 +97,12 @@ Different attempts may own different logical results, and each query names the e
 Revisions may append to the same logical-result ID as governed result meaning advances, but every
 read names the record ID and expected revision explicitly. Result presence never authorizes
 selection of a current attempt, head, or latest revision. State, result, and audit facts must share
-exact tenant, organization, classification, execution-request, attempt, and root-lineage scope and
-must be mutually consistent. `RuntimeAdapterInvocationResult` remains an action-level result and
-cannot satisfy this cardinality or be selected as the logical result.
+exact tenant, organization, effective classification, execution-request, attempt, and root-lineage
+scope and must be mutually consistent. The execution request retains its exact immutable source
+classification; ADR-146 requires the effective classification to be equal to or higher than that
+source fact and prohibits cloning or rewriting the request to force equality.
+`RuntimeAdapterInvocationResult` remains an action-level result and cannot satisfy this cardinality
+or be selected as the logical result.
 
 ### Trusted query-fact preparation
 

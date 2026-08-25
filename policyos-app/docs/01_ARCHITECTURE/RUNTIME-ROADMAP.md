@@ -1633,3 +1633,17 @@ session owns the provider audit sink and the scope exits before that session dep
 
 This correction adds no registry lookup, application-state service locator, schema, backfill, or
 migration `20260808_0025`. External credentials and live provider calls remain outside this gate.
+
+## Sprint 17 logical-result source/effective classification governance
+
+**Status: Governed / Validated, Pending Review.** ADR-146 separates the immutable classification
+of the exact persisted execution-request revision from the effective classification shared by the
+state, audit, logical result, and deliverable effect. Effective classification may equal or exceed
+the source classification but can never be lower. Neither value may be inferred, rewritten,
+cloned, selected from latest state, or substituted across scope or lineage.
+
+The required public-contract correction and migration `20260808_0025` are separate gates. The
+migration must preserve exact request-revision relational proof with a dedicated source-
+classification fact, preserve effective-classification state/audit foreign keys, reject duplicate
+request/attempt logical-result identities, and fail closed on ambiguous existing rows. The
+preserved vertical-slice candidate resumes only after those gates merge.

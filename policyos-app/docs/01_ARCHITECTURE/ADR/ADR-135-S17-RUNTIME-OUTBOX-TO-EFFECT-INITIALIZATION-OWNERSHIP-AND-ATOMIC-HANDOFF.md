@@ -41,6 +41,11 @@ The deliverable variant preserves every caller-supplied effect, envelope, lifecy
 scope, classification, lineage, transaction, outbox, state, audit, idempotency, revision, digest,
 and time binding. No layer generates or infers those facts.
 
+ADR-146 clarifies that this effect/state/audit classification is the effective classification for
+the exact attempt. The immutable execution-request revision retains its separate source
+classification, which may be lower but never higher. Effect initialization cannot rewrite or clone
+the request to force classification equality.
+
 ### Facade-owned atomic persistence
 
 The Runtime API facade remains the sole owner of the outer `AsyncSession` and root transaction.
@@ -75,7 +80,9 @@ and reconciliation observations. This gate creates no combined public status.
 Migration `20260805_0016` already owns the effect, lifecycle head, lifecycle revision, and
 reconciliation tables, scoped constraints, foreign keys, and due index. Generic Runtime revision
 and transaction tables already own the base write-set records. No table, column, consumed marker,
-backfill, or migration `20260808_0025` is required.
+or backfill is required for the outbox-to-effect handoff itself. ADR-146 separately requires
+migration `20260808_0025` to correct logical-result source/effective classification ownership; that
+migration adds no outbox, effect, lifecycle, or consumed-marker meaning.
 
 ## Required gate sequence
 

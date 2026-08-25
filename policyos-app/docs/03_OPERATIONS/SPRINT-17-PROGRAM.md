@@ -370,3 +370,17 @@ Status: implemented locally, validation required before publication.
 - Artifact reads and reviews do not enter provider execution scope.
 - No production credential, external provider call, PostgreSQL schema change, or migration
   `20260808_0025` is included.
+
+## ADR-146 logical-result classification ownership governance gate
+
+**Status: Governed / Validated, Pending Review.** PostgreSQL vertical acceptance exposed a real
+contract/schema conflict rather than a fixture-only failure: an immutable `CONFIDENTIAL`
+execution-request revision can legitimately own `RESTRICTED` state, audit, result, and effect
+facts, while migration `20260808_0023` requires one shared FK classification.
+
+ADR-146 assigns the request revision's exact source classification and the attempt's exact
+effective classification to separate owners. The next public-contract gate adds explicit source
+classification carriage; the following persistence gate implements fail-closed migration
+`20260808_0025`. Existing vertical candidate work remains preserved and cannot resume until both
+gates merge. This governance gate changes no production contract, schema, database row, provider,
+credential, route, tag, or release.
