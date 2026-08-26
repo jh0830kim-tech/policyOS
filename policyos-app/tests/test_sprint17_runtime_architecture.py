@@ -568,6 +568,56 @@ def test_adr135_active_session_effect_persistence_is_transaction_neutral() -> No
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_adr146_governs_source_and_effective_classification_before_schema_change() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-146-S17-RUNTIME-LOGICAL-RESULT-SOURCE-AND-EFFECTIVE-"
+        "CLASSIFICATION-OWNERSHIP.md"
+    )
+    related = (
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-098-CP9-RUNTIME-EXECUTION-LIFECYCLE-PUBLIC-STATUS-AND-"
+            "AUTHORITATIVE-REFERENCE.md"
+        ),
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-099-CP9-RUNTIME-LOGICAL-EXECUTION-RESULT-IDENTITY-AND-"
+            "PERSISTENCE-OWNERSHIP.md"
+        ),
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-135-S17-RUNTIME-OUTBOX-TO-EFFECT-INITIALIZATION-OWNERSHIP-"
+            "AND-ATOMIC-HANDOFF.md"
+        ),
+    )
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for phrase in (
+        "source classification",
+        "effective classification",
+        "must be equal to",
+        "or higher than the source classification",
+        "execution_request_classification",
+        "fk_runtime_logical_result_execution_request",
+        "one logical-result ID per tenant, organization",
+        "execution request, and attempt",
+        "Migration `20260808_0025`",
+        "No latest-row selection",
+        "Populated downgrade fails",
+        "zero residue",
+    ):
+        assert phrase in adr
+    for text in related:
+        assert "ADR-146" in text
+    assert "Sprint 17 logical-result source/effective classification governance" in roadmap
+    assert "ADR-146 logical-result classification ownership governance gate" in program
+    assert "Sprint 17 logical-result source/effective classification security boundary" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_adr139_governs_safe_request_rejection_and_one_variable_probe() -> None:
     adr = _read(
         "docs/01_ARCHITECTURE/ADR/"

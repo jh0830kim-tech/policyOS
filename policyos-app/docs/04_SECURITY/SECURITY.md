@@ -1710,3 +1710,18 @@ provider audit sink is created from the request `AsyncSession`; the factory cann
 commit, roll back, or retain that session. Scope exit occurs before the request database dependency
 ends. Raw credentials, prompts, schemas, provider responses, provider messages, and SQL detail
 remain excluded from public errors, logs, audit metadata, and persistence.
+
+## Sprint 17 logical-result source/effective classification security boundary
+
+ADR-146 prevents classification elevation from rewriting immutable request authority. The exact
+execution-request revision owns its source classification; state, audit, logical result, and effect
+share the effective classification. Effective classification must be equal to or higher than the
+source fact. Lowered, missing, ambiguous, substituted, cross-tenant, cross-organization, cross-
+request, cross-attempt, cross-lineage, or wrong-revision bindings fail closed.
+
+The later migration `20260808_0025` may derive no classification from payload content, effective
+classification, opaque references, or latest rows. Existing rows may receive source classification
+only through an exact unique join to their already referenced execution-request revision; every
+uncertain or inconsistent case stops before destructive schema or data changes. Relational proof,
+append-only behavior, transaction ownership, replay mutation zero, and rollback residue zero remain
+mandatory.

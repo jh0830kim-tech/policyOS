@@ -6,6 +6,8 @@
 `20260808_0022`
 **Clarifies:** ADR-097 and ADR-098. Their assumption that the generic Runtime execution-result
 record already represents the API logical execution result is superseded by this decision.
+**Clarified by:** ADR-146, which separates execution-request source classification from logical-
+result effective classification and governs the required schema amendment.
 
 ## Context
 
@@ -48,8 +50,9 @@ write-set contents may be searched or interpreted to manufacture a logical resul
 
 ### Exact identity and cardinality
 
-A logical result is owned by exactly one tuple of tenant, organization, classification, execution
-request, root lineage, and attempt. For one exact execution-request and attempt tuple there is at
+A logical result is owned by exactly one tuple of tenant, organization, effective classification,
+execution request, root lineage, and attempt. Its exact execution-request revision separately owns
+an immutable source classification. For one exact execution-request and attempt tuple there is at
 most one logical-result ID. Later meaning may append revisions to that same ID; it cannot create a
 second logical-result ID. Different attempts may have different logical results, and a query must
 name the exact attempt rather than select a request-level current or latest attempt.
@@ -57,8 +60,8 @@ name the exact attempt rather than select a request-level current or latest atte
 The persisted identity must carry:
 
 - `runtime_logical_execution_result_id` and positive `result_revision`;
-- tenant ID, organization ID, and classification;
-- runtime execution-request ID and expected revision;
+- tenant ID, organization ID, and effective classification;
+- runtime execution-request ID, expected revision, and source classification;
 - attempt ID;
 - root-lineage ID and root-lineage digest;
 - exact execution-state record ID and expected revision;
@@ -74,8 +77,10 @@ The result-present query locator carries the logical-result ID and expected revi
 scope, execution-request, attempt, root-lineage, state, and audit identity/revision facts. Stored
 result digests and references remain exact-read outputs rather than query-locator authority. The
 result-absent variant carries no logical-result or adapter-result identity. State, audit, and
-result exact reads must agree on tenant, organization, classification, execution request, root
-lineage, and attempt before projection. Missing, stale, duplicate, substituted, cross-scope,
+result exact reads must agree on tenant, organization, effective classification, execution request,
+root lineage, and attempt before projection. The request source classification must equal the
+classification stored on its exact revision, and the effective classification must not be lower.
+Missing, stale, duplicate, substituted, cross-scope,
 cross-lineage, wrong-attempt, wrong-revision, or digest-inconsistent facts fail closed.
 
 ### Adapter results and Audit
@@ -92,7 +97,7 @@ bindings to its execution request, exact state revision, and exact audit revisio
 
 ### Schema and migration
 
-Migration `20260808_0023` is required. It must add a dedicated append-only logical
+Migration `20260808_0023` is required and established the dedicated append-only logical
 execution-result revision store; reusing the existing adapter-result payload or nullable generic
 metadata is prohibited. The store must enforce:
 
@@ -103,6 +108,12 @@ metadata is prohibited. The store must enforce:
 - non-null classification, root-lineage ID/digest, result identity, expected revisions, and stored
   digest/reference;
 - `ON DELETE RESTRICT`, ORM append-only guards, and PostgreSQL UPDATE/DELETE rejection triggers.
+
+ADR-146 records that `20260808_0023` reused one classification in the request, state, and audit
+foreign keys and therefore cannot represent an approved classification elevation. Migration
+`20260808_0025` must add exact execution-request source-classification carriage and preserve the
+logical-result effective classification for state and audit ownership. It cannot weaken relational
+proof or permit multiple logical-result identities for one request and attempt.
 
 The migration must contain no INSERT, inferred backfill, promotion, normalization,
 deduplication, deletion, generated UUID, generated revision, generated digest, or generated time.
