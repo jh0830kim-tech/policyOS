@@ -97,7 +97,7 @@ bindings to its execution request, exact state revision, and exact audit revisio
 
 ### Schema and migration
 
-Migration `20260808_0023` established the dedicated append-only logical
+Migration `20260808_0023` is required and established the dedicated append-only logical
 execution-result revision store; reusing the existing adapter-result payload or nullable generic
 metadata is prohibited. The store must enforce:
 
