@@ -11,8 +11,10 @@ from pydantic import ValidationError
 from app.ai.privacy import DataClassification
 from app.core.auth_claims import VerifiedAccessTokenClaims
 from app.runtime.ports import (
+    RuntimeApiLogicalExecutionResult,
     RuntimeApiLogicalExecutionResultMutationAbsent,
     RuntimeApiLogicalExecutionResultMutationPresent,
+    RuntimeApiQueryProjectionLocator,
     RuntimeRateAdmissionDecision,
     RuntimeRateAdmissionDecisionRequest,
     RuntimeRateAdmissionPersistenceResult,
@@ -926,6 +928,15 @@ def test_domain_operation_result_presence_matches_exact_staged_state() -> None:
             ),
             missing_required,
         )
+
+
+def test_logical_result_contracts_require_explicit_source_classification() -> None:
+    assert RuntimeApiLogicalExecutionResult.model_fields[
+        "execution_request_classification"
+    ].is_required()
+    assert RuntimeApiQueryProjectionLocator.model_fields[
+        "execution_request_classification"
+    ].is_required()
 
 
 def test_facade_accepts_only_outer_boundary_contracts_and_explicit_facts() -> None:

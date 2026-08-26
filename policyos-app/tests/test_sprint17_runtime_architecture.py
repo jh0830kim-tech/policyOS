@@ -39,6 +39,26 @@ def test_adr131_governs_operator_enablement_without_runtime_registry() -> None:
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
 
 
+def test_adr146_public_contracts_preserve_source_and_effective_classification() -> None:
+    contracts = _read("app/runtime/ports/runtime_api_persistence.py")
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    assert contracts.count("execution_request_classification: DataClassification") == 2
+    for phrase in (
+        "not_lower(self.scope.classification, self.execution_request_classification)",
+        "not_lower(scope.classification, expected.classification)",
+        "result.execution_request_classification",
+        "self.locator.execution_request_classification",
+    ):
+        assert phrase in contracts
+    assert "Sprint 17 logical-result source/effective classification public contracts" in roadmap
+    assert "Logical-result source/effective classification public-contract gate" in program
+    assert "Sprint 17 logical-result classification contract security boundary" in security
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
 def test_adr143_governs_registry_snapshot_production_composition() -> None:
     adr = _read(
         "docs/01_ARCHITECTURE/ADR/"

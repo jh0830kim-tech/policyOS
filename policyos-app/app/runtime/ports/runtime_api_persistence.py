@@ -9,7 +9,14 @@ from pydantic import field_validator, model_validator
 
 from app.ai.privacy import DataClassification
 from app.runtime.authority import RuntimeAdmissionDecision, RuntimeAuthorityDecisionStatus
-from app.runtime.ports._base import BoundedId, PositiveInt, RuntimePortModel, aware, canonical
+from app.runtime.ports._base import (
+    BoundedId,
+    PositiveInt,
+    RuntimePortModel,
+    aware,
+    canonical,
+    not_lower,
+)
 from app.runtime.ports.delivery import RuntimeEffectReconciliationRequest
 from app.runtime.ports.delivery_persistence import RuntimeEffectAtomicWriteSet
 from app.runtime.ports.delivery_persistence_validation import (
@@ -69,6 +76,7 @@ class RuntimeApiLogicalExecutionResult(RuntimePortModel):
     runtime_logical_execution_result_id: UUID
     result_revision: PositiveInt
     execution_request: RuntimeApiPersistedRecordFact
+    execution_request_classification: DataClassification
     execution_state: RuntimeApiPersistedRecordFact
     audit_trail: RuntimeApiPersistedRecordFact
     attempt_id: UUID
@@ -93,6 +101,8 @@ class RuntimeApiLogicalExecutionResult(RuntimePortModel):
         }
         if len(record_ids) != 4:
             raise ValueError("logical result records must be distinct")
+        if not not_lower(self.scope.classification, self.execution_request_classification):
+            raise ValueError("logical result classification is below its execution request")
         return self
 
 
@@ -131,6 +141,7 @@ class RuntimeApiQueryResultPresentLocator(RuntimePortModel):
 
 class RuntimeApiQueryProjectionLocator(RuntimePortModel):
     execution_request: RuntimeApiPersistedRecordFact
+    execution_request_classification: DataClassification
     execution_state: RuntimeApiPersistedRecordFact
     audit_trail: RuntimeApiPersistedRecordFact
     result: RuntimeApiQueryResultAbsentLocator | RuntimeApiQueryResultPresentLocator
@@ -155,6 +166,8 @@ class RuntimeApiQueryProjectionLocator(RuntimePortModel):
         if isinstance(self.result, RuntimeApiQueryResultPresentLocator):
             if self.result.logical_execution_result.record_id in record_ids:
                 raise ValueError("execution result must be a distinct logical record")
+        if not not_lower(self.scope.classification, self.execution_request_classification):
+            raise ValueError("query classification is below its execution request")
         return self
 
 
@@ -197,6 +210,7 @@ class RuntimeApiLogicalExecutionResultRevisionReadResult(RuntimePortModel):
             result.runtime_logical_execution_result_id,
             result.result_revision,
             result.execution_request,
+            result.execution_request_classification,
             result.execution_state,
             result.audit_trail,
             result.attempt_id,
@@ -205,6 +219,7 @@ class RuntimeApiLogicalExecutionResultRevisionReadResult(RuntimePortModel):
             self.locator.result.logical_execution_result.record_id,
             self.locator.result.logical_execution_result.expected_revision,
             self.locator.execution_request,
+            self.locator.execution_request_classification,
             self.locator.execution_state,
             self.locator.audit_trail,
             self.locator.attempt_id,
@@ -421,7 +436,6 @@ def _validate_submission_write_set(
     if (
         scope.tenant_id,
         scope.organization_id,
-        scope.classification,
         scope.root_lineage_id,
         scope.root_lineage_digest_reference,
         scope.runtime_execution_request_id,
@@ -431,7 +445,6 @@ def _validate_submission_write_set(
     ) != (
         expected.tenant_id,
         expected.organization_id,
-        expected.classification,
         expected.root_lineage_id,
         expected.root_lineage_digest_reference,
         binding.execution_request.record_id,
@@ -440,6 +453,8 @@ def _validate_submission_write_set(
         binding.registry.registry_revision,
     ):
         raise ValueError("atomic write set differs from exact persistence binding")
+    if not not_lower(scope.classification, expected.classification):
+        raise ValueError("atomic write set classification is below its execution request")
     if (
         base_write_set.expected_state_revision != binding.execution_state.expected_revision
         or base_write_set.expected_audit_revision != binding.audit_trail.expected_revision
@@ -495,20 +510,28 @@ def _validate_submission_logical_result(
     audit = write_set.audit_trail
     if (
         result.execution_request,
+        result.execution_request_classification,
         result.execution_state.record_id,
         result.execution_state.expected_revision,
         result.audit_trail.record_id,
         result.audit_trail.expected_revision,
         result.attempt_id,
-        result.scope,
+        result.scope.tenant_id,
+        result.scope.organization_id,
+        result.scope.root_lineage_id,
+        result.scope.root_lineage_digest_reference,
     ) != (
         binding.execution_request,
+        binding.scope.classification,
         state.runtime_execution_state_record_id,
         state.current_revision,
         audit.runtime_audit_trail_id,
         audit.trail_revision,
         state.scope.attempt_id,
-        binding.scope,
+        binding.scope.tenant_id,
+        binding.scope.organization_id,
+        binding.scope.root_lineage_id,
+        binding.scope.root_lineage_digest_reference,
     ):
         raise ValueError("logical result differs from exact submission records")
     if (
@@ -529,16 +552,18 @@ def _validate_submission_logical_result(
         binding.execution_request.record_id,
         binding.scope.tenant_id,
         binding.scope.organization_id,
-        binding.scope.classification,
+        result.scope.classification,
         binding.scope.root_lineage_id,
         binding.scope.root_lineage_digest_reference,
         binding.scope.tenant_id,
         binding.scope.organization_id,
-        binding.scope.classification,
+        result.scope.classification,
         binding.scope.root_lineage_id,
         binding.scope.root_lineage_digest_reference,
     ):
         raise ValueError("logical result scope or lineage differs from submission")
+    if not not_lower(result.scope.classification, result.execution_request_classification):
+        raise ValueError("logical result classification is below its execution request")
     if result.produced_at < max(state.updated_at, audit.updated_at, write_set.requested_at):
         raise ValueError("logical result predates its exact state or audit revision")
 
