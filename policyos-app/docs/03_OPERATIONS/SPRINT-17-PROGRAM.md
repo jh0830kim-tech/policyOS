@@ -393,3 +393,16 @@ and query scopes. Contract validation permits only equal or monotonic elevation 
 facts through exact query reads. This checkpoint changes no persistence implementation, schema, or
 migration; `20260808_0024` remains the single Alembic head pending the separately governed
 `20260808_0025` gate.
+
+## ADR-147 logical-result historical payload backfill governance gate
+
+**Status: Governed / Validated, Pending Review.** Historical logical-result payloads cannot be
+strictly deserialized after the source-classification contract amendment unless their immutable
+JSON also receives the new authoritative field. ADR-147 assigns both the relational column and
+canonical payload value to the same exact request-revision join.
+
+The persistence gate must preflight the complete store before any change, reject collisions and
+partial states, perform the bounded immutable rewrite and trigger restoration in one PostgreSQL
+transaction, and prove relational/payload equality. Repository injection, best-effort repair,
+populated downgrade, production changes, and migration creation remain outside this governance
+checkpoint.

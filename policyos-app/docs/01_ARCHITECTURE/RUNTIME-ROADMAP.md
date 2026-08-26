@@ -1656,3 +1656,13 @@ scope. Equal and raised classifications are accepted; lowered, missing, substitu
 cross-binding classifications fail closed. Exact reads preserve both facts without changing the
 public facade signatures. Schema ownership remains deferred to the separate migration
 `20260808_0025` persistence gate.
+
+## Sprint 17 logical-result historical payload backfill governance
+
+**Status: Governed / Validated, Pending Review.** ADR-147 requires migration
+`20260808_0025` to populate the relational source-classification column and the canonical
+historical `result_payload` field from one exact execution-request revision join. Full collision
+and consistency preflight precedes every change; immutable-trigger removal, payload update,
+constraint replacement, verification, and trigger restoration form one PostgreSQL transaction.
+Repository read-time injection and populated downgrade are prohibited. The schema implementation
+and resumed vertical validation remain separate gates.

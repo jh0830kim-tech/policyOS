@@ -1735,3 +1735,17 @@ cross-lineage, wrong-revision, or downgraded bindings fail closed before staging
 Neither classification is generated, normalized, selected from a latest row, or inferred from the
 other. This contract-only gate adds no schema, persistence mutation, backfill, credential, provider
 call, or migration `20260808_0025`.
+
+## Sprint 17 logical-result historical payload backfill security boundary
+
+ADR-147 permits no general immutable-result mutation capability. Migration `20260808_0025` alone
+may add the canonical source-classification field to historical payloads, using the same exact
+execution-request revision that owns the new relational column. Complete store preflight rejects
+missing, ambiguous, duplicate, lowered, inconsistent, cross-scope, non-object, collided, or
+partially migrated rows before any schema or data change.
+
+The governed revision trigger may be absent only inside the single transactional migration and
+must be recreated and verified before exit. Any failure rolls back all DDL and payload changes.
+Repository cannot synthesize, default, normalize, or repair the field; relational/payload mismatch
+fails closed. Populated downgrade, latest-row inference, payload-derived authority, and
+best-effort backfill remain prohibited.
