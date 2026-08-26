@@ -1647,3 +1647,12 @@ migration must preserve exact request-revision relational proof with a dedicated
 classification fact, preserve effective-classification state/audit foreign keys, reject duplicate
 request/attempt logical-result identities, and fail closed on ambiguous existing rows. The
 preserved vertical-slice candidate resumes only after those gates merge.
+
+## Sprint 17 logical-result source/effective classification public contracts
+
+The Runtime persistence Port now carries the exact execution-request source classification beside
+its record identity and carries the effective classification in the logical-result and query
+scope. Equal and raised classifications are accepted; lowered, missing, substituted, or
+cross-binding classifications fail closed. Exact reads preserve both facts without changing the
+public facade signatures. Schema ownership remains deferred to the separate migration
+`20260808_0025` persistence gate.

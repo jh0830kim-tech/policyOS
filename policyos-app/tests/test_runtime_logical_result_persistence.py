@@ -66,6 +66,7 @@ def present_locator(stage: RuntimeApiLocalWriteSetStage):
     return base.model_copy(
         update={
             "execution_request": result.execution_request,
+            "execution_request_classification": result.execution_request_classification,
             "execution_state": result.execution_state,
             "audit_trail": result.audit_trail,
             "attempt_id": result.attempt_id,
@@ -101,6 +102,9 @@ class RecordingSession:
 def test_logical_result_serialization_is_strict_and_round_trips() -> None:
     result = logical_stage().logical_execution_result.logical_execution_result
     payload = serialize_logical_execution_result(result)
+    assert payload["execution_request_classification"] == (
+        result.execution_request_classification.value
+    )
     assert deserialize_logical_execution_result(payload) == result
     payload["unknown"] = "forbidden"
     with pytest.raises(RuntimePersistenceSerializationError):

@@ -606,8 +606,10 @@ def atomic_write_set(
     outbox=None,
     persisted=None,
     state=RuntimeExecutionState.ADMITTED,
+    effective_classification=None,
 ) -> RuntimeAtomicWriteSet:
     item = persisted or binding()
+    effective_classification = effective_classification or item.scope.classification
     identity = item.registry_resolution_admission.resolution_request.action_identity
     scope = RuntimePortScope(
         runtime_execution_request_id=item.execution_request.record_id,
@@ -619,7 +621,7 @@ def atomic_write_set(
         actor_id=uid(42),
         tenant_id=item.scope.tenant_id,
         organization_id=item.scope.organization_id,
-        classification=item.scope.classification,
+        classification=effective_classification,
         root_lineage_id=item.scope.root_lineage_id,
         root_lineage_digest_reference=item.scope.root_lineage_digest_reference,
         registry_revision=item.registry.registry_revision,
@@ -644,7 +646,7 @@ def atomic_write_set(
         attempt_id=scope.attempt_id,
         tenant_id=item.scope.tenant_id,
         organization_id=item.scope.organization_id,
-        classification=item.scope.classification,
+        classification=effective_classification,
         root_lineage_id=item.scope.root_lineage_id,
         root_lineage_digest_reference=item.scope.root_lineage_digest_reference,
     )
@@ -659,7 +661,7 @@ def atomic_write_set(
         runtime_execution_request_id=item.execution_request.record_id,
         tenant_id=item.scope.tenant_id,
         organization_id=item.scope.organization_id,
-        classification=item.scope.classification,
+        classification=effective_classification,
         root_lineage_id=item.scope.root_lineage_id,
         root_lineage_digest_reference=item.scope.root_lineage_digest_reference,
     )
@@ -770,6 +772,7 @@ def logical_execution_result(
         runtime_logical_execution_result_id=uid(54),
         result_revision=1,
         execution_request=item.execution_request,
+        execution_request_classification=item.scope.classification,
         execution_state=record(
             write_set.state_record.runtime_execution_state_record_id.int,
             write_set.state_record.current_revision,
@@ -779,7 +782,9 @@ def logical_execution_result(
             write_set.audit_trail.trail_revision,
         ),
         attempt_id=write_set.state_record.scope.attempt_id,
-        scope=item.scope,
+        scope=item.scope.model_copy(
+            update={"classification": write_set.state_record.scope.classification}
+        ),
         result_reference="logical-result.reference",
         result_digest_reference="sha256:logical-result.digest",
         result_payload_provenance_reference="logical-result.payload-provenance",
@@ -881,6 +886,7 @@ def query_integration_facts(
         active_transaction=active_transaction_context(),
         locator=RuntimeApiQueryProjectionLocator(
             execution_request=persisted.execution_request,
+            execution_request_classification=persisted.scope.classification,
             execution_state=persisted.execution_state,
             audit_trail=persisted.audit_trail,
             result=RuntimeApiQueryResultAbsentLocator(),
@@ -1818,6 +1824,103 @@ def test_exact_logical_result_read_returns_stored_references_only() -> None:
             logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
             reconciliation_request=item,
             staged_at=NOW,
+        )
+
+
+def test_logical_result_preserves_source_and_raised_effective_classification() -> None:
+    persisted = binding_for_scope(TENANT, ORGANIZATION, DataClassification.CONFIDENTIAL)
+    write_set = atomic_write_set(
+        persisted=persisted,
+        state=RuntimeExecutionState.SUCCEEDED,
+        effective_classification=DataClassification.RESTRICTED,
+    )
+    result = logical_execution_result(write_set, persisted=persisted)
+    stage = RuntimeApiLocalWriteSetStage(
+        local_write_set_id=uid(8501),
+        transport_receipt_id=uid(8502),
+        operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+        binding=persisted,
+        write_set_digest_reference="write-set.raised-classification",
+        logical_execution_result=RuntimeApiLogicalExecutionResultMutationPresent(
+            logical_execution_result=result
+        ),
+        write_set=write_set,
+        staged_at=NOW,
+    )
+    assert stage.logical_execution_result.logical_execution_result is result
+    assert result.execution_request_classification is DataClassification.CONFIDENTIAL
+    assert result.scope.classification is DataClassification.RESTRICTED
+
+    locator = query_integration_facts(
+        classification=DataClassification.CONFIDENTIAL
+    ).locator.model_copy(
+        update={
+            "execution_request_classification": DataClassification.CONFIDENTIAL,
+            "execution_state": result.execution_state,
+            "audit_trail": result.audit_trail,
+            "attempt_id": result.attempt_id,
+            "scope": result.scope,
+            "result": RuntimeApiQueryResultPresentLocator(
+                logical_execution_result=RuntimeApiPersistedRecordFact(
+                    record_id=result.runtime_logical_execution_result_id,
+                    expected_revision=result.result_revision,
+                ),
+                attempt_id=result.attempt_id,
+            ),
+        }
+    )
+    read = RuntimeApiLogicalExecutionResultRevisionReadResult(
+        locator=locator,
+        logical_execution_result=result,
+        observed_at=NOW,
+    )
+    assert read.locator.execution_request_classification is DataClassification.CONFIDENTIAL
+    assert read.locator.scope.classification is DataClassification.RESTRICTED
+
+
+def test_logical_result_rejects_lowered_or_substituted_source_classification() -> None:
+    persisted = binding_for_scope(TENANT, ORGANIZATION, DataClassification.CONFIDENTIAL)
+    lowered_write_set = atomic_write_set(
+        persisted=persisted,
+        state=RuntimeExecutionState.SUCCEEDED,
+        effective_classification=DataClassification.INTERNAL,
+    )
+    with pytest.raises(ValidationError, match="below its execution request"):
+        RuntimeApiLocalWriteSetStage(
+            local_write_set_id=uid(8511),
+            transport_receipt_id=uid(8512),
+            operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+            binding=persisted,
+            write_set_digest_reference="write-set.lowered-classification",
+            logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
+            write_set=lowered_write_set,
+            staged_at=NOW,
+        )
+
+    raised_write_set = atomic_write_set(
+        persisted=persisted,
+        state=RuntimeExecutionState.SUCCEEDED,
+        effective_classification=DataClassification.RESTRICTED,
+    )
+    result = logical_execution_result(raised_write_set, persisted=persisted)
+    with pytest.raises(ValidationError, match="exact submission records"):
+        RuntimeApiLocalWriteSetStage.model_validate(
+            {
+                "local_write_set_id": uid(8521),
+                "transport_receipt_id": uid(8522),
+                "operation": RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
+                "binding": persisted,
+                "write_set_digest_reference": "write-set.substituted-source",
+                "logical_execution_result": {
+                    "presence": "present",
+                    "logical_execution_result": {
+                        **result.model_dump(),
+                        "execution_request_classification": DataClassification.INTERNAL,
+                    },
+                },
+                "write_set": raised_write_set,
+                "staged_at": NOW,
+            }
         )
 
 

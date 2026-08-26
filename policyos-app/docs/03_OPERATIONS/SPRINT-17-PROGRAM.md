@@ -384,3 +384,12 @@ classification carriage; the following persistence gate implements fail-closed m
 `20260808_0025`. Existing vertical candidate work remains preserved and cannot resume until both
 gates merge. This governance gate changes no production contract, schema, database row, provider,
 credential, route, tag, or release.
+
+## Logical-result source/effective classification public-contract gate
+
+The public Runtime persistence contracts now require an explicit execution-request source
+classification and retain the effective classification on state, audit, logical-result, effect,
+and query scopes. Contract validation permits only equal or monotonic elevation and preserves both
+facts through exact query reads. This checkpoint changes no persistence implementation, schema, or
+migration; `20260808_0024` remains the single Alembic head pending the separately governed
+`20260808_0025` gate.

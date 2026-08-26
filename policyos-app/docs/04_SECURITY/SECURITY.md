@@ -1725,3 +1725,13 @@ only through an exact unique join to their already referenced execution-request 
 uncertain or inconsistent case stops before destructive schema or data changes. Relational proof,
 append-only behavior, transaction ownership, replay mutation zero, and rollback residue zero remain
 mandatory.
+
+## Sprint 17 logical-result classification contract security boundary
+
+The Runtime logical-result and query contracts carry the immutable execution-request source
+classification separately from the effective classification. Effective classification may equal
+or exceed the source fact but can never be lower. Missing, substituted, cross-scope, cross-attempt,
+cross-lineage, wrong-revision, or downgraded bindings fail closed before staging or projection.
+Neither classification is generated, normalized, selected from a latest row, or inferred from the
+other. This contract-only gate adds no schema, persistence mutation, backfill, credential, provider
+call, or migration `20260808_0025`.
