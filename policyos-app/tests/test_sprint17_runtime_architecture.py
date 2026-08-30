@@ -755,3 +755,45 @@ def test_adr142_separates_logical_model_from_provider_wire_resource() -> None:
         "docs/04_SECURITY/SECURITY.md"
     )
     assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+
+
+def test_adr147_governs_historical_payload_backfill_and_trigger_ordering() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-147-S17-RUNTIME-LOGICAL-RESULT-HISTORICAL-PAYLOAD-BACKFILL-AND-"
+        "IMMUTABLE-MIGRATION-ORDERING.md"
+    )
+    related = (
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-099-CP9-RUNTIME-LOGICAL-EXECUTION-RESULT-IDENTITY-AND-PERSISTENCE-"
+            "OWNERSHIP.md"
+        ),
+        _read(
+            "docs/01_ARCHITECTURE/ADR/"
+            "ADR-146-S17-RUNTIME-LOGICAL-RESULT-SOURCE-AND-EFFECTIVE-CLASSIFICATION-"
+            "OWNERSHIP.md"
+        ),
+    )
+    for phrase in (
+        "same joined source row",
+        "no payload already contains `execution_request_classification`",
+        "Before any trigger, constraint, schema, or row change",
+        "recreate and verify the exact immutability trigger",
+        "It cannot inject",
+        "populated logical-result identity or revision table",
+        "migration `20260808_0025`",
+    ):
+        assert phrase in adr
+    for text in related:
+        assert "ADR-147" in text
+    assert "logical-result historical payload backfill governance" in _read(
+        "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md"
+    )
+    assert "logical-result historical payload backfill governance gate" in _read(
+        "docs/03_OPERATIONS/SPRINT-17-PROGRAM.md"
+    )
+    assert "logical-result historical payload backfill security boundary" in _read(
+        "docs/04_SECURITY/SECURITY.md"
+    )
+    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))

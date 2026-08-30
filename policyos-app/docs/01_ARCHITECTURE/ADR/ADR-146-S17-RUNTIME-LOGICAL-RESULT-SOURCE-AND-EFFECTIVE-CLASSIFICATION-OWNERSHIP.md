@@ -121,3 +121,13 @@ relational ownership. This governance gate changes no production Python, public 
 repository, schema, migration, database row, provider, credential, route, tag, or release. The
 vertical validation remains blocked until the public-contract and `20260808_0025` persistence
 gates are separately approved, implemented, merged, and validated.
+
+## Historical payload migration ordering
+
+ADR-147 closes the historical serialization gap created by the required public field. Migration
+`20260808_0025` must derive both the relational source-classification column and the canonical
+`result_payload.execution_request_classification` field from the same exact request-revision join.
+It performs complete collision and consistency preflight before mutation, bounds the immutable
+trigger removal to one transactional DDL sequence, verifies column-to-payload equality, and
+restores the trigger before exit. Repository read-time injection, payload inference, partial
+migration acceptance, and populated downgrade remain prohibited.

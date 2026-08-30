@@ -175,3 +175,12 @@ remains Planned.
 CP9 gains an explicit, auditable distinction between action outcomes and the API logical result.
 It also requires an additional contract and schema checkpoint before Application Integration.
 No existing row changes meaning, and no production capability is claimed by this ADR.
+
+## Sprint 17 historical payload amendment
+
+ADR-147 governs the one exceptional migration-time rewrite required after ADR-146 separated source
+and effective classification. Historical `result_payload` documents receive
+`execution_request_classification` only from the exact joined execution-request revision, in the
+same PostgreSQL transaction that installs the relational source-classification ownership. A
+pre-existing key, ambiguous join, mismatch, or partial state fails before mutation. Repository
+cannot inject or repair the field during reads, and ordinary append-only ownership remains intact.
