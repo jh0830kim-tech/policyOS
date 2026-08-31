@@ -31,6 +31,18 @@ def _alembic(url: str) -> Config:
     return config
 
 
+def _run_alembic(operation, config: Config, revision: str, url: str) -> None:
+    previous = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = url
+    try:
+        operation(config, revision)
+    finally:
+        if previous is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = previous
+
+
 def test_migration_declares_closed_backfill_and_trigger_ordering() -> None:
     source = MIGRATION.read_text(encoding="utf-8")
     assert source.index("_preflight()") < source.index("op.add_column(")
@@ -72,7 +84,7 @@ def test_model_uses_source_classification_only_for_request_revision_fk() -> None
 def test_postgresql_historical_backfill_and_populated_downgrade_fail_closed() -> None:
     url = _database_url()
     config = _alembic(url)
-    command.upgrade(config, "20260808_0024")
+    _run_alembic(command.upgrade, config, "20260808_0024", url)
     tenant = UUID("00000000-0000-0000-0000-000000009001")
     organization = UUID("00000000-0000-0000-0000-000000009002")
     request_id = UUID("00000000-0000-0000-0000-000000009003")
@@ -163,7 +175,7 @@ def test_postgresql_historical_backfill_and_populated_downgrade_fail_closed() ->
         await connection.close()
 
     asyncio.run(seed())
-    command.upgrade(config, "20260808_0025")
+    _run_alembic(command.upgrade, config, "20260808_0025", url)
 
     async def verify() -> None:
         connection = await asyncpg.connect(_asyncpg_url(url))
@@ -183,7 +195,7 @@ def test_postgresql_historical_backfill_and_populated_downgrade_fail_closed() ->
 
     asyncio.run(verify())
     with pytest.raises(Exception, match="populated logical-result classification"):
-        command.downgrade(config, "20260808_0024")
+        _run_alembic(command.downgrade, config, "20260808_0024", url)
 
     async def verify_version() -> None:
         connection = await asyncpg.connect(_asyncpg_url(url))
