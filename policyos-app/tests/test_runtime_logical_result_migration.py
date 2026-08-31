@@ -9,6 +9,7 @@ import pytest
 from alembic.config import Config
 
 from alembic import command
+from app.core.config import get_settings
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "alembic/versions/20260808_0025_runtime_logical_result_classification.py"
@@ -34,6 +35,7 @@ def _alembic(url: str) -> Config:
 def _run_alembic(operation, config: Config, revision: str, url: str) -> None:
     previous = os.environ.get("DATABASE_URL")
     os.environ["DATABASE_URL"] = url
+    get_settings.cache_clear()
     try:
         operation(config, revision)
     finally:
@@ -41,6 +43,7 @@ def _run_alembic(operation, config: Config, revision: str, url: str) -> None:
             os.environ.pop("DATABASE_URL", None)
         else:
             os.environ["DATABASE_URL"] = previous
+        get_settings.cache_clear()
 
 
 def test_migration_declares_closed_backfill_and_trigger_ordering() -> None:
