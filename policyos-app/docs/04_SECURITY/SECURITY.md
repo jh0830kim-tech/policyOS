@@ -1749,3 +1749,18 @@ must be recreated and verified before exit. Any failure rolls back all DDL and p
 Repository cannot synthesize, default, normalize, or repair the field; relational/payload mismatch
 fails closed. Populated downgrade, latest-row inference, payload-derived authority, and
 best-effort backfill remain prohibited.
+
+## Sprint 17 logical-result classification persistence security boundary
+
+Migration `20260808_0025` is the sole authority for the historical immutable-payload rewrite. It
+uses only the exact persisted execution-request revision named by record type, tenant,
+organization, record ID, and expected revision. It rejects ambiguous, missing, cross-scope,
+duplicate, inconsistent, lowered, non-object, collided, or partially migrated facts before any
+schema or row mutation.
+
+The repository never fills or repairs source classification. It requires equality among the
+strict payload, dedicated relational column, and exact request revision while retaining effective
+classification for state and audit relationships. Trigger restoration is verified before the
+transaction exits; every failure rolls back schema and data together. Populated downgrade,
+latest-row inference, hidden classification generation, transaction replacement, and mutation
+outside the caller-owned root transaction remain prohibited.

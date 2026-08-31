@@ -406,3 +406,16 @@ partial states, perform the bounded immutable rewrite and trigger restoration in
 transaction, and prove relational/payload equality. Repository injection, best-effort repair,
 populated downgrade, production changes, and migration creation remain outside this governance
 checkpoint.
+
+## Logical-result classification persistence gate
+
+**Status: Implemented locally; validation pending.** The gate introduces the single governed
+Alembic head `20260808_0025`, performs an exact historical source-classification backfill, and
+changes the request/attempt uniqueness boundary so classification cannot hide duplicates.
+Migration preflight covers missing or ambiguous request revisions, inconsistent history, lowered
+classification, non-object payloads, and pre-existing canonical-field collisions before DDL.
+
+Required acceptance includes fresh and populated PostgreSQL 16 upgrade, equal/raised binding,
+trigger restoration, strict read mismatch rejection, replay/concurrency, rollback residue zero,
+populated downgrade state preservation, empty downgrade, and the exact single head. No vertical-
+slice candidate reuse, credential/provider access, tag, or release belongs to this checkpoint.

@@ -5,6 +5,15 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _assert_only_governed_0025() -> None:
+    paths = tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    assert tuple(path.name for path in paths) == (
+        "20260808_0025_runtime_logical_result_classification.py",
+    )
+
+
 ADR = ROOT / "docs" / "01_ARCHITECTURE" / "ADR"
 RULES = ROOT / "docs" / "01_ARCHITECTURE" / "SPRINT-15-RUNTIME-ARCHITECTURE-RULES.md"
 MIGRATION_0022 = ROOT / "alembic" / "versions" / "20260808_0022_runtime_registry_persistence.py"
@@ -2397,7 +2406,7 @@ def test_cp10_worker_operating_model_governance_precedes_implementation() -> Non
     ):
         assert phrase in combined
     assert not (ROOT / "app/runtime/workers").exists()
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_pre_invocation_revalidation_public_contracts_are_exact():
@@ -2450,7 +2459,7 @@ def test_cp10_worker_pre_invocation_revalidation_governance_is_explicit():
         "migration `20260808_0025`",
     ):
         assert phrase in related
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_result_production_public_contracts_are_exact():
@@ -2523,7 +2532,7 @@ def test_cp10_worker_request_preparation_public_contract_gate_is_bounded() -> No
         "Implemented / Validated, Pending Review",
     ):
         assert phrase in related
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_request_preparation_signatures_are_governed() -> None:
@@ -2596,7 +2605,7 @@ def test_cp10_worker_request_preparation_signatures_are_governed() -> None:
         "factory receives the candidate",
     ):
         assert forbidden not in lowered
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_request_preparation_ownership_is_governed() -> None:
@@ -2637,7 +2646,7 @@ def test_cp10_worker_request_preparation_ownership_is_governed() -> None:
         "CP10 Worker request-preparation ownership security boundary",
     ):
         assert phrase in related
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_public_contract_precision_is_governed_before_contracts() -> None:
@@ -2700,7 +2709,7 @@ def test_cp10_worker_public_contract_precision_is_governed_before_contracts() ->
     assert (ROOT / "app/services/runtime_worker_contracts.py").is_file()
     assert (ROOT / "app/services/runtime_worker_protocols.py").is_file()
     assert (ROOT / "app/services/runtime_worker_validation.py").is_file()
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_contract_semantics_are_governed_before_public_contracts() -> None:
@@ -2767,7 +2776,7 @@ def test_cp10_worker_contract_semantics_are_governed_before_public_contracts() -
         assert phrase in combined
     assert (ROOT / "app/services/runtime_worker_contracts.py").is_file()
     assert (ROOT / "app/services/runtime_worker_protocols.py").is_file()
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_public_contract_gate_is_exact_and_dependency_safe() -> None:
@@ -2819,7 +2828,7 @@ def test_cp10_worker_public_contract_gate_is_exact_and_dependency_safe() -> None
         "production CP10 remains Planned",
     ):
         assert phrase in documents
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr114_governs_prepared_delivery_binding_and_outcome_ordering() -> None:
@@ -2886,7 +2895,7 @@ def test_adr114_governs_prepared_delivery_binding_and_outcome_ordering() -> None
     ):
         assert forbidden not in adr114.lower()
     assert not (ROOT / "app/services/runtime_worker_preparation.py").exists()
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_prepared_delivery_public_contract_gate_is_bounded():
@@ -2929,7 +2938,7 @@ def test_cp10_prepared_delivery_public_contract_gate_is_bounded():
         "Implemented / Validated, Pending Review",
     ):
         assert phrase in related
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_production_composition_result_and_dependency_ownership_is_governed():
@@ -2988,7 +2997,7 @@ def test_cp10_worker_production_composition_result_and_dependency_ownership_is_g
         "No schema or migration `20260808_0025`",
     ):
         assert phrase in related
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_result_producer_and_bundle_public_signatures_are_governed():
@@ -3057,7 +3066,7 @@ def test_cp10_worker_result_producer_and_bundle_public_signatures_are_governed()
         "migration `20260808_0025`",
     ):
         assert phrase in related
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_shutdown_observation_request_preparation_is_governed():
@@ -3101,7 +3110,7 @@ def test_cp10_worker_shutdown_observation_request_preparation_is_governed():
         "trusted-time boundary",
     ):
         assert phrase in related
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_shutdown_observation_request_preparation_contracts_are_exact():
@@ -3124,7 +3133,7 @@ def test_cp10_worker_shutdown_observation_request_preparation_contracts_are_exac
     assert "validate_runtime_worker_shutdown_observation_request_preparation" in validation
     assert "shutdown-observation request-preparation public contracts" in related
     assert "sixteenth" in related
-    assert not tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_operational_failure_and_drain_governance() -> None:
@@ -3169,7 +3178,7 @@ def test_cp10_worker_operational_failure_marker_public_contract_gate() -> None:
     assert "operational failure marker public contract" in roadmap.lower()
     assert "Status: Implemented / Validated, Pending Review" in program
     assert "non-disclosing marker contract" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_production_worker_is_bounded_to_governed_application_sequencing() -> None:
@@ -3204,7 +3213,7 @@ def test_cp10_production_worker_is_bounded_to_governed_application_sequencing() 
         assert forbidden not in worker
     assert "create_runtime_worker_application_service" in production
     assert "CP10 production Worker application service" in related
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_poll_result_candidate_failure_and_drain_ordering_is_governed() -> None:
@@ -3251,7 +3260,7 @@ def test_cp10_worker_poll_result_candidate_failure_and_drain_ordering_is_governe
         "zero residue",
     ):
         assert required in related
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_implements_non_blocking_poll_results_and_sticky_drain_ordering() -> None:
@@ -3276,7 +3285,7 @@ def test_cp10_worker_implements_non_blocking_poll_results_and_sticky_drain_order
     sticky_observation = worker.index("shutdown = await self._observe_shutdown", cycle_result)
     poll_wait = worker.index("await self.dependencies.interruptible_wait_factory().wait")
     assert cycle_result < sticky_observation < poll_wait
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_worker_postgresql_acceptance_is_test_only_and_exact() -> None:
@@ -3304,7 +3313,7 @@ def test_cp10_worker_postgresql_acceptance_is_test_only_and_exact() -> None:
     assert "POLICYOS_TEST_DATABASE_URL" in support
     assert "runtime_delivery_session_factory" in support
     assert "CP10 Worker PostgreSQL shutdown/crash-window acceptance" in related
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_cp10_and_sprint15_closeout_is_complete_and_bounded() -> None:
@@ -3329,4 +3338,4 @@ def test_cp10_and_sprint15_closeout_is_complete_and_bounded() -> None:
         assert required in combined
     assert "| CP10 | Planned |" not in roadmap
     assert "| CP10 Workers | Planned |" not in program
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()

@@ -68,6 +68,7 @@ def _revision_values(result: RuntimeApiLogicalExecutionResult) -> tuple[object, 
         result.scope.tenant_id,
         result.scope.organization_id,
         result.scope.classification.value,
+        result.execution_request_classification.value,
         result.execution_request.record_id,
         result.execution_request.expected_revision,
         result.attempt_id,
@@ -93,6 +94,7 @@ def _stored_revision_values(
         stored.tenant_id,
         stored.organization_id,
         stored.classification,
+        stored.execution_request_classification,
         stored.runtime_execution_request_id,
         stored.execution_request_expected_revision,
         stored.attempt_id,
@@ -160,6 +162,9 @@ class SQLAlchemyRuntimeLogicalExecutionResultRepository:
                     tenant_id=result.scope.tenant_id,
                     organization_id=result.scope.organization_id,
                     classification=result.scope.classification.value,
+                    execution_request_classification=(
+                        result.execution_request_classification.value
+                    ),
                     runtime_execution_request_id=result.execution_request.record_id,
                     execution_request_expected_revision=(
                         result.execution_request.expected_revision
@@ -281,6 +286,26 @@ class SQLAlchemyRuntimeLogicalExecutionResultRepository:
         if _stored_revision_values(stored) != _revision_values(result):
             raise RuntimePersistenceError(
                 "stored logical execution-result columns differ from payload"
+            )
+        request_revision = (
+            await self._session.execute(
+                select(RuntimeRecordRevision).where(
+                    RuntimeRecordRevision.record_type
+                    == RuntimePersistenceRecordType.EXECUTION_REQUEST.value,
+                    RuntimeRecordRevision.tenant_id == stored.tenant_id,
+                    RuntimeRecordRevision.organization_id == stored.organization_id,
+                    RuntimeRecordRevision.classification == stored.execution_request_classification,
+                    RuntimeRecordRevision.record_id == stored.runtime_execution_request_id,
+                    RuntimeRecordRevision.record_revision
+                    == stored.execution_request_expected_revision,
+                )
+            )
+        ).scalar_one_or_none()
+        if request_revision is None:
+            raise RuntimePersistenceError("exact execution-request revision is unavailable")
+        if request_revision.classification != result.execution_request_classification.value:
+            raise RuntimePersistenceError(
+                "stored logical execution-result request classification differs"
             )
         return RuntimeApiLogicalExecutionResultRevisionReadResult(
             locator=locator,

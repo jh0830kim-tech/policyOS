@@ -12,7 +12,23 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_alembic_has_single_head() -> None:
     config = Config("alembic.ini")
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["20260808_0024"]
+    assert scripts.get_heads() == ["20260808_0025"]
+
+
+def test_logical_result_classification_migration_is_exact_and_fail_closed() -> None:
+    path = ROOT / "alembic/versions/20260808_0025_runtime_logical_result_classification.py"
+    source = path.read_text(encoding="utf-8")
+    assert 'revision: str = "20260808_0025"' in source
+    assert 'down_revision: str | None = "20260808_0024"' in source
+    assert source.index("_preflight()") < source.index("op.add_column(")
+    assert "execution_request_classification" in source
+    assert "jsonb_build_object" in source
+    assert "result_payload ? 'execution_request_classification'" in source
+    assert "request and attempt identity is duplicated" in source
+    assert source.index('f"DROP TRIGGER {_TRIGGER}') < source.index("UPDATE {_REVISIONS}")
+    assert source.rindex("_restore_trigger()") > source.index("UPDATE {_REVISIONS}")
+    downgrade = source.index("def downgrade")
+    assert source.index("raise RuntimeError", downgrade) < source.index("op.drop_column", downgrade)
 
 
 def test_rate_admission_migration_is_exact_and_fail_closed() -> None:

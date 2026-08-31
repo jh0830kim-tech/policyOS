@@ -5,6 +5,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _assert_only_governed_0025() -> None:
+    paths = tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    assert tuple(path.name for path in paths) == (
+        "20260808_0025_runtime_logical_result_classification.py",
+    )
+
+
 def _read(relative: str) -> str:
     return (ROOT / relative).read_text(encoding="utf-8")
 
@@ -36,7 +43,7 @@ def test_adr131_governs_operator_enablement_without_runtime_registry() -> None:
     assert "one deployment-owned immutable, secret-free manifest" in program
     assert "Sprint 17 operator-enablement governance boundary" in roadmap
     assert "Sprint 17 operator-enablement security boundary" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr146_public_contracts_preserve_source_and_effective_classification() -> None:
@@ -56,7 +63,7 @@ def test_adr146_public_contracts_preserve_source_and_effective_classification() 
     assert "Sprint 17 logical-result source/effective classification public contracts" in roadmap
     assert "Logical-result source/effective classification public-contract gate" in program
     assert "Sprint 17 logical-result classification contract security boundary" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr143_governs_registry_snapshot_production_composition() -> None:
@@ -87,7 +94,7 @@ def test_adr143_governs_registry_snapshot_production_composition() -> None:
     assert "Gemini registry-snapshot composition security boundary" in _read(
         "docs/04_SECURITY/SECURITY.md"
     )
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr144_governs_ai_office_dependency_bundle_and_route_composition() -> None:
@@ -120,7 +127,7 @@ def test_adr144_governs_ai_office_dependency_bundle_and_route_composition() -> N
     assert "Gemini AI Office dependency-bundle and route-composition security boundary" in _read(
         "docs/04_SECURITY/SECURITY.md"
     )
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr145_governs_request_scoped_gateway_audit_and_execution_composition() -> None:
@@ -182,7 +189,7 @@ def test_ai_office_production_composition_is_request_scoped_and_explicit() -> No
     assert "provider_model_name" in gemini
     assert "app.state" not in production
     assert "20260808_0025" not in production
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr141_governs_stable_path_and_closed_http_404_provenance() -> None:
@@ -203,7 +210,7 @@ def test_adr141_governs_stable_path_and_closed_http_404_provenance() -> None:
     for name in ("ADR-136", "ADR-137", "ADR-140"):
         path = next((ROOT / "docs/01_ARCHITECTURE/ADR").glob(f"{name}-*.md"))
         assert "ADR-141" in _read(path.relative_to(ROOT).as_posix())
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_postgresql_connector_evidence_acceptance_is_explicit_and_secret_free() -> None:
@@ -231,7 +238,7 @@ def test_postgresql_connector_evidence_acceptance_is_explicit_and_secret_free() 
     assert "Sprint 17 PostgreSQL connector evidence acceptance" in roadmap
     assert "PostgreSQL connector evidence acceptance gate" in program
     assert "Sprint 17 PostgreSQL connector evidence security proof" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_operator_manifest_contract_reuses_catalog_and_rejects_path_substitution() -> None:
@@ -249,7 +256,7 @@ def test_operator_manifest_contract_reuses_catalog_and_rejects_path_substitution
     assert "manifest wrapper" in adr
     assert "Construction accepts only the canonical path" in program
     assert "`/v1/runtime/connector`" in program
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr132_governs_deployment_neutral_secret_and_transport_backends() -> None:
@@ -302,7 +309,7 @@ def test_adr132_governs_deployment_neutral_secret_and_transport_backends() -> No
     assert "ADR-132 deployment-neutral backend gate" in program
     assert "Sprint 17 deployment-neutral secret backend" in roadmap
     assert "Sprint 17 deployment-neutral private-backend security boundary" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr133_governs_trusted_deadline_clock_and_transport_timeout() -> None:
@@ -356,7 +363,7 @@ def test_adr133_governs_trusted_deadline_clock_and_transport_timeout() -> None:
     assert "ADR-133 trusted deadline-clock gate" in program
     assert "Sprint 17 trusted deadline clock and transport timeout governance" in roadmap
     assert "Sprint 17 trusted deadline-clock security boundary" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr134_governs_private_backend_signatures_and_tls_trust() -> None:
@@ -411,7 +418,7 @@ def test_adr134_governs_private_backend_signatures_and_tls_trust() -> None:
     assert "ADR-134 private backend signature gate" in program
     assert "Sprint 17 private backend signature and TLS trust governance" in roadmap
     assert "Sprint 17 private backend signature and TLS trust boundary" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr134_private_backend_implementation_is_explicit_and_private() -> None:
@@ -435,7 +442,7 @@ def test_adr134_private_backend_implementation_is_explicit_and_private() -> None
         "follow_redirects=True",
     ):
         assert forbidden not in source
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_local_https_provider_sandbox_uses_the_production_transport_boundary() -> None:
@@ -463,7 +470,7 @@ def test_local_https_provider_sandbox_uses_the_production_transport_boundary() -
     assert "Sprint 17 local HTTPS provider-sandbox acceptance" in roadmap
     assert "Local HTTPS provider-sandbox acceptance gate" in program
     assert "Sprint 17 local HTTPS acceptance security evidence" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_sprint17_closeout_is_complete_with_deployment_deferred() -> None:
@@ -487,7 +494,7 @@ def test_sprint17_closeout_is_complete_with_deployment_deferred() -> None:
     ):
         assert phrase in program
     assert "is not production enablement" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr135_governs_atomic_outbox_to_effect_handoff_without_new_schema() -> None:
@@ -531,7 +538,7 @@ def test_adr135_governs_atomic_outbox_to_effect_handoff_without_new_schema() -> 
     assert "Sprint 17 outbox-to-effect atomic handoff correction" in roadmap
     assert "ADR-135 atomic handoff correction gate" in program
     assert "Sprint 17 atomic outbox-to-effect handoff security boundary" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr135_submission_stage_contracts_are_closed_without_persistence_changes() -> None:
@@ -551,7 +558,7 @@ def test_adr135_submission_stage_contracts_are_closed_without_persistence_change
     assert "Active Persistence Implemented / Pending Review" in roadmap
     assert "ADR-135 submission-stage public contracts" in program
     assert "Sprint 17 closed submission-stage contract boundary" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr135_active_session_effect_persistence_is_transaction_neutral() -> None:
@@ -585,7 +592,7 @@ def test_adr135_active_session_effect_persistence_is_transaction_neutral() -> No
     assert "Active Persistence Implemented / Pending Review" in roadmap
     assert "ADR-135 active-session effect persistence" in program
     assert "Sprint 17 active-session initial-effect persistence boundary" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr146_governs_source_and_effective_classification_before_schema_change() -> None:
@@ -635,7 +642,7 @@ def test_adr146_governs_source_and_effective_classification_before_schema_change
     assert "Sprint 17 logical-result source/effective classification governance" in roadmap
     assert "ADR-146 logical-result classification ownership governance gate" in program
     assert "Sprint 17 logical-result source/effective classification security boundary" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr139_governs_safe_request_rejection_and_one_variable_probe() -> None:
@@ -682,7 +689,7 @@ def test_adr139_governs_safe_request_rejection_and_one_variable_probe() -> None:
     assert "Sprint 17 Gemini request-rejection diagnostic and wire-probe governance" in roadmap
     assert "Gemini request-rejection safe diagnostic and wire-probe governance gate" in program
     assert "Gemini request-rejection diagnostic and single-probe security boundary" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr140_governs_one_literal_api_version_path_probe() -> None:
@@ -724,7 +731,7 @@ def test_adr140_governs_one_literal_api_version_path_probe() -> None:
     assert "Sprint 17 Gemini API-version path governance" in roadmap
     assert "Gemini API-version path governance gate" in program
     assert "Gemini API-version path security boundary" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr142_separates_logical_model_from_provider_wire_resource() -> None:
@@ -754,7 +761,7 @@ def test_adr142_separates_logical_model_from_provider_wire_resource() -> None:
     assert "Gemini logical-model and wire-resource security boundary" in _read(
         "docs/04_SECURITY/SECURITY.md"
     )
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr147_governs_historical_payload_backfill_and_trigger_ordering() -> None:
@@ -796,4 +803,31 @@ def test_adr147_governs_historical_payload_backfill_and_trigger_ordering() -> No
     assert "logical-result historical payload backfill security boundary" in _read(
         "docs/04_SECURITY/SECURITY.md"
     )
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
+
+
+def test_logical_result_classification_persistence_gate_is_bounded() -> None:
+    migration = _read("alembic/versions/20260808_0025_runtime_logical_result_classification.py")
+    model = _read("app/models/runtime_logical_result.py")
+    repository = _read("app/runtime/persistence/logical_result_repositories.py")
+    for phrase in (
+        'revision: str = "20260808_0025"',
+        'down_revision: str | None = "20260808_0024"',
+        "_preflight()",
+        "result_payload ? 'execution_request_classification'",
+        "jsonb_build_object",
+        "_restore_trigger()",
+        "populated logical-result classification cannot be downgraded",
+    ):
+        assert phrase in migration
+    assert "execution_request_classification: Mapped[str]" in model
+    assert "ck_runtime_logical_result_classification_not_lowered" in model
+    assert "stored.execution_request_classification" in repository
+    assert "exact execution-request revision is unavailable" in repository
+    for path, phrase in (
+        ("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md", "classification persistence"),
+        ("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md", "classification persistence gate"),
+        ("docs/04_SECURITY/SECURITY.md", "classification persistence security boundary"),
+    ):
+        assert phrase in _read(path)
+    _assert_only_governed_0025()

@@ -53,7 +53,6 @@ class RuntimeLogicalExecutionResultRecord(Base):
         UniqueConstraint(
             "tenant_id",
             "organization_id",
-            "classification",
             "runtime_execution_request_id",
             "attempt_id",
             name="uq_runtime_logical_result_request_attempt",
@@ -113,7 +112,7 @@ class RuntimeLogicalExecutionResultRevisionRecord(Base):
                 "execution_request_record_type",
                 "tenant_id",
                 "organization_id",
-                "classification",
+                "execution_request_classification",
                 "runtime_execution_request_id",
                 "execution_request_expected_revision",
             ),
@@ -160,6 +159,19 @@ class RuntimeLogicalExecutionResultRevisionRecord(Base):
             "audit_trail_record_type = 'audit_trail'",
             name="ck_runtime_logical_result_record_types",
         ),
+        CheckConstraint(
+            f"execution_request_classification IN ({_CLASSIFICATIONS})",
+            name="ck_runtime_logical_result_request_classification",
+        ),
+        CheckConstraint(
+            "CASE classification "
+            "WHEN 'public' THEN 0 WHEN 'internal' THEN 1 "
+            "WHEN 'confidential' THEN 2 WHEN 'restricted' THEN 3 END >= "
+            "CASE execution_request_classification "
+            "WHEN 'public' THEN 0 WHEN 'internal' THEN 1 "
+            "WHEN 'confidential' THEN 2 WHEN 'restricted' THEN 3 END",
+            name="ck_runtime_logical_result_classification_not_lowered",
+        ),
         UniqueConstraint(
             "tenant_id",
             "organization_id",
@@ -175,6 +187,7 @@ class RuntimeLogicalExecutionResultRevisionRecord(Base):
     tenant_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     organization_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     classification: Mapped[str] = mapped_column(String(20), nullable=False)
+    execution_request_classification: Mapped[str] = mapped_column(String(20), nullable=False)
     runtime_execution_request_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     execution_request_expected_revision: Mapped[int] = mapped_column(Integer, nullable=False)
     attempt_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
