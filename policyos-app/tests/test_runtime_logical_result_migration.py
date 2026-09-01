@@ -7,12 +7,14 @@ from uuid import UUID
 import asyncpg
 import pytest
 from alembic.config import Config
+from sqlalchemy.engine import make_url
 
 from alembic import command
 from app.core.config import get_settings
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "alembic/versions/20260808_0025_runtime_logical_result_classification.py"
+MIGRATION_TEST_DATABASE = "policyos_logical_result_migration_test"
 
 
 def _database_url() -> str:
@@ -44,6 +46,37 @@ def _run_alembic(operation, config: Config, revision: str, url: str) -> None:
         else:
             os.environ["DATABASE_URL"] = previous
         get_settings.cache_clear()
+
+
+async def _create_migration_test_database(url: str) -> None:
+    connection = await asyncpg.connect(_asyncpg_url(url), database="postgres")
+    try:
+        await connection.execute(f'CREATE DATABASE "{MIGRATION_TEST_DATABASE}"')
+    finally:
+        await connection.close()
+
+
+async def _drop_migration_test_database(url: str) -> None:
+    connection = await asyncpg.connect(_asyncpg_url(url), database="postgres")
+    try:
+        await connection.execute(f'DROP DATABASE "{MIGRATION_TEST_DATABASE}"')
+    finally:
+        await connection.close()
+
+
+@pytest.fixture
+def migration_database_url() -> str:
+    source_url = _database_url()
+    isolated_url = (
+        make_url(source_url)
+        .set(database=MIGRATION_TEST_DATABASE)
+        .render_as_string(hide_password=False)
+    )
+    asyncio.run(_create_migration_test_database(source_url))
+    try:
+        yield isolated_url
+    finally:
+        asyncio.run(_drop_migration_test_database(source_url))
 
 
 def test_migration_declares_closed_backfill_and_trigger_ordering() -> None:
@@ -84,8 +117,10 @@ def test_model_uses_source_classification_only_for_request_revision_fk() -> None
     )
 
 
-def test_postgresql_historical_backfill_and_populated_downgrade_fail_closed() -> None:
-    url = _database_url()
+def test_postgresql_historical_backfill_and_populated_downgrade_fail_closed(
+    migration_database_url: str,
+) -> None:
+    url = migration_database_url
     config = _alembic(url)
     _run_alembic(command.upgrade, config, "20260808_0024", url)
     tenant = UUID("00000000-0000-0000-0000-000000009001")
