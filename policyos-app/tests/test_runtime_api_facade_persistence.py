@@ -28,6 +28,8 @@ from app.runtime.persistence import (
     RuntimeEffect,
     RuntimeEffectLifecycleHead,
     RuntimeEffectLifecycleRevision,
+    RuntimeLogicalExecutionResultRevisionRecord,
+    SQLAlchemyExecutionRequestRepository,
     SQLAlchemyRuntimeApiActiveTransactionPersistenceFactory,
     SQLAlchemyRuntimeEffectDueRepository,
     SQLAlchemyRuntimeRegistryRepository,
@@ -35,7 +37,8 @@ from app.runtime.persistence import (
 from app.runtime.ports import (
     RuntimeApiLocalWriteSetOperation,
     RuntimeApiLocalWriteSetStage,
-    RuntimeApiLogicalExecutionResultMutationAbsent,
+    RuntimeApiLogicalExecutionResultMutationPresent,
+    RuntimeRepositoryWriteRequest,
 )
 from app.services.runtime_api_contracts import (
     RuntimeApiCommandIdentity,
@@ -75,11 +78,13 @@ from app.services.runtime_tenant_binding import RuntimeScopeNotFoundError
 from tests.test_runtime_api_binding_contracts import (
     active_transaction_context,
     binding_for_effect_write_set,
+    logical_execution_result,
     query_integration_facts,
     reconciliation_integration_facts,
     submission_integration_facts,
 )
 from tests.test_runtime_delivery_persistence_contracts import due_request, effect_write_set
+from tests.test_runtime_orchestration_domain import invocation_request
 from tests.test_runtime_persistence import seed_atomic_heads
 
 NOW = datetime(2026, 8, 8, tzinfo=UTC)
@@ -593,7 +598,9 @@ async def test_postgresql_active_submission_stages_effect_in_caller_root_transac
         operation=RuntimeApiLocalWriteSetOperation.SUBMIT_INVOCATION,
         binding=binding,
         write_set_digest_reference="write-set.active-effect",
-        logical_execution_result=RuntimeApiLogicalExecutionResultMutationAbsent(),
+        logical_execution_result=RuntimeApiLogicalExecutionResultMutationPresent(
+            logical_execution_result=logical_execution_result(base, persisted=binding)
+        ),
         write_set=write_set,
         staged_at=base.requested_at,
     )
@@ -604,6 +611,28 @@ async def test_postgresql_active_submission_stages_effect_in_caller_root_transac
         update={"trail_revision": base.expected_audit_revision}
     )
     async with factory() as session, session.begin():
+        source_classification = (
+            stage.logical_execution_result.logical_execution_result.execution_request_classification
+        )
+        execution_request = invocation_request().authority.execution_request.model_copy(
+            update={"classification": source_classification}
+        )
+        assert execution_request.runtime_execution_request_id == binding.execution_request.record_id
+        await SQLAlchemyExecutionRequestRepository(session).save(
+            execution_request,
+            RuntimeRepositoryWriteRequest(
+                runtime_repository_write_request_id=uuid4(),
+                runtime_repository_write_receipt_id=uuid4(),
+                record_id=execution_request.runtime_execution_request_id,
+                tenant_id=execution_request.tenant_id,
+                organization_id=execution_request.organization_id,
+                classification=execution_request.classification,
+                resulting_revision=1,
+                record_digest_reference="request.active-effect-input",
+                requested_at=execution_request.requested_at,
+            ),
+            stored_at=base.requested_at,
+        )
         await seed_atomic_heads(session, previous_state, previous_audit)
 
     class RollbackProbe(RuntimeError):
@@ -633,6 +662,16 @@ async def test_postgresql_active_submission_stages_effect_in_caller_root_transac
             await session.scalar(select(func.count(RuntimeEffectLifecycleHead.runtime_effect_id)))
             == 0
         )
+        assert (
+            await session.scalar(
+                select(
+                    func.count(
+                        RuntimeLogicalExecutionResultRevisionRecord.runtime_logical_execution_result_id
+                    )
+                )
+            )
+            == 0
+        )
 
     async with factory() as session, session.begin():
         root = session.get_transaction()
@@ -659,6 +698,16 @@ async def test_postgresql_active_submission_stages_effect_in_caller_root_transac
         candidates = await SQLAlchemyRuntimeEffectDueRepository(session).select_due(request)
         assert len(candidates) == 1
         assert candidates[0].effect_identity == identity
+        assert (
+            await session.scalar(
+                select(
+                    func.count(
+                        RuntimeLogicalExecutionResultRevisionRecord.runtime_logical_execution_result_id
+                    )
+                )
+            )
+            == 1
+        )
     await engine.dispose()
 
 

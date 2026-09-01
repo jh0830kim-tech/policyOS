@@ -127,6 +127,9 @@ async def test_append_stages_exact_identity_and_revision_without_transaction_con
         result.runtime_logical_execution_result_id
     )
     assert revision.result_payload == serialize_logical_execution_result(result)
+    assert revision.execution_request_classification == (
+        result.execution_request_classification.value
+    )
     assert session.flush.await_count == 1
     assert not any(
         hasattr(session, name) for name in ("begin", "begin_nested", "commit", "rollback", "close")

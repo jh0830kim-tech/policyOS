@@ -1666,3 +1666,17 @@ and consistency preflight precedes every change; immutable-trigger removal, payl
 constraint replacement, verification, and trigger restoration form one PostgreSQL transaction.
 Repository read-time injection and populated downgrade are prohibited. The schema implementation
 and resumed vertical validation remain separate gates.
+
+## Sprint 17 logical-result classification persistence
+
+**Status: Implemented locally; validation pending.** Migration `20260808_0025` adds the exact
+execution-request source classification to each logical-result revision and backfills the same
+canonical field into historical payloads from one exact request-revision join. Complete preflight
+precedes schema or row mutation, and the governed immutable trigger is removed, restored, and
+verified only inside the migration transaction.
+
+The model and repository preserve effective classification for state/audit/result binding while
+using source classification only for the execution-request FK. Exact reads independently compare
+payload, relational column, and request revision. Populated downgrade, inferred authority,
+collision repair, and partial migration remain fail closed. The preserved vertical-slice gate
+cannot resume until this checkpoint is validated, published, reviewed, and merged.

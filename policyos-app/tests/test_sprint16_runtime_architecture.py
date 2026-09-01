@@ -5,6 +5,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _assert_only_governed_0025() -> None:
+    paths = tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    assert tuple(path.name for path in paths) == (
+        "20260808_0025_runtime_logical_result_classification.py",
+    )
+
+
 def test_adr123_governs_initial_connector_credentials_and_acknowledgement() -> None:
     adr = (
         ROOT
@@ -46,7 +53,7 @@ def test_adr123_governs_initial_connector_credentials_and_acknowledgement() -> N
     ):
         assert prohibited not in combined
 
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_sprint16_closeout_is_complete_and_bounded() -> None:
@@ -67,7 +74,7 @@ def test_sprint16_closeout_is_complete_and_bounded() -> None:
     ):
         assert required in combined
 
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_connector_provider_postgresql_acceptance_gate_is_bounded() -> None:
@@ -223,7 +230,7 @@ def test_connector_worker_materialization_handoff_contract_gate_is_bounded() -> 
     ):
         assert prohibited not in connector.lower()
 
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr125_governs_connector_provisioning_and_worker_handoff() -> None:
@@ -278,7 +285,7 @@ def test_adr125_governs_connector_provisioning_and_worker_handoff() -> None:
     ):
         assert prohibited not in combined.lower()
 
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_connector_persistence_sufficiency_gate_reuses_exact_cp8_payloads() -> None:
@@ -324,7 +331,7 @@ def test_connector_persistence_sufficiency_gate_reuses_exact_cp8_payloads() -> N
     ):
         assert prohibited not in combined
 
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr124_governs_connector_evidence_mapping_and_exact_lease_binding() -> None:
@@ -383,7 +390,7 @@ def test_adr124_governs_connector_evidence_mapping_and_exact_lease_binding() -> 
     ):
         assert prohibited not in combined
 
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_managed_connector_public_contract_gate_is_bounded() -> None:
@@ -420,7 +427,7 @@ def test_managed_connector_public_contract_gate_is_bounded() -> None:
     ):
         assert prohibited not in connector.lower()
 
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr127_connector_authentication_encoding_and_transport_governance() -> None:
@@ -465,7 +472,7 @@ def test_adr127_connector_authentication_encoding_and_transport_governance() -> 
     assert "Governed / Validated, Pending Review" in roadmap
     assert "Bearer-authenticated JSON protocol" in program
     assert "entire header is excluded or redacted" in security
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_connector_wire_public_contract_gate_is_secret_free_and_bounded() -> None:
@@ -500,7 +507,7 @@ def test_connector_wire_public_contract_gate_is_secret_free_and_bounded() -> Non
     ):
         assert prohibited not in connector.lower()
 
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr128_connector_production_composition_and_materialization_facts_governance() -> None:
@@ -568,7 +575,7 @@ def test_adr128_connector_production_composition_and_materialization_facts_gover
         assert prohibited in adr128
 
     assert "Production/public Python" not in adr128
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr129_connector_materialization_provider_and_bundle_signature_governance() -> None:
@@ -618,7 +625,7 @@ def test_adr129_connector_materialization_provider_and_bundle_signature_governan
     ):
         assert prohibited in adr129
 
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_connector_materialization_facts_and_bundle_public_contract_gate() -> None:
@@ -673,7 +680,7 @@ def test_connector_materialization_facts_and_bundle_public_contract_gate() -> No
         "sqlalchemy",
     ):
         assert prohibited not in connector.lower()
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_sprint16_production_connector_composition_is_private_and_exact():
@@ -735,4 +742,4 @@ def test_adr130_governs_operation_specific_connector_purposes() -> None:
     ):
         assert prohibited in adr
 
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()

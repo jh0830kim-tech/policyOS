@@ -5,6 +5,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _assert_only_governed_0025() -> None:
+    paths = tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
+    assert tuple(path.name for path in paths) == (
+        "20260808_0025_runtime_logical_result_classification.py",
+    )
+
+
 def _read(relative: str) -> str:
     return (ROOT / relative).read_text(encoding="utf-8")
 
@@ -45,7 +52,7 @@ def test_adr136_governs_gemini_without_schema_or_traffic() -> None:
     assert "Gemini evaluation mode" in runbook
     assert "`GOOGLE_API_KEY` is also present" in environment
     assert "synthetic `public` request" in runbook
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr137_pins_wire_revision_and_local_schema_validation() -> None:
@@ -104,7 +111,7 @@ def test_adr137_pins_wire_revision_and_local_schema_validation() -> None:
     ):
         assert phrase in adapter
     assert '"jsonschema>=4.23,<5"' in project
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr136_defines_exact_provider_classification_denial() -> None:
@@ -158,7 +165,7 @@ def test_gemini_config_and_privacy_contracts_are_implemented_without_adapter() -
     assert "Gemini config/privacy contract security boundary" in security
     assert not (ROOT / "app/ai/providers/gemini.py").exists()
     assert (ROOT / "app/ai/providers/gemini_interactions.py").exists()
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr138_governs_optional_fields_usage_and_safe_diagnostics() -> None:
@@ -199,7 +206,7 @@ def test_adr138_governs_optional_fields_usage_and_safe_diagnostics() -> None:
     assert "Gemini documented optional response and safe diagnostic correction gate" in program
     assert "Gemini optional response metadata and safe diagnostic security boundary" in security
     assert "Gemini optional response and safe diagnostic governance" in environment
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr138_response_wire_correction_is_narrow_and_private() -> None:
@@ -218,7 +225,7 @@ def test_adr138_response_wire_correction_is_narrow_and_private() -> None:
         assert phrase in adapter
 
     assert "diagnostic_reason" not in _read("app/ai/model_gateway.py")
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr139_request_wire_correction_is_single_variable_and_private() -> None:
@@ -242,7 +249,7 @@ def test_adr139_request_wire_correction_is_single_variable_and_private() -> None
     ):
         assert phrase in tests
     assert "diagnostic_reason" not in _read("app/ai/model_gateway.py")
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
 
 
 def test_adr141_path_and_http_404_correction_is_literal_and_network_free() -> None:
@@ -256,4 +263,4 @@ def test_adr141_path_and_http_404_correction_is_literal_and_network_free() -> No
     assert '"2026-05-20"' in adapter
     assert "generativelanguage.googleapis.com/v1/interactions" in tests
     assert "test_http_404_is_configuration_error_without_model_only_provenance" in tests
-    assert not any((ROOT / "alembic/versions").glob("20260808_0025*"))
+    _assert_only_governed_0025()
