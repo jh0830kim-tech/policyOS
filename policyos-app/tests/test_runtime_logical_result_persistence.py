@@ -187,6 +187,7 @@ async def test_active_transaction_stages_atomic_bundle_then_logical_result(
         append_result,
     )
     session = MagicMock()
+    session.flush = AsyncMock()
     root = object()
     session.in_transaction.return_value = True
     session.in_nested_transaction.return_value = False

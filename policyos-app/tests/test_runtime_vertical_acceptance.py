@@ -1,12 +1,17 @@
 """PostgreSQL vertical acceptance for Runtime execution and delivery lifecycles."""
 
+import asyncio
 import os
+import sys
 from datetime import timedelta
+from pathlib import Path
 
+import asyncpg
 import httpx
 import pytest
 import pytest_asyncio
 from sqlalchemy import func, select
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.api.deps import get_runtime_verified_claims
@@ -21,9 +26,6 @@ from app.runtime.orchestration import (
     invoke_runtime_action,
 )
 from app.runtime.persistence import (
-    RUNTIME_EFFECT_PERSISTENCE_TABLES,
-    RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES,
-    RUNTIME_PERSISTENCE_TABLES,
     RuntimeEffectLifecycleHead,
     RuntimeEffectLifecycleRevision,
     RuntimePersistenceConflictError,
@@ -71,35 +73,65 @@ from tests.test_runtime_orchestration_domain import (
 from tests.test_runtime_persistence import FixedClock
 from tests.test_runtime_persistence import postgres_sessions as postgres_sessions
 
+ROOT = Path(__file__).resolve().parents[1]
+VERTICAL_TEST_DATABASE = "policyos_runtime_vertical_test"
+
+
+def _asyncpg_url(value: str) -> str:
+    return value.replace("postgresql+asyncpg://", "postgresql://")
+
+
+async def _create_vertical_test_database(source_url: str) -> str:
+    connection = await asyncpg.connect(_asyncpg_url(source_url), database="postgres")
+    try:
+        await connection.execute(f'CREATE DATABASE "{VERTICAL_TEST_DATABASE}"')
+    finally:
+        await connection.close()
+    return (
+        make_url(source_url)
+        .set(database=VERTICAL_TEST_DATABASE)
+        .render_as_string(hide_password=False)
+    )
+
+
+async def _drop_vertical_test_database(source_url: str) -> None:
+    connection = await asyncpg.connect(_asyncpg_url(source_url), database="postgres")
+    try:
+        await connection.execute(f'DROP DATABASE "{VERTICAL_TEST_DATABASE}"')
+    finally:
+        await connection.close()
+
+
+async def _upgrade_vertical_test_database(database_url: str) -> None:
+    environment = os.environ.copy()
+    environment["DATABASE_URL"] = database_url
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "alembic",
+        "upgrade",
+        "head",
+        cwd=ROOT,
+        env=environment,
+    )
+    if await process.wait() != 0:
+        raise RuntimeError("vertical test database migration failed")
+
 
 @pytest_asyncio.fixture
 async def vertical_sessions():
-    database_url = os.getenv("POLICYOS_TEST_DATABASE_URL")
-    if not database_url:
+    source_url = os.getenv("POLICYOS_TEST_DATABASE_URL")
+    if not source_url:
         pytest.skip("POLICYOS_TEST_DATABASE_URL is required for vertical acceptance")
+    database_url = await _create_vertical_test_database(source_url)
+    await _upgrade_vertical_test_database(database_url)
     engine = create_async_engine(database_url)
-    tables = tuple(
-        dict.fromkeys(
-            (
-                *RUNTIME_PERSISTENCE_TABLES,
-                *RUNTIME_EFFECT_PERSISTENCE_TABLES,
-                *RUNTIME_LOGICAL_RESULT_PERSISTENCE_TABLES,
-            )
-        )
-    )
-    async with engine.begin() as connection:
-        for table in reversed(tables):
-            await connection.run_sync(lambda sync, item=table: item.drop(sync, checkfirst=True))
-        for table in tables:
-            await connection.run_sync(lambda sync, item=table: item.create(sync))
     factory = async_sessionmaker(engine, expire_on_commit=False)
     try:
         yield factory
     finally:
-        async with engine.begin() as connection:
-            for table in reversed(tables):
-                await connection.run_sync(lambda sync, item=table: item.drop(sync, checkfirst=True))
         await engine.dispose()
+        await _drop_vertical_test_database(source_url)
 
 
 def state_history(invocation) -> tuple:
