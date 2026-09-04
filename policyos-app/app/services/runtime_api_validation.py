@@ -13,6 +13,7 @@ from app.runtime.ports import (
     RuntimeApiLogicalExecutionResultMutationPresent,
     RuntimeApiPersistenceBindingRead,
     RuntimeApiRegistryResolutionAdmissionFact,
+    RuntimeEffectAtomicWriteSet,
     RuntimeRatePolicyProvisionCommand,
     RuntimeRatePolicyRevision,
     RuntimeRatePolicyRevocationCommand,
@@ -781,7 +782,12 @@ def validate_runtime_api_domain_operation_result(
         write_set = result.stage.write_set
         if write_set is None:
             raise RuntimeApiContractConflict("domain operation submission write set is missing")
-        state = write_set.state_record.current_state
+        base_write_set = (
+            write_set.base_write_set
+            if isinstance(write_set, RuntimeEffectAtomicWriteSet)
+            else write_set
+        )
+        state = base_write_set.state_record.current_state
         present = isinstance(
             result.stage.logical_execution_result,
             RuntimeApiLogicalExecutionResultMutationPresent,

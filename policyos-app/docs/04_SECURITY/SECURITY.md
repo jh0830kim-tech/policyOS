@@ -1764,3 +1764,18 @@ classification for state and audit relationships. Trigger restoration is verifie
 transaction exits; every failure rolls back schema and data together. Populated downgrade,
 latest-row inference, hidden classification generation, transaction replacement, and mutation
 outside the caller-owned root transaction remain prohibited.
+
+## Sprint 17 resumed Runtime vertical-validation security boundary
+
+The vertical acceptance binds the authenticated principal, tenant, organization, classification,
+root lineage, exact persistence revisions, initial effect identity and transport receipt through
+one caller-owned Runtime submission transaction. A Worker-visible due candidate exists only after
+that transaction commits. Wrong-tenant selection returns no candidate; replay cannot invoke the
+domain callback or create the effect twice.
+
+Execution projection and effect-delivery lifecycle remain separate authoritative results. The
+synthetic Worker performs one network-free invocation and preserves append-only `ENQUEUED`,
+`CLAIMED`, `DELIVERING` and `DELIVERED` revisions. Existing rollback and conflict evidence proves
+zero partial residue. The gate uses merged migration `20260808_0025` and adds no further schema,
+backfill or migration. Credential, bearer header, raw provider body and live endpoint remain
+excluded.

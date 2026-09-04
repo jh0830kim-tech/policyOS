@@ -83,7 +83,10 @@ from tests.test_runtime_api_binding_contracts import (
     reconciliation_integration_facts,
     submission_integration_facts,
 )
-from tests.test_runtime_delivery_persistence_contracts import due_request, effect_write_set
+from tests.test_runtime_delivery_persistence_contracts import (
+    due_request,
+    effect_write_set,
+)
 from tests.test_runtime_orchestration_domain import invocation_request
 from tests.test_runtime_persistence import seed_atomic_heads
 
@@ -324,7 +327,11 @@ def replace_submission_ids(facts):
     stage = facts.integration.stage.model_copy(update={"transport_receipt_id": receipt_id})
     integration = facts.integration.model_copy(update={"command_id": command_id, "stage": stage})
     return facts.model_copy(
-        update={"command_id": command_id, "receipt_id": receipt_id, "integration": integration}
+        update={
+            "command_id": command_id,
+            "receipt_id": receipt_id,
+            "integration": integration,
+        }
     )
 
 
@@ -334,7 +341,11 @@ def replace_reconciliation_ids(facts):
     stage = facts.integration.stage.model_copy(update={"transport_receipt_id": receipt_id})
     integration = facts.integration.model_copy(update={"command_id": command_id, "stage": stage})
     return facts.model_copy(
-        update={"command_id": command_id, "receipt_id": receipt_id, "integration": integration}
+        update={
+            "command_id": command_id,
+            "receipt_id": receipt_id,
+            "integration": integration,
+        }
     )
 
 
@@ -443,7 +454,9 @@ def concrete_facade(session, callback):
 
 
 @pytest.mark.asyncio
-async def test_postgresql_concrete_reconciliation_stage_and_receipt_are_atomic(database_url):
+async def test_postgresql_concrete_reconciliation_stage_and_receipt_are_atomic(
+    database_url,
+):
     engine = create_async_engine(database_url)
     factory = async_sessionmaker(engine, expire_on_commit=False)
     organization_id, tenant_id, _, claims = await seed(factory)
@@ -749,7 +762,10 @@ async def test_postgresql_revocation_cross_scope_query_and_reconciliation(databa
     with pytest.raises(RuntimeScopeNotFoundError):
         async with factory() as session:
             await facade(session).get_invocation(
-                query, claims, RuntimeApiOrganizationSelector(organization_id=uuid4()), query_facts
+                query,
+                claims,
+                RuntimeApiOrganizationSelector(organization_id=uuid4()),
+                query_facts,
             )
     assert LocalOperation.calls == 1
 

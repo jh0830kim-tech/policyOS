@@ -1680,3 +1680,20 @@ using source classification only for the execution-request FK. Exact reads indep
 payload, relational column, and request revision. Populated downgrade, inferred authority,
 collision repair, and partial migration remain fail closed. The preserved vertical-slice gate
 cannot resume until this checkpoint is validated, published, reviewed, and merged.
+
+## Sprint 17 resumed Runtime vertical-slice validation
+
+**Status: Implemented / Validated, Pending Review.** The bounded PostgreSQL 16 acceptance now
+starts with one authenticated HTTP Runtime submission carrying the complete caller-supplied
+`RuntimeEffectAtomicWriteSet`. The facade-owned transaction commits the execution facts, outbox,
+initial effect, `ENQUEUED` lifecycle head and transport receipt atomically. A separate synthetic
+Worker flow selects that committed effect, claims it, records `DELIVERING`, invokes one
+network-free delivery capability and records `DELIVERED`.
+
+The API execution projection remains `SUCCEEDED` while the effect-delivery lifecycle independently
+reaches `DELIVERED`; no combined status is created. Exact transport replay invokes the domain
+callback once and creates no duplicate receipt or effect lifecycle, while wrong-scope due
+selection returns zero candidates. Existing combined PostgreSQL evidence retains pre-commit
+invisibility, rollback residue zero and conflict fail-closed behavior. This gate uses the merged
+migration `20260808_0025` and introduces no further schema, backfill or migration; live credential
+and provider traffic remain excluded.

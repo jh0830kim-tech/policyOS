@@ -13,7 +13,9 @@ from app.runtime.persistence.errors import (
 from app.runtime.persistence.logical_result_repositories import (
     SQLAlchemyRuntimeLogicalExecutionResultRepository,
 )
-from app.runtime.persistence.registry_repositories import SQLAlchemyRuntimeRegistryRepository
+from app.runtime.persistence.registry_repositories import (
+    SQLAlchemyRuntimeRegistryRepository,
+)
 from app.runtime.persistence.transaction import _persist_runtime_atomic_write_set
 from app.runtime.ports import (
     RuntimeApiActiveTransactionContext,
@@ -131,6 +133,7 @@ class SQLAlchemyRuntimeApiActiveTransactionPersistence:
                     stage.logical_execution_result,
                     RuntimeApiLogicalExecutionResultMutationPresent,
                 ):
+                    await self._session.flush()
                     await SQLAlchemyRuntimeLogicalExecutionResultRepository(
                         self._session
                     ).append_from_stage(stage)
