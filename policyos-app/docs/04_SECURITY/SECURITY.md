@@ -1794,3 +1794,11 @@ deployment, tag, or release. No prompt, credential, bearer header, raw provider 
 arbitrary provider diagnostic becomes persistent or public. A repeatable local validation demo is
 the next bounded checkpoint; live-provider acceptance and operator enablement remain separately
 approved activities.
+
+## Repeatable local validation demo
+
+The local demo entry point is `scripts/run_local_validation_demo.py`; setup and evidence limits
+are documented in `docs/03_OPERATIONS/LOCAL-VALIDATION-DEMO.md`. It reuses the existing Runtime
+PostgreSQL scenario and six loopback HTTPS cases in separate stages with disposable storage.
+Runtime HTTP uses ASGITransport and injected claims; Worker delivery is synthetic. This is not
+live-provider, login, deployment or productivity evidence. The migration head remains 20260808_0025.
