@@ -46,6 +46,24 @@ def test_adr131_governs_operator_enablement_without_runtime_registry() -> None:
     _assert_only_governed_0025()
 
 
+def test_post_validation_closeout_matches_merged_local_evidence() -> None:
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for text in (roadmap, program, security):
+        assert "post-validation closeout" in text.lower()
+        assert "single Alembic head `20260808_0025`" in text
+        assert "live-provider" in text
+        assert "deployment" in text
+    assert "PR #197" in roadmap
+    assert "PR #198" in roadmap
+    assert "repeatable local validation demo" in program
+    assert "execution projection and effect-delivery lifecycle" in program
+    assert "rollback residue zero" in security
+    _assert_only_governed_0025()
+
+
 def test_adr146_public_contracts_preserve_source_and_effective_classification() -> None:
     contracts = _read("app/runtime/ports/runtime_api_persistence.py")
     roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")

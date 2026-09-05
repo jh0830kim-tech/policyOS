@@ -1779,3 +1779,18 @@ synthetic Worker performs one network-free invocation and preserves append-only 
 zero partial residue. The gate uses merged migration `20260808_0025` and adds no further schema,
 backfill or migration. Credential, bearer header, raw provider body and live endpoint remain
 excluded.
+
+## Sprint 17 post-validation closeout security boundary
+
+The merged PR #197 persistence gate and PR #198 Runtime vertical slice establish local validation
+with the single Alembic head `20260808_0025`. PostgreSQL evidence preserves exact tenant,
+organization, classification, lineage, revision, receipt, effect, and transaction binding.
+Synthetic delivery proves post-commit Worker visibility, exact replay without duplicate external
+invocation or persistence mutation, cross-tenant rejection, and rollback residue zero while
+keeping execution projection and delivery lifecycle authoritative and separate.
+
+This boundary authorizes no live credential, provider endpoint, secret-backend activation,
+deployment, tag, or release. No prompt, credential, bearer header, raw provider response, or
+arbitrary provider diagnostic becomes persistent or public. A repeatable local validation demo is
+the next bounded checkpoint; live-provider acceptance and operator enablement remain separately
+approved activities.
