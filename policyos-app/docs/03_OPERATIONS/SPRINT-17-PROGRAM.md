@@ -358,7 +358,7 @@ approved production correction must remain network free and add no schema or mig
 `20260808_0025`.
 ## AI Office production composition correction gate
 
-Status: implemented locally, validation required before publication.
+Status: implemented, validated, and merged.
 
 - The application factory accepts the optional AI Office dependency bundle explicitly while
   preserving the Runtime bundle's positional compatibility.
@@ -373,7 +373,7 @@ Status: implemented locally, validation required before publication.
 
 ## ADR-146 logical-result classification ownership governance gate
 
-**Status: Governed / Validated, Pending Review.** PostgreSQL vertical acceptance exposed a real
+**Status: Governed / Validated / Merged.** PostgreSQL vertical acceptance exposed a real
 contract/schema conflict rather than a fixture-only failure: an immutable `CONFIDENTIAL`
 execution-request revision can legitimately own `RESTRICTED` state, audit, result, and effect
 facts, while migration `20260808_0023` requires one shared FK classification.
@@ -396,7 +396,7 @@ migration; `20260808_0024` remains the single Alembic head pending the separatel
 
 ## ADR-147 logical-result historical payload backfill governance gate
 
-**Status: Governed / Validated, Pending Review.** Historical logical-result payloads cannot be
+**Status: Governed / Validated / Merged.** Historical logical-result payloads cannot be
 strictly deserialized after the source-classification contract amendment unless their immutable
 JSON also receives the new authoritative field. ADR-147 assigns both the relational column and
 canonical payload value to the same exact request-revision join.
@@ -409,7 +409,7 @@ checkpoint.
 
 ## Logical-result classification persistence gate
 
-**Status: Implemented locally; validation pending.** The gate introduces the single governed
+**Status: Implemented / Validated / Merged.** The gate introduces the single governed
 Alembic head `20260808_0025`, performs an exact historical source-classification backfill, and
 changes the request/attempt uniqueness boundary so classification cannot hide duplicates.
 Migration preflight covers missing or ambiguous request revisions, inconsistent history, lowered
@@ -422,7 +422,7 @@ slice candidate reuse, credential/provider access, tag, or release belongs to th
 
 ## Resumed Runtime vertical-slice validation gate
 
-**Status: Implemented / Validated, Pending Review.** One deterministic PostgreSQL 16 scenario
+**Status: Implemented / Validated / Merged.** One deterministic PostgreSQL 16 scenario
 crosses the actual HTTP submission route, trusted preparation pipeline, facade-owned root
 transaction, active-session initial-effect persistence, committed due selection and synthetic
 Worker delivery. The initial effect appears as exactly one `ENQUEUED` candidate only after commit;
@@ -436,3 +436,17 @@ reported separately, and the combined acceptance matrix retains pre-commit invis
 conflict rollback residue zero. This gate uses the merged migration `20260808_0025`, adds no
 further public contract, schema or migration, and performs no live provider call, deployment, tag
 or release.
+
+## Post-validation closeout reconciliation gate
+
+**Status: Local validation complete; live-provider enablement deferred.** PR #197 and PR #198 are
+merged, the Alembic graph has the single Alembic head `20260808_0025`, and the deterministic
+PostgreSQL 16
+vertical slice is authoritative local evidence. It covers authenticated Runtime submission,
+same-transaction initial-effect creation, post-commit Worker visibility, synthetic delivery,
+exact replay, cross-tenant rejection, conflict rollback, and zero partial residue.
+
+The execution projection and effect-delivery lifecycle remain separate results. This closeout does
+not claim live Gemini success, production credential or secret-backend readiness, deployment,
+tag, or release. The next checkpoint is a repeatable local validation demo; any live-provider or
+operator-enablement action remains separately gated.

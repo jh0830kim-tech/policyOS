@@ -1636,7 +1636,7 @@ migration `20260808_0025`. External credentials and live provider calls remain o
 
 ## Sprint 17 logical-result source/effective classification governance
 
-**Status: Governed / Validated, Pending Review.** ADR-146 separates the immutable classification
+**Status: Governed / Validated / Merged.** ADR-146 separates the immutable classification
 of the exact persisted execution-request revision from the effective classification shared by the
 state, audit, logical result, and deliverable effect. Effective classification may equal or exceed
 the source classification but can never be lower. Neither value may be inferred, rewritten,
@@ -1659,7 +1659,7 @@ public facade signatures. Schema ownership remains deferred to the separate migr
 
 ## Sprint 17 logical-result historical payload backfill governance
 
-**Status: Governed / Validated, Pending Review.** ADR-147 requires migration
+**Status: Governed / Validated / Merged.** ADR-147 requires migration
 `20260808_0025` to populate the relational source-classification column and the canonical
 historical `result_payload` field from one exact execution-request revision join. Full collision
 and consistency preflight precedes every change; immutable-trigger removal, payload update,
@@ -1669,7 +1669,7 @@ and resumed vertical validation remain separate gates.
 
 ## Sprint 17 logical-result classification persistence
 
-**Status: Implemented locally; validation pending.** Migration `20260808_0025` adds the exact
+**Status: Implemented / Validated / Merged.** Migration `20260808_0025` adds the exact
 execution-request source classification to each logical-result revision and backfills the same
 canonical field into historical payloads from one exact request-revision join. Complete preflight
 precedes schema or row mutation, and the governed immutable trigger is removed, restored, and
@@ -1678,12 +1678,12 @@ verified only inside the migration transaction.
 The model and repository preserve effective classification for state/audit/result binding while
 using source classification only for the execution-request FK. Exact reads independently compare
 payload, relational column, and request revision. Populated downgrade, inferred authority,
-collision repair, and partial migration remain fail closed. The preserved vertical-slice gate
-cannot resume until this checkpoint is validated, published, reviewed, and merged.
+collision repair, and partial migration remain fail closed. PR #197 merged the persistence gate;
+`20260808_0025` is the single Alembic head.
 
 ## Sprint 17 resumed Runtime vertical-slice validation
 
-**Status: Implemented / Validated, Pending Review.** The bounded PostgreSQL 16 acceptance now
+**Status: Implemented / Validated / Merged.** The bounded PostgreSQL 16 acceptance now
 starts with one authenticated HTTP Runtime submission carrying the complete caller-supplied
 `RuntimeEffectAtomicWriteSet`. The facade-owned transaction commits the execution facts, outbox,
 initial effect, `ENQUEUED` lifecycle head and transport receipt atomically. A separate synthetic
@@ -1697,3 +1697,16 @@ selection returns zero candidates. Existing combined PostgreSQL evidence retains
 invisibility, rollback residue zero and conflict fail-closed behavior. This gate uses the merged
 migration `20260808_0025` and introduces no further schema, backfill or migration; live credential
 and provider traffic remain excluded.
+
+## Sprint 17 post-validation closeout
+
+**Status: Local validation complete; live-provider enablement deferred.** PR #197 merged the
+logical-result classification persistence gate and PR #198 merged the resumed Runtime vertical
+slice. The merged tree has the single Alembic head `20260808_0025`. Synthetic delivery and local
+PostgreSQL 16 acceptance prove the authenticated submission, atomic initial-effect handoff,
+committed Worker visibility, independent execution and delivery results, exact replay,
+cross-tenant rejection, and rollback residue zero.
+
+This evidence does not claim a successful live-provider path, production credential readiness,
+deployment, tag, or release. The next bounded activity is a repeatable local validation demo;
+live Gemini application-path acceptance and operator deployment remain separately approved gates.
