@@ -1710,3 +1710,11 @@ cross-tenant rejection, and rollback residue zero.
 This evidence does not claim a successful live-provider path, production credential readiness,
 deployment, tag, or release. The next bounded activity is a repeatable local validation demo;
 live Gemini application-path acceptance and operator deployment remain separately approved gates.
+
+## Repeatable local validation demo
+
+The local demo entry point is `scripts/run_local_validation_demo.py`; setup and evidence limits
+are documented in `docs/03_OPERATIONS/LOCAL-VALIDATION-DEMO.md`. It reuses the existing Runtime
+PostgreSQL scenario and six loopback HTTPS cases in separate stages with disposable storage.
+Runtime HTTP uses ASGITransport and injected claims; Worker delivery is synthetic. This is not
+live-provider, login, deployment or productivity evidence. The migration head remains 20260808_0025.

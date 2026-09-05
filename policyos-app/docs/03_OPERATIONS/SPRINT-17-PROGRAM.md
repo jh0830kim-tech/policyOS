@@ -450,3 +450,11 @@ The execution projection and effect-delivery lifecycle remain separate results. 
 not claim live Gemini success, production credential or secret-backend readiness, deployment,
 tag, or release. The next checkpoint is a repeatable local validation demo; any live-provider or
 operator-enablement action remains separately gated.
+
+## Repeatable local validation demo
+
+The local demo entry point is `scripts/run_local_validation_demo.py`; setup and evidence limits
+are documented in `docs/03_OPERATIONS/LOCAL-VALIDATION-DEMO.md`. It reuses the existing Runtime
+PostgreSQL scenario and six loopback HTTPS cases in separate stages with disposable storage.
+Runtime HTTP uses ASGITransport and injected claims; Worker delivery is synthetic. This is not
+live-provider, login, deployment or productivity evidence. The migration head remains 20260808_0025.
