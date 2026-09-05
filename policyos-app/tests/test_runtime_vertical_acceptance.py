@@ -1,11 +1,24 @@
-"""PostgreSQL vertical acceptance tests for the merged CP0-CP7 runtime."""
+"""PostgreSQL vertical acceptance for Runtime execution and delivery lifecycles."""
 
+import asyncio
+import os
+import sys
 from datetime import timedelta
+from pathlib import Path
 
+import asyncpg
+import httpx
 import pytest
+import pytest_asyncio
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.api.deps import get_runtime_verified_claims
+from app.core.auth_claims import VerifiedAccessTokenClaims
+from app.db.session import get_db
+from app.main import create_app
+from app.models.runtime_api_idempotency import RuntimeApiIdempotencyReceiptRecord
 from app.runtime.adapters import FakeRuntimeAdapter
 from app.runtime.audit import RuntimeAuditTrail, validate_runtime_audit_trail
 from app.runtime.orchestration import (
@@ -13,6 +26,8 @@ from app.runtime.orchestration import (
     invoke_runtime_action,
 )
 from app.runtime.persistence import (
+    RuntimeEffectLifecycleHead,
+    RuntimeEffectLifecycleRevision,
     RuntimePersistenceConflictError,
     RuntimePersistenceRecordType,
     RuntimeRecordHead,
@@ -24,6 +39,7 @@ from app.runtime.persistence import (
     SQLAlchemyExecutionStateRepository,
     SQLAlchemyRuntimeAdmissionRepository,
     SQLAlchemyRuntimeAuditRepository,
+    SQLAlchemyRuntimeEffectDueRepository,
     SQLAlchemyRuntimeIdempotencyRepository,
     SQLAlchemyRuntimePermitRepository,
     SQLAlchemyRuntimeTransaction,
@@ -32,12 +48,22 @@ from app.runtime.persistence import (
 )
 from app.runtime.ports import (
     RuntimeClockReading,
+    RuntimeEffectLifecycleStatus,
     RuntimeRepositoryReadRequest,
     RuntimeRepositoryWriteRequest,
     RuntimeTransactionRecordType,
 )
 from app.runtime.state import RuntimeExecutionState
+from tests.runtime_api_acceptance_test_support import (
+    AUDIENCE,
+    PRINCIPAL_ID,
+    AcceptanceFactories,
+    seed_submission_persistence,
+    submission_case,
+)
+from tests.runtime_worker_acceptance_test_support import run_synthetic_worker_delivery
 from tests.test_runtime_authority_domain import uid
+from tests.test_runtime_delivery_persistence_contracts import due_request
 from tests.test_runtime_execution_state_domain import state_values, transition
 from tests.test_runtime_orchestration_domain import (
     commit_request,
@@ -46,6 +72,66 @@ from tests.test_runtime_orchestration_domain import (
 )
 from tests.test_runtime_persistence import FixedClock
 from tests.test_runtime_persistence import postgres_sessions as postgres_sessions
+
+ROOT = Path(__file__).resolve().parents[1]
+VERTICAL_TEST_DATABASE = "policyos_runtime_vertical_test"
+
+
+def _asyncpg_url(value: str) -> str:
+    return value.replace("postgresql+asyncpg://", "postgresql://")
+
+
+async def _create_vertical_test_database(source_url: str) -> str:
+    connection = await asyncpg.connect(_asyncpg_url(source_url), database="postgres")
+    try:
+        await connection.execute(f'CREATE DATABASE "{VERTICAL_TEST_DATABASE}"')
+    finally:
+        await connection.close()
+    return (
+        make_url(source_url)
+        .set(database=VERTICAL_TEST_DATABASE)
+        .render_as_string(hide_password=False)
+    )
+
+
+async def _drop_vertical_test_database(source_url: str) -> None:
+    connection = await asyncpg.connect(_asyncpg_url(source_url), database="postgres")
+    try:
+        await connection.execute(f'DROP DATABASE "{VERTICAL_TEST_DATABASE}"')
+    finally:
+        await connection.close()
+
+
+async def _upgrade_vertical_test_database(database_url: str) -> None:
+    environment = os.environ.copy()
+    environment["DATABASE_URL"] = database_url
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "alembic",
+        "upgrade",
+        "head",
+        cwd=ROOT,
+        env=environment,
+    )
+    if await process.wait() != 0:
+        raise RuntimeError("vertical test database migration failed")
+
+
+@pytest_asyncio.fixture
+async def vertical_sessions():
+    source_url = os.getenv("POLICYOS_TEST_DATABASE_URL")
+    if not source_url:
+        pytest.skip("POLICYOS_TEST_DATABASE_URL is required for vertical acceptance")
+    database_url = await _create_vertical_test_database(source_url)
+    await _upgrade_vertical_test_database(database_url)
+    engine = create_async_engine(database_url)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    try:
+        yield factory
+    finally:
+        await engine.dispose()
+        await _drop_vertical_test_database(source_url)
 
 
 def state_history(invocation) -> tuple:
@@ -295,79 +381,106 @@ async def test_postgres_runtime_vertical_slice_round_trips_all_governed_facts(
     reservation = commit.write_set.idempotency_reservation
     requested_at = committed.committed_at + timedelta(seconds=2)
     async with postgres_sessions() as session:
-        assert await SQLAlchemyExecutionRequestRepository(session).get(
-            read_request(
-                invocation.authority.execution_request,
-                sequence=1,
-                expected_revision=1,
-                requested_at=requested_at,
+        assert (
+            await SQLAlchemyExecutionRequestRepository(session).get(
+                read_request(
+                    invocation.authority.execution_request,
+                    sequence=1,
+                    expected_revision=1,
+                    requested_at=requested_at,
+                )
             )
-        ) == invocation.authority.execution_request
-        assert await SQLAlchemyRuntimeAdmissionRepository(session).get(
-            read_request(
-                invocation.authority,
-                sequence=2,
-                expected_revision=1,
-                requested_at=requested_at,
+            == invocation.authority.execution_request
+        )
+        assert (
+            await SQLAlchemyRuntimeAdmissionRepository(session).get(
+                read_request(
+                    invocation.authority,
+                    sequence=2,
+                    expected_revision=1,
+                    requested_at=requested_at,
+                )
             )
-        ) == invocation.authority
-        assert await SQLAlchemyExecutionPlanRepository(session).get(
-            read_request(
-                invocation.plan,
-                sequence=3,
-                expected_revision=1,
-                requested_at=requested_at,
+            == invocation.authority
+        )
+        assert (
+            await SQLAlchemyExecutionPlanRepository(session).get(
+                read_request(
+                    invocation.plan,
+                    sequence=3,
+                    expected_revision=1,
+                    requested_at=requested_at,
+                )
             )
-        ) == invocation.plan
-        assert await SQLAlchemyRuntimePermitRepository(session).get(
-            read_request(
-                invocation.authority.permit_references[0],
-                sequence=4,
-                expected_revision=1,
-                requested_at=requested_at,
+            == invocation.plan
+        )
+        assert (
+            await SQLAlchemyRuntimePermitRepository(session).get(
+                read_request(
+                    invocation.authority.permit_references[0],
+                    sequence=4,
+                    expected_revision=1,
+                    requested_at=requested_at,
+                )
             )
-        ) == invocation.authority.permit_references[0]
-        assert await SQLAlchemyExecutionStateRepository(session).get(
-            read_request(
-                final_state,
-                sequence=5,
-                expected_revision=final_state.current_revision,
-                requested_at=requested_at,
+            == invocation.authority.permit_references[0]
+        )
+        assert (
+            await SQLAlchemyExecutionStateRepository(session).get(
+                read_request(
+                    final_state,
+                    sequence=5,
+                    expected_revision=final_state.current_revision,
+                    requested_at=requested_at,
+                )
             )
-        ) == final_state
-        assert await SQLAlchemyRuntimeAuditRepository(session).get(
-            read_request(
-                final_audit,
-                sequence=6,
-                expected_revision=final_audit.trail_revision,
-                requested_at=requested_at,
+            == final_state
+        )
+        assert (
+            await SQLAlchemyRuntimeAuditRepository(session).get(
+                read_request(
+                    final_audit,
+                    sequence=6,
+                    expected_revision=final_audit.trail_revision,
+                    requested_at=requested_at,
+                )
             )
-        ) == final_audit
-        assert await SQLAlchemyExecutionResultRepository(session).get(
-            read_request(
-                result,
-                sequence=7,
-                expected_revision=1,
-                requested_at=requested_at,
+            == final_audit
+        )
+        assert (
+            await SQLAlchemyExecutionResultRepository(session).get(
+                read_request(
+                    result,
+                    sequence=7,
+                    expected_revision=1,
+                    requested_at=requested_at,
+                )
             )
-        ) == result
-        assert await SQLAlchemyRuntimeIdempotencyRepository(session).get(
-            read_request(
-                reservation,
-                sequence=8,
-                expected_revision=1,
-                requested_at=requested_at,
+            == result
+        )
+        assert (
+            await SQLAlchemyRuntimeIdempotencyRepository(session).get(
+                read_request(
+                    reservation,
+                    sequence=8,
+                    expected_revision=1,
+                    requested_at=requested_at,
+                )
             )
-        ) == reservation
-        assert await SQLAlchemyExecutionStateRepository(session).get(
-            read_request(
-                final_state,
-                sequence=9,
-                expected_revision=final_state.current_revision,
-                requested_at=requested_at,
-                tenant_id=uid(49999),
+            == reservation
+        )
+        assert (
+            await SQLAlchemyExecutionStateRepository(session).get(
+                read_request(
+                    final_state,
+                    sequence=9,
+                    expected_revision=final_state.current_revision,
+                    requested_at=requested_at,
+                    tenant_id=uid(49999),
+                )
             )
-        ) is None
+            is None
+        )
         transaction = await session.get(
             RuntimeTransactionRecord,
             committed.transaction_receipt.runtime_transaction_receipt_id,
@@ -466,14 +579,12 @@ async def test_postgres_runtime_atomic_commit_rolls_back_mid_transaction_conflic
     async with postgres_sessions() as session:
         state_head = await session.scalar(
             select(RuntimeRecordHead).where(
-                RuntimeRecordHead.record_type
-                == RuntimePersistenceRecordType.EXECUTION_STATE.value
+                RuntimeRecordHead.record_type == RuntimePersistenceRecordType.EXECUTION_STATE.value
             )
         )
         audit_head = await session.scalar(
             select(RuntimeRecordHead).where(
-                RuntimeRecordHead.record_type
-                == RuntimePersistenceRecordType.AUDIT_TRAIL.value
+                RuntimeRecordHead.record_type == RuntimePersistenceRecordType.AUDIT_TRAIL.value
             )
         )
         reservation_heads = await session.scalar(
@@ -491,3 +602,106 @@ async def test_postgres_runtime_atomic_commit_rolls_back_mid_transaction_conflic
         assert audit_head.current_revision == invocation.audit_trail.trail_revision
         assert reservation_heads == 0
         assert transaction_count == 0
+
+
+@pytest.mark.asyncio
+async def test_http_submission_to_synthetic_worker_delivery_is_atomic_and_replay_safe(
+    vertical_sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    postgres_sessions = vertical_sessions
+    request, facts, context, callback, write_set = await submission_case("vertical-submission-key")
+    await seed_submission_persistence(postgres_sessions, facts, context, write_set)
+    claims = VerifiedAccessTokenClaims(
+        subject=str(PRINCIPAL_ID),
+        jti_reference="jti:vertical-submission",
+        verified_issuer="https://issuer.policyos.test",
+        verified_audiences=(AUDIENCE,),
+        issued_at=context.provenance.issued_at,
+        expires_at=context.provenance.valid_until + timedelta(minutes=4),
+    )
+    events: list[str] = []
+    application = create_app(
+        AcceptanceFactories(
+            session_factory=postgres_sessions,
+            context=context,
+            callback=callback,
+            events=events,
+        ).bundle()
+    )
+
+    async def verified_claims():
+        return claims
+
+    async def database_session():
+        async with postgres_sessions() as session:
+            yield session
+
+    application.dependency_overrides[get_runtime_verified_claims] = verified_claims
+    application.dependency_overrides[get_db] = database_session
+    transport = httpx.ASGITransport(app=application)
+    payload = {
+        "action_reference": request.action_reference,
+        "command_reference": request.command_reference,
+        "input_reference": request.input_reference,
+        "classification": request.classification.value,
+    }
+    headers = {"Idempotency-Key": request.idempotency_key}
+    identity = write_set.initial_effect_enqueue.effect_identity
+    params = {"organization_id": str(identity.organization_id)}
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        first = await client.post(
+            "/api/v1/runtime/invocations",
+            params=params,
+            headers=headers,
+            json=payload,
+        )
+        replay = await client.post(
+            "/api/v1/runtime/invocations",
+            params=params,
+            headers=headers,
+            json=payload,
+        )
+
+    assert first.status_code == 200, first.text
+    assert replay.status_code == 200, replay.text
+    assert first.json() == replay.json()
+    assert first.json()["status"] == "succeeded"
+    assert callback.calls == 1
+    async with postgres_sessions() as session:
+        initial_head = await session.get(
+            RuntimeEffectLifecycleHead,
+            (identity.tenant_id, identity.organization_id, identity.runtime_effect_id),
+        )
+        initial_revisions = (
+            await session.scalars(
+                select(RuntimeEffectLifecycleRevision).where(
+                    RuntimeEffectLifecycleRevision.runtime_effect_id == identity.runtime_effect_id
+                )
+            )
+        ).all()
+        receipt_count = await session.scalar(
+            select(func.count())
+            .select_from(RuntimeApiIdempotencyReceiptRecord)
+            .where(RuntimeApiIdempotencyReceiptRecord.receipt_id == facts.receipt_id)
+        )
+        wrong_scope = await SQLAlchemyRuntimeEffectDueRepository(session).select_due(
+            due_request(
+                tenant_id=uid(49001),
+                organization_id=identity.organization_id,
+                classification=identity.classification,
+                observed_at=write_set.base_write_set.requested_at,
+                requested_at=write_set.base_write_set.requested_at,
+            )
+        )
+    assert initial_head is not None
+    assert initial_head.current_status == RuntimeEffectLifecycleStatus.ENQUEUED.value
+    assert [row.lifecycle_revision for row in initial_revisions] == [1]
+    assert receipt_count == 1
+    assert wrong_scope == ()
+
+    delivery = await run_synthetic_worker_delivery(postgres_sessions, write_set)
+    assert delivery.selected_candidate_count == 1
+    assert delivery.delivery_call_count == 1
+    assert delivery.final_status is RuntimeEffectLifecycleStatus.DELIVERED
+    assert delivery.lifecycle_revisions == (1, 2, 3, 4)
+    assert first.json()["status"] == "succeeded"

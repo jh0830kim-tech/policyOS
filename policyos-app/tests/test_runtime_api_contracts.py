@@ -110,6 +110,9 @@ from tests.test_runtime_api_binding_contracts import (
     atomic_write_set as _atomic_write_set,
 )
 from tests.test_runtime_api_binding_contracts import (
+    binding_for_effect_write_set as _binding_for_effect_write_set,
+)
+from tests.test_runtime_api_binding_contracts import (
     logical_execution_result as _logical_execution_result,
 )
 from tests.test_runtime_api_binding_contracts import (
@@ -121,6 +124,7 @@ from tests.test_runtime_api_binding_contracts import (
 from tests.test_runtime_api_binding_contracts import (
     submission_integration_facts as _submission_integration_facts,
 )
+from tests.test_runtime_delivery_persistence_contracts import effect_write_set
 
 NOW = datetime(2026, 8, 6, tzinfo=UTC)
 TENANT = UUID("00000000-0000-0000-0000-000000000101")
@@ -937,6 +941,44 @@ def test_logical_result_contracts_require_explicit_source_classification() -> No
     assert RuntimeApiQueryProjectionLocator.model_fields[
         "execution_request_classification"
     ].is_required()
+
+
+def test_domain_operation_result_uses_effect_write_set_base_state() -> None:
+    bound_command = command()
+    effect = run(effect_write_set())
+    base = effect.base_write_set
+    persisted = _binding_for_effect_write_set(effect)
+    stage = bound_command.integration.stage.model_copy(
+        update={
+            "binding": persisted,
+            "write_set": effect,
+            "logical_execution_result": RuntimeApiLogicalExecutionResultMutationPresent(
+                logical_execution_result=_logical_execution_result(
+                    base,
+                    persisted=persisted,
+                )
+            ),
+        }
+    )
+    result = RuntimeApiDomainOperationResult(
+        safe_result=safe_result(RuntimeApiPublicStatus.SUCCEEDED),
+        stage=stage,
+    )
+    integration = bound_command.integration.model_copy(
+        update={
+            "binding": bound_command.integration.binding.model_copy(
+                update={"persistence": persisted}
+            ),
+            "stage": stage,
+        }
+    )
+    assert (
+        validate_runtime_api_domain_operation_result(
+            bound_command.model_copy(update={"integration": integration}),
+            result,
+        )
+        is result
+    )
 
 
 def test_facade_accepts_only_outer_boundary_contracts_and_explicit_facts() -> None:

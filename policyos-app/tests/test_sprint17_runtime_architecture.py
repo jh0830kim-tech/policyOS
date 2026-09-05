@@ -66,6 +66,33 @@ def test_adr146_public_contracts_preserve_source_and_effective_classification() 
     _assert_only_governed_0025()
 
 
+def test_resumed_runtime_vertical_slice_keeps_execution_and_delivery_separate() -> None:
+    acceptance = _read("tests/test_runtime_vertical_acceptance.py")
+    api_support = _read("tests/runtime_api_acceptance_test_support.py")
+    worker_support = _read("tests/runtime_worker_acceptance_test_support.py")
+    roadmap = _read("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md")
+    program = _read("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md")
+    security = _read("docs/04_SECURITY/SECURITY.md")
+
+    for phrase in (
+        "submission_case",
+        "seed_submission_persistence",
+        "RuntimeEffectLifecycleStatus.ENQUEUED",
+        "run_synthetic_worker_delivery",
+        "RuntimeEffectLifecycleStatus.DELIVERED",
+        'first.json()["status"] == "succeeded"',
+    ):
+        assert phrase in acceptance
+    assert "effect_write_set" in api_support
+    assert "SubmissionDomainCallback" in api_support
+    assert "SyntheticWorkerDeliveryEvidence" in worker_support
+    assert "delivery_call_count=len(delivery.calls)" in worker_support
+    assert "Sprint 17 resumed Runtime vertical-slice validation" in roadmap
+    assert "Resumed Runtime vertical-slice validation gate" in program
+    assert "Sprint 17 resumed Runtime vertical-validation security boundary" in security
+    _assert_only_governed_0025()
+
+
 def test_adr143_governs_registry_snapshot_production_composition() -> None:
     adr = _read(
         "docs/01_ARCHITECTURE/ADR/"
@@ -827,7 +854,10 @@ def test_logical_result_classification_persistence_gate_is_bounded() -> None:
     for path, phrase in (
         ("docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md", "classification persistence"),
         ("docs/03_OPERATIONS/SPRINT-17-PROGRAM.md", "classification persistence gate"),
-        ("docs/04_SECURITY/SECURITY.md", "classification persistence security boundary"),
+        (
+            "docs/04_SECURITY/SECURITY.md",
+            "classification persistence security boundary",
+        ),
     ):
         assert phrase in _read(path)
     _assert_only_governed_0025()

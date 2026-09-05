@@ -419,3 +419,20 @@ Required acceptance includes fresh and populated PostgreSQL 16 upgrade, equal/ra
 trigger restoration, strict read mismatch rejection, replay/concurrency, rollback residue zero,
 populated downgrade state preservation, empty downgrade, and the exact single head. No vertical-
 slice candidate reuse, credential/provider access, tag, or release belongs to this checkpoint.
+
+## Resumed Runtime vertical-slice validation gate
+
+**Status: Implemented / Validated, Pending Review.** One deterministic PostgreSQL 16 scenario
+crosses the actual HTTP submission route, trusted preparation pipeline, facade-owned root
+transaction, active-session initial-effect persistence, committed due selection and synthetic
+Worker delivery. The initial effect appears as exactly one `ENQUEUED` candidate only after commit;
+the Worker records lifecycle revisions 2 through 4 and invokes the synthetic delivery capability
+exactly once.
+
+The HTTP replay returns the same safe execution projection, calls the authoritative submission
+callback once in total and leaves one transport receipt and one four-revision delivery history.
+Cross-tenant due selection returns no candidate. Execution projection and delivery lifecycle are
+reported separately, and the combined acceptance matrix retains pre-commit invisibility and
+conflict rollback residue zero. This gate uses the merged migration `20260808_0025`, adds no
+further public contract, schema or migration, and performs no live provider call, deployment, tag
+or release.
