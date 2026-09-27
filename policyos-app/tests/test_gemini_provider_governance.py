@@ -5,6 +5,24 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_adr148_implementation_separates_credential_and_bootstrap():
+    config = _read("app/core/config.py")
+    production = _read("app/ai/gemini_production.py")
+    application = _read("app/application.py")
+    main = _read("app/main.py")
+    assert "class ApplicationSettings(Settings)" in config
+    assert "return ApplicationSettings()" in config
+    assert "GeminiCredentialAccessor" in production
+    assert "credential_accessor.open()" in production
+    assert "async def revoke" in production
+    assert "app = create_app()" not in application
+    assert "from app.application import create_app, lifespan" in main
+    assert "app = create_app()" in main
+    assert "get_settings" not in production
+    assert "os.environ" not in production
+    _assert_only_governed_0025()
+
+
 def test_adr148_bounds_credential_lifetime_and_one_call_acceptance() -> None:
     adr = _read(
         "docs/01_ARCHITECTURE/ADR/"

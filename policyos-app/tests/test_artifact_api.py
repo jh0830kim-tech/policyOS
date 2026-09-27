@@ -16,6 +16,71 @@ from app.schemas.artifact import ArtifactRead
 from app.services.office_application import OfficeExecutionError
 
 
+def test_default_and_injectable_factory_preserve_route_schema():
+    from app.application import create_app
+    from app.main import create_app as compatibility_factory
+
+    assert compatibility_factory is create_app
+    independent = create_app()
+    original = app.openapi()["paths"]
+    actual = independent.openapi()["paths"]
+    for path, schema in actual.items():
+        assert schema == original[path]
+
+
+def test_injected_scope_failure_is_bounded_503(monkeypatch):
+    from dataclasses import replace
+
+    from test_ai_office_production_composition import gemini_bundle
+
+    from app.ai.model_gateway import ModelConfigurationError
+    from app.application import create_app
+    from app.core.config import ApplicationSettings
+
+    bundle = gemini_bundle()
+
+    class FailingScope:
+        async def __aenter__(self):
+            raise ModelConfigurationError("synthetic-private-detail")
+
+        async def __aexit__(self, *args):
+            return False
+
+    class FailingFactory:
+        blueprint = bundle.request_execution_scope_factory.blueprint
+
+        def open(self, audit_sink):
+            assert audit_sink is not None
+            return FailingScope()
+
+    monkeypatch.setattr(
+        "app.application.get_settings",
+        lambda: ApplicationSettings(_env_file=None, ai_provider="gemini"),
+    )
+    application = create_app(
+        ai_office_dependencies=replace(bundle, request_execution_scope_factory=FailingFactory())
+    )
+    user, membership, organization_id = identity()
+    db = AsyncMock(spec=AsyncSession)
+    db.get.return_value = user
+    db.scalar.side_effect = [membership, uuid.uuid4()]
+
+    async def override():
+        yield db
+
+    application.dependency_overrides[get_db] = override
+    with TestClient(application) as test_client:
+        response = test_client.post(
+            "/api/v1/ai/work-packages",
+            params={"organization_id": str(organization_id)},
+            headers={"Authorization": f"Bearer {create_access_token(str(user.id))}"},
+            json={"package_type": "policy_package", "instruction": "Synthetic public input"},
+        )
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "configuration_error"
+    assert "private" not in response.text
+
+
 def identity() -> tuple[User, Membership, uuid.UUID]:
     organization_id = uuid.uuid4()
     user = User(

@@ -2263,7 +2263,7 @@ def test_cp9_operational_preflight_public_contracts_are_bounded() -> None:
 def test_cp9_production_runtime_composition_and_thin_routes_are_bounded() -> None:
     production = (ROOT / "app/services/runtime_api_production.py").read_text(encoding="utf-8")
     routes = (ROOT / "app/api/routes/runtime.py").read_text(encoding="utf-8")
-    main = (ROOT / "app/main.py").read_text(encoding="utf-8")
+    main = (ROOT / "app/application.py").read_text(encoding="utf-8")
     combined = "\n".join(
         (
             (ROOT / "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md").read_text(encoding="utf-8"),

@@ -130,6 +130,8 @@ def bind_ai_office_production(
         raise ModelConfigurationError("AI Office production dependencies are required")
     factory = dependencies.request_execution_scope_factory
     blueprint = factory.blueprint
+    if not isinstance(blueprint, OfficeCompositionBlueprint):
+        raise ModelConfigurationError("AI Office blueprint binding differs")
     if blueprint.provider != provider:
         raise ModelConfigurationError("AI Office provider binding differs")
 
