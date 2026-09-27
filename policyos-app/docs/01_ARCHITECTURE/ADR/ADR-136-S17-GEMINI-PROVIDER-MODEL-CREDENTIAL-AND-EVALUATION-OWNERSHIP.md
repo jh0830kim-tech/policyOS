@@ -227,3 +227,13 @@ ADR-145 clarifies that the application lifetime retains only a secret-free immut
 provider-bound request-scope factory. Each work-package mutation supplies its request DB-bound
 `ProviderAuditSink` and receives one fresh managed execution composition. Raw Gemini credential,
 HTTP client, gateway and audit sink cannot escape that scope or be cached in application state.
+
+## ADR-148 credential ownership amendment
+
+ADR-148 supersedes the construction-time Settings key requirement for the future injected
+production path: a deployment-injected credential accessor materializes the key only inside
+the managed request scope. Application construction validates capability presence and binding;
+invalid secret material fails scope entry before I/O. Legacy code is not corrected by this
+document. Reference release does not guarantee Python string memory zeroization.
+The first live acceptance remains a separately approved PUBLIC synthetic single-agent call.
+Current Alembic head is 20260808_0025; this amendment adds no migration.
