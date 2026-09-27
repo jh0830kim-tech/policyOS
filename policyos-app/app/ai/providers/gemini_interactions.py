@@ -150,6 +150,16 @@ class _RequestRejection(StrEnum):
     HTTP_422_UNCLASSIFIED = "request_http_422_unclassified"
 
 
+class _RejectionParseReason(StrEnum):
+    RESPONSE_BOUNDS = "response_bounds"
+    INVALID_JSON = "invalid_json"
+    ERROR_SHAPE = "error_shape"
+    CODE_MISSING = "code_missing"
+    CODE_TYPE = "code_type"
+    CODE_UNSUPPORTED = "code_unsupported"
+    CODE_CONFLICT = "code_conflict"
+
+
 class _GeminiInvalidResponseError(ModelGatewayError):
     def __init__(self, reason: _ResponseRejection, message: str) -> None:
         self.diagnostic_reason = reason.value
@@ -165,8 +175,10 @@ class _GeminiRequestRejectedError(ModelGatewayError):
         *,
         started: float,
         retry_count: int,
+        parse_reason: _RejectionParseReason | None = None,
     ) -> None:
         self.diagnostic_reason = reason.value
+        self.rejection_parse_reason = parse_reason.value if parse_reason is not None else None
         super().__init__(
             code,
             message,
@@ -679,30 +691,44 @@ def _map_http_error(
 
 
 def _provider_error_code(response: httpx.Response) -> str | None:
+    return _classify_provider_error(response)[0]
+
+
+def _classify_provider_error(
+    response: httpx.Response,
+) -> tuple[str | None, _RejectionParseReason | None]:
     if len(response.content) > _MAX_RESPONSE_BYTES:
-        return None
+        return None, _RejectionParseReason.RESPONSE_BOUNDS
     try:
         payload = response.json()
     except ValueError:
-        return None
+        return None, _RejectionParseReason.INVALID_JSON
     if not isinstance(payload, dict) or set(payload) != {"error"}:
-        return None
+        return None, _RejectionParseReason.ERROR_SHAPE
     error = payload.get("error")
     if not isinstance(error, dict):
-        return None
+        return None, _RejectionParseReason.ERROR_SHAPE
     status = error.get("status")
     legacy = status if isinstance(status, str) and status in _ALLOWED_PROVIDER_ERROR_CODES else None
     if "code" not in error:
-        return legacy
+        if "status" not in error:
+            return None, _RejectionParseReason.CODE_MISSING
+        if not isinstance(status, str):
+            return None, _RejectionParseReason.CODE_TYPE
+        if legacy is None:
+            return None, _RejectionParseReason.CODE_UNSUPPORTED
+        return legacy, None
     code = error.get("code")
     if not isinstance(code, str):
-        return None
+        return None, _RejectionParseReason.CODE_TYPE
     canonical = next(
         (mapped for wire, mapped in _INTERACTIONS_ERROR_CODE_MAP if code == wire), None
     )
-    if canonical is None or ("status" in error and legacy != canonical):
-        return None
-    return canonical
+    if canonical is None:
+        return None, _RejectionParseReason.CODE_UNSUPPORTED
+    if "status" in error and legacy != canonical:
+        return None, _RejectionParseReason.CODE_CONFLICT
+    return canonical, None
 
 
 def _request_rejection_error(
@@ -710,7 +736,7 @@ def _request_rejection_error(
     started: float,
     retry_count: int,
 ) -> ModelGatewayError:
-    provider_code = _provider_error_code(response)
+    provider_code, parse_reason = _classify_provider_error(response)
     if provider_code in {"SAFETY", "RECITATION", "SENSITIVE_INFORMATION"}:
         reason = "policy_blocked"
         code = ModelErrorCode.POLICY_BLOCKED
@@ -732,6 +758,7 @@ def _request_rejection_error(
         message,
         started=started,
         retry_count=retry_count,
+        parse_reason=parse_reason,
     )
 
 

@@ -299,9 +299,27 @@ def test_interactions_error_code_compatibility_stays_private() -> None:
     assert "_INTERACTIONS_ERROR_CODE_MAP = (" in adapter
     for code in ("invalid_request", "failed_precondition", "parameter_unknown"):
         assert code in adr
-    assert '("status" in error and legacy != canonical)' in adapter
+    assert '"status" in error and legacy != canonical' in adapter
     assert "No message parsing" in adr
     assert "diagnostic_reason" not in _read("app/ai/model_gateway.py")
+
+
+def test_unclassified_parse_diagnostics_are_private_and_closed() -> None:
+    adapter = _read("app/ai/providers/gemini_interactions.py")
+    assert "class _RejectionParseReason(StrEnum):" in adapter
+    assert "self.rejection_parse_reason = parse_reason.value" in adapter
+    for category in (
+        "response_bounds",
+        "invalid_json",
+        "error_shape",
+        "code_missing",
+        "code_type",
+        "code_unsupported",
+        "code_conflict",
+    ):
+        assert category in adapter
+    for path in ("app/ai/model_gateway.py", "app/ai/privacy.py", "app/agents/base.py"):
+        assert "rejection_parse_reason" not in _read(path)
 
 
 def test_adr141_path_and_http_404_correction_is_literal_and_network_free() -> None:

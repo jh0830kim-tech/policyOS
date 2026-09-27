@@ -570,6 +570,91 @@ async def test_interactions_code_compatibility_is_closed_and_conflict_safe(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("status", [400, 422])
+@pytest.mark.parametrize(
+    ("body", "category"),
+    [
+        (b"x" * 1_048_577, "response_bounds"),
+        (b"not-json", "invalid_json"),
+        (b"\xff", "invalid_json"),
+        (b"[]", "error_shape"),
+        (b'{"error":null}', "error_shape"),
+        (b'{"error":{},"extra":true}', "error_shape"),
+        (b'{"error":{}}', "code_missing"),
+        (b'{"error":{"code":400}}', "code_type"),
+        (b'{"error":{"status":null}}', "code_type"),
+        (b'{"error":{"code":"unsupported"}}', "code_unsupported"),
+        (b'{"error":{"status":"invalid_argument"}}', "code_unsupported"),
+        (b'{"error":{"code":"invalid_request","status":"INVALID_ARGUMENT"}}', "code_conflict"),
+        (b'{"error":{"code":"failed_precondition","status":null}}', "code_conflict"),
+    ],
+    ids=[
+        "oversized",
+        "invalid-json",
+        "invalid-encoding",
+        "array-envelope",
+        "null-error",
+        "extra-envelope",
+        "missing-code",
+        "numeric-code",
+        "null-status",
+        "unknown-code",
+        "unknown-status",
+        "conflicting-status",
+        "malformed-status",
+    ],
+)
+async def test_unclassified_parse_reason_is_closed_and_ephemeral(
+    status: int, body: bytes, category: str, caplog
+) -> None:
+    class Sink:
+        def __init__(self):
+            self.records = []
+
+        async def record(self, metadata):
+            self.records.append(metadata)
+
+    sink = Sink()
+    transport = CountingTransport(lambda req: httpx.Response(status, content=body, request=req))
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway(
+            "synthetic-key", model=MODEL, transport=transport, audit_sink=sink, max_retries=2
+        ).generate(request())
+    error = caught.value
+    assert error.code is ModelErrorCode.INVALID_REQUEST
+    assert error.retryable is False
+    assert error.retry_count == 0
+    assert error.diagnostic_reason == f"request_http_{status}_unclassified"
+    assert error.rejection_parse_reason == category
+    assert category not in str(error)
+    assert "unsupported" not in str(error)
+    assert "synthetic-key" not in repr(vars(error))
+    assert len(sink.records) == 1
+    assert "rejection_parse_reason" not in sink.records[0].model_dump()
+    assert category not in caplog.text
+    assert len(transport.requests) == 1
+    assert transport.close_count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"code": "invalid_request"},
+        {"code": "failed_precondition", "status": "FAILED_PRECONDITION"},
+        {"status": "SAFETY"},
+    ],
+)
+async def test_recognized_rejection_has_no_parse_failure(fields: dict) -> None:
+    transport = transport_for({"error": fields}, status=400)
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway("synthetic-key", model=MODEL, transport=transport).generate(
+            request()
+        )
+    assert caught.value.rejection_parse_reason is None
+
+
+@pytest.mark.asyncio
 async def test_bounded_application_retry_reuses_one_managed_client() -> None:
     calls = 0
 
