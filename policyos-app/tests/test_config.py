@@ -1,7 +1,40 @@
 import pytest
 from pydantic import SecretStr, ValidationError
 
-from app.core.config import Settings
+from app.core.config import ApplicationSettings, Settings, get_settings
+
+
+def test_application_settings_never_retain_ambient_gemini_material(monkeypatch, tmp_path):
+    monkeypatch.setenv("GEMINI_API_KEY", "synthetic-environment-secret")
+    monkeypatch.setenv("GOOGLE_API_KEY", "synthetic-ignored-secret")
+    dotenv = tmp_path / "synthetic.env"
+    dotenv.write_text("GEMINI_API_KEY=synthetic-dotenv-secret\nAI_PROVIDER=gemini\n")
+    settings = ApplicationSettings(_env_file=dotenv, ai_provider="gemini")
+    assert settings.ai_provider == "gemini"
+    assert settings.gemini_api_key is settings.google_api_key is None
+    assert "gemini_api_key" not in ApplicationSettings.model_fields
+    assert "google_api_key" not in ApplicationSettings.model_fields
+    assert "synthetic-" not in repr(settings)
+    assert "synthetic-" not in str(settings.model_dump())
+
+
+@pytest.mark.parametrize("name", ["gemini_api_key", "google_api_key"])
+def test_application_rejects_explicit_second_credential_owner(name):
+    with pytest.raises(ValidationError, match="injected accessor") as caught:
+        ApplicationSettings(_env_file=None, **{name: "synthetic-only"})
+    assert "synthetic-only" not in str(caught.value)
+
+
+def test_application_settings_loader_is_secret_free(monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "synthetic-only")
+    get_settings.cache_clear()
+    try:
+        settings = get_settings()
+        assert isinstance(settings, ApplicationSettings)
+        assert settings.gemini_api_key is None
+    finally:
+        get_settings.cache_clear()
 
 
 @pytest.mark.parametrize(

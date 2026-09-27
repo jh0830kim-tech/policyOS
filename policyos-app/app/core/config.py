@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Literal, Self
+from typing import ClassVar, Literal, Self
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,6 +12,7 @@ _MINIMUM_SECRET_LENGTH = 32
 
 
 class Settings(BaseSettings):
+    _injected_gemini_credentials: ClassVar[bool] = False
     app_name: str = "PolicyOS"
     app_env: str = "development"
     database_url: str = "postgresql+asyncpg://policyos:policyos@localhost:5432/policyos"
@@ -177,7 +178,7 @@ class Settings(BaseSettings):
             self.ai_provider = "disabled"
         if self.ai_provider == "openai" and not self.openai_api_key:
             raise ValueError("OPENAI_API_KEY is required when AI_PROVIDER=openai")
-        if self.ai_provider == "gemini":
+        if self.ai_provider == "gemini" and not self._injected_gemini_credentials:
             if self.gemini_api_key is None:
                 raise ValueError("GEMINI_API_KEY is required when AI_PROVIDER=gemini")
             gemini_api_key = self.gemini_api_key.get_secret_value()
@@ -206,6 +207,38 @@ class Settings(BaseSettings):
         return self
 
 
+class ApplicationSettings(Settings):
+    """App settings never select or retain Gemini credential material."""
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
+    _injected_gemini_credentials: ClassVar[bool] = True
+    gemini_api_key: ClassVar[None] = None
+    google_api_key: ClassVar[None] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_explicit_gemini_credentials(cls, values):
+        if isinstance(values, dict) and any(
+            name.lower() in {"gemini_api_key", "google_api_key"} for name in values
+        ):
+            raise ValueError("Application Gemini credentials require an injected accessor")
+        return values
+
+    @classmethod
+    def settings_customise_sources(
+        cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings
+    ):
+        def noncredential_dotenv():
+            # Dotenv treats unknown names as extras; exclude them from application state.
+            return {
+                key: value
+                for key, value in dotenv_settings().items()
+                if key.lower() not in {"gemini_api_key", "google_api_key"}
+            }
+
+        return init_settings, env_settings, noncredential_dotenv, file_secret_settings
+
+
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return ApplicationSettings()

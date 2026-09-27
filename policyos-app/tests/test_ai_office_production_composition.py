@@ -19,7 +19,22 @@ from app.ai_models import (
     RegisteredProvider,
     RegistryLifecycleStatus,
 )
-from app.core.config import Settings
+from app.core.config import ApplicationSettings, Settings
+
+
+def test_application_binding_requires_no_settings_owned_gemini_secret():
+    settings = ApplicationSettings(_env_file=None, ai_provider="gemini")
+    bound = bind_ai_office_production(settings, gemini_bundle())
+    assert bound.blueprint.logical_model_id == "office.gemini.flash"
+    assert settings.gemini_api_key is None
+
+
+def test_factory_with_invalid_blueprint_is_rejected_before_request():
+    bundle = gemini_bundle()
+    bundle.request_execution_scope_factory.blueprint = None
+    with pytest.raises(ModelConfigurationError, match="blueprint"):
+        bind_ai_office_production(ApplicationSettings(_env_file=None, ai_provider="gemini"), bundle)
+
 
 NOW = datetime(2026, 8, 23, tzinfo=UTC)
 REGISTRY_ID = UUID("00000000-0000-0000-0000-000000000143")

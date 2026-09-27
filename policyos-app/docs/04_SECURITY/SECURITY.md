@@ -1816,3 +1816,25 @@ zero retry/fallback, store=false, background=false and no tools/history. Full wo
 validation is separately approved; local demo evidence does not prove live-provider success.
 No credential access, production implementation or deployment is performed by this gate.
 Existing Alembic head 20260808_0025 is unchanged; no new schema or migration is required.
+
+## ADR-148 request-scope and bootstrap implementation
+
+The injected factory is importable from app.application without constructing a default app.
+app.main retains the compatibility ASGI entry point and fails closed for an external provider
+without an explicit bundle. ApplicationSettings excludes Gemini credential fields; direct
+legacy Settings construction remains available for adapter compatibility tests, not as the
+injected production credential owner. Deployment supplies a GeminiCredentialAccessor whose
+open() returns a fresh async credential lease. GeminiRequestExecutionScopeFactory preserves
+the existing open(audit_sink) signature and three-field bundle.
+
+Each request validates the credential before I/O, builds a fresh gateway, rejects overlapping
+generation and use after exit, drains an active child before lease release, and releases its
+gateway, audit-sink and credential references on every exit. Cleanup cannot suppress a primary
+failure; scope configuration failures use a bounded 503 response. No Python string zeroization
+is claimed. PUBLIC-only transmission, exact logical/wire binding and local output validation
+remain enforced by the existing adapter.
+
+Validation uses synthetic accessors and mock HTTP transport only. This implementation does not
+authorize or prove a live single-agent call, whole work-package success, operator credential
+backend activation or deployment. A live acceptance still needs separate one-call approval.
+The existing migration 20260808_0025 is unchanged; no schema or persistence work is included.

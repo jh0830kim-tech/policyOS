@@ -239,7 +239,7 @@ def test_ai_office_production_composition_is_request_scoped_and_explicit() -> No
     composition = _read("app/ai/composition.py")
     artifacts = _read("app/api/routes/artifacts.py")
     service = _read("app/services/office_application.py")
-    main = _read("app/main.py")
+    main = _read("app/application.py")
     gemini = _read("app/ai/providers/gemini_interactions.py")
 
     for required in (
