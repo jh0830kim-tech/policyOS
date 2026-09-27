@@ -66,6 +66,11 @@ _ALLOWED_PROVIDER_ERROR_CODES = frozenset(
     }
 )
 _ALLOWED_STEP_FIELDS = frozenset({"content", "type"})
+_INTERACTIONS_ERROR_CODE_MAP = (
+    ("invalid_request", "INVALID_REQUEST"),
+    ("failed_precondition", "FAILED_PRECONDITION"),
+    ("parameter_unknown", "PARAMETER_UNKNOWN"),
+)
 _ALLOWED_CONTENT_FIELDS = frozenset({"text", "type"})
 _ALLOWED_USAGE_FIELDS = frozenset(
     {
@@ -128,6 +133,10 @@ class _ResponseRejection(StrEnum):
 
 
 class _RequestRejection(StrEnum):
+    HTTP_400_INVALID_REQUEST = "request_http_400_invalid_request"
+    HTTP_400_PARAMETER_UNKNOWN = "request_http_400_parameter_unknown"
+    HTTP_422_INVALID_REQUEST = "request_http_422_invalid_request"
+    HTTP_422_PARAMETER_UNKNOWN = "request_http_422_parameter_unknown"
     HTTP_404_UNCLASSIFIED = "request_http_404_unclassified"
     HTTP_400_INVALID_ARGUMENT = "request_http_400_invalid_argument"
     HTTP_400_FAILED_PRECONDITION = "request_http_400_failed_precondition"
@@ -681,8 +690,19 @@ def _provider_error_code(response: httpx.Response) -> str | None:
     error = payload.get("error")
     if not isinstance(error, dict):
         return None
-    code = error.get("status")
-    return code if isinstance(code, str) and code in _ALLOWED_PROVIDER_ERROR_CODES else None
+    status = error.get("status")
+    legacy = status if isinstance(status, str) and status in _ALLOWED_PROVIDER_ERROR_CODES else None
+    if "code" not in error:
+        return legacy
+    code = error.get("code")
+    if not isinstance(code, str):
+        return None
+    canonical = next(
+        (mapped for wire, mapped in _INTERACTIONS_ERROR_CODE_MAP if code == wire), None
+    )
+    if canonical is None or ("status" in error and legacy != canonical):
+        return None
+    return canonical
 
 
 def _request_rejection_error(
@@ -697,6 +717,8 @@ def _request_rejection_error(
         message = "Model provider blocked the request"
     else:
         reason = {
+            "INVALID_REQUEST": "invalid_request",
+            "PARAMETER_UNKNOWN": "parameter_unknown",
             "FAILED_PRECONDITION": "failed_precondition",
             "INVALID_ARGUMENT": "invalid_argument",
             "OUT_OF_RANGE": "out_of_range",
