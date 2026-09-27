@@ -124,3 +124,11 @@ architecture tests. It must remain network free and use synthetic credentials on
 - Let the request-scope factory select or repair registry/provider/model identity.
 - Reuse one execution composition, credential, provider client, or gateway across requests.
 - Add schema or migration `20260808_0025` for an application-lifetime correction.
+
+## ADR-148 request credential and bootstrap amendment
+
+ADR-148 preserves the exact three-field bundle and open(audit_sink) contract. Its deployment-
+injected accessor is a private factory dependency. The scope releases credential and gateway
+references and rejects use after exit without promising Python string memory zeroization.
+An importable injection factory must be separated from eager default ASGI construction.
+Implementation remains pending; existing migration 20260808_0025 remains the single head.

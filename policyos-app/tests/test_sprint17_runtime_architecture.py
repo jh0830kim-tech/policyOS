@@ -5,6 +5,32 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_adr148_preserves_bundle_and_separates_injected_bootstrap() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-148-S17-GEMINI-REQUEST-CREDENTIAL-AND-APPLICATION-BOOTSTRAP-OWNERSHIP.md"
+    )
+    for phrase in (
+        "request_execution_scope_factory, model_registry_snapshot, logical_model_id",
+        "OfficeRequestExecutionScopeFactory.open(audit_sink)",
+        "Separate the dependency-injected application factory",
+        "No import-time secret",
+        "No new migration, backfill or persistence ownership",
+        "production implementation and live acceptance remain pending",
+    ):
+        assert phrase in adr
+    for number in ("ADR-136", "ADR-145"):
+        path = next((ROOT / "docs/01_ARCHITECTURE/ADR").glob(f"{number}-*.md"))
+        assert "ADR-148" in path.read_text(encoding="utf-8")
+    for path in (
+        "docs/01_ARCHITECTURE/RUNTIME-ROADMAP.md",
+        "docs/03_OPERATIONS/SPRINT-17-PROGRAM.md",
+        "docs/04_SECURITY/SECURITY.md",
+    ):
+        assert "ADR-148 Gemini request credential and bootstrap governance" in _read(path)
+    _assert_only_governed_0025()
+
+
 def _assert_only_governed_0025() -> None:
     paths = tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
     assert tuple(path.name for path in paths) == (

@@ -5,6 +5,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_adr148_bounds_credential_lifetime_and_one_call_acceptance() -> None:
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-148-S17-GEMINI-REQUEST-CREDENTIAL-AND-APPLICATION-BOOTSTRAP-OWNERSHIP.md"
+    )
+    for phrase in (
+        "deployment-injected credential accessor",
+        "sole production Gemini materialization",
+        "releases credential and gateway references",
+        "Python string memory zeroization is not guaranteed",
+        "Preserve the primary exception",
+        "Full work-package validation requires separate approval",
+        "Exactly one provider call",
+        "store=false, background=false",
+        "single Alembic head remains 20260808_0025",
+    ):
+        assert phrase in adr
+    _assert_only_governed_0025()
+
+
 def _assert_only_governed_0025() -> None:
     paths = tuple((ROOT / "alembic/versions").glob("20260808_0025*"))
     assert tuple(path.name for path in paths) == (

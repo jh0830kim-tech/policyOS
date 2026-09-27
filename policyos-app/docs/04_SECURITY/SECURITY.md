@@ -1802,3 +1802,17 @@ are documented in `docs/03_OPERATIONS/LOCAL-VALIDATION-DEMO.md`. It reuses the e
 PostgreSQL scenario and six loopback HTTPS cases in separate stages with disposable storage.
 Runtime HTTP uses ASGITransport and injected claims; Worker delivery is synthetic. This is not
 live-provider, login, deployment or productivity evidence. The migration head remains 20260808_0025.
+
+## ADR-148 Gemini request credential and bootstrap governance
+
+Status: governance accepted; production implementation and live acceptance pending.
+ADR-148 assigns materialization to a deployment-injected credential accessor inside a fresh
+request scope, preserves the three-field AI Office bundle and open(audit_sink), and requires
+a dependency-injected factory import independent of eager external-provider construction.
+Release credential/gateway references on all exits; Python string memory zeroization is not
+guaranteed. Preserve request-bound audit and exact tenant/model/classification binding.
+First live acceptance requires separate approval for one PUBLIC synthetic single-agent call,
+zero retry/fallback, store=false, background=false and no tools/history. Full work-package
+validation is separately approved; local demo evidence does not prove live-provider success.
+No credential access, production implementation or deployment is performed by this gate.
+Existing Alembic head 20260808_0025 is unchanged; no new schema or migration is required.
