@@ -290,6 +290,20 @@ def test_adr139_request_wire_correction_is_single_variable_and_private() -> None
     _assert_only_governed_0025()
 
 
+def test_interactions_error_code_compatibility_stays_private() -> None:
+    adapter = _read("app/ai/providers/gemini_interactions.py")
+    adr = _read(
+        "docs/01_ARCHITECTURE/ADR/"
+        "ADR-139-S17-GEMINI-REQUEST-REJECTION-SAFE-DIAGNOSTIC-AND-WIRE-PROBE-GOVERNANCE.md"
+    )
+    assert "_INTERACTIONS_ERROR_CODE_MAP = (" in adapter
+    for code in ("invalid_request", "failed_precondition", "parameter_unknown"):
+        assert code in adr
+    assert '("status" in error and legacy != canonical)' in adapter
+    assert "No message parsing" in adr
+    assert "diagnostic_reason" not in _read("app/ai/model_gateway.py")
+
+
 def test_adr141_path_and_http_404_correction_is_literal_and_network_free() -> None:
     adapter = _read("app/ai/providers/gemini_interactions.py")
     tests = _read("tests/test_gemini_interactions.py")

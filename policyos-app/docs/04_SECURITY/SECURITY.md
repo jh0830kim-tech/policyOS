@@ -1838,3 +1838,27 @@ Validation uses synthetic accessors and mock HTTP transport only. This implement
 authorize or prove a live single-agent call, whole work-package success, operator credential
 backend activation or deployment. A live acceptance still needs separate one-call approval.
 The existing migration 20260808_0025 is unchanged; no schema or persistence work is included.
+
+## Gemini safe error-code compatibility correction
+
+The approved compatibility amendment recognizes only exact Interactions error.code values
+invalid_request, failed_precondition and parameter_unknown, without case conversion or repair.
+They retain the non-retryable public invalid_request boundary. Private categories preserve the
+HTTP 400/422 prefix and use invalid_request, failed_precondition or parameter_unknown respectively.
+Existing legacy error.status values and their mappings remain supported when code is absent.
+When both fields exist, both must be recognized and map to the same exact canonical identity;
+otherwise the category is unclassified. In particular invalid_request plus INVALID_ARGUMENT
+is conservatively unclassified, while failed_precondition plus FAILED_PRECONDITION agrees.
+A present malformed or unknown code never falls back to a recognized legacy status.
+Lowercase safety codes and HTTP 416 handling are outside this correction.
+
+No message parsing, provider field-path extraction, raw-body retention or arbitrary diagnostic
+output is permitted. Existing response bounds, public contracts, audit fields, retry behavior,
+model identity, endpoint, revision, response-format and request schema remain unchanged.
+Synthetic tests exercise official codes, legacy compatibility, conflicts, malformed values and
+non-disclosure without credentials or provider traffic. This fixes diagnostic compatibility;
+it does not establish the cause of the previous live HTTP 400 or prove live acceptance.
+No schema/migration change is needed; the current Alembic head remains 20260808_0025.
+A further live call requires separate approval after offline validation.
+
+Official reference: https://ai.google.dev/gemini-api/docs/api-errors

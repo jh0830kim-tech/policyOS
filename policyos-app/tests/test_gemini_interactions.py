@@ -520,6 +520,56 @@ async def test_oversized_request_rejection_body_is_not_inspected(status: int) ->
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("status", [400, 422])
+@pytest.mark.parametrize(
+    ("fields", "reason"),
+    [
+        ({"code": "invalid_request"}, "invalid_request"),
+        ({"code": "failed_precondition"}, "failed_precondition"),
+        ({"code": "parameter_unknown"}, "parameter_unknown"),
+        (
+            {"code": "failed_precondition", "status": "FAILED_PRECONDITION"},
+            "failed_precondition",
+        ),
+        ({"code": "invalid_request", "status": "SAFETY"}, "unclassified"),
+        ({"code": "invalid_request", "status": "INVALID_ARGUMENT"}, "unclassified"),
+        ({"code": "failed_precondition", "status": None}, "unclassified"),
+        ({"code": "failed_precondition", "status": []}, "unclassified"),
+        ({"code": "FAILED_PRECONDITION"}, "unclassified"),
+        ({"code": " failed_precondition"}, "unclassified"),
+        ({"code": None, "status": "SAFETY"}, "unclassified"),
+        ({"code": 400}, "unclassified"),
+        ({"code": []}, "unclassified"),
+        ({"code": {}}, "unclassified"),
+        ({"code": "safety"}, "unclassified"),
+        ({"code": "out_of_range"}, "unclassified"),
+        ({"code": "unknown", "status": "INVALID_ARGUMENT"}, "unclassified"),
+        ({"code": "x" * 101}, "unclassified"),
+    ],
+)
+async def test_interactions_code_compatibility_is_closed_and_conflict_safe(
+    status: int, fields: dict, reason: str, caplog
+) -> None:
+    marker = "synthetic-private-detail-do-not-retain"
+    transport = transport_for(
+        {"error": {**fields, "message": marker, "details": [marker]}}, status=status
+    )
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway(
+            "synthetic-key", model=MODEL, transport=transport, max_retries=2
+        ).generate(request())
+    assert caught.value.code is ModelErrorCode.INVALID_REQUEST
+    assert caught.value.retryable is False
+    assert caught.value.retry_count == 0
+    assert caught.value.diagnostic_reason == f"request_http_{status}_{reason}"
+    assert marker not in str(caught.value)
+    assert marker not in repr(vars(caught.value))
+    assert marker not in caplog.text
+    assert len(transport.requests) == 1
+    assert transport.close_count == 1
+
+
+@pytest.mark.asyncio
 async def test_bounded_application_retry_reuses_one_managed_client() -> None:
     calls = 0
 
