@@ -1862,3 +1862,29 @@ No schema/migration change is needed; the current Alembic head remains 20260808_
 A further live call requires separate approval after offline validation.
 
 Official reference: https://ai.google.dev/gemini-api/docs/api-errors
+
+## Gemini unclassified rejection parse diagnostics
+
+Unclassified HTTP 400/422 rejection retains its existing public error, private
+diagnostic_reason, non-retryable decision and fail-closed acceptance boundary.
+An additional private ephemeral rejection_parse_reason identifies only one closed value:
+response_bounds, invalid_json, error_shape, code_missing, code_type,
+code_unsupported or code_conflict. Recognized codes have no parse failure.
+HTTP 404 remains unchanged and does not inspect the response body for this classification.
+
+Precedence is response size, JSON parse, exact error envelope, then code fields.
+Without code, a missing status is code_missing, a non-string status is code_type,
+and an unknown string status is code_unsupported. With code, invalid type and
+unsupported code take precedence; a recognized code with any nonmatching status
+is code_conflict, including null, malformed and unsupported status values.
+These categories describe parser branches, not the provider's underlying rejection cause.
+
+No raw body, message, arbitrary code, field name or schema is retained, printed or
+extracted by this diagnostic. It is not added to public contracts, audit records,
+logs, persistence or route results, and cannot trigger retry, fallback or another call.
+An explicitly approved operator probe may report the closed category only.
+Request schema, model, path, revision, wire format and all admission policies remain
+unchanged. Synthetic offline tests cover every branch, existing recognized mappings,
+single-call behavior, cleanup and absence from audit and error messages.
+No credential/provider access, database, schema or migration work is included.
+Alembic remains 20260808_0025. Live validation and publication need separate approval.
