@@ -190,6 +190,24 @@ then non-object error value (error_not_object). Missing error takes precedence o
 extra fields; extra fields take precedence over a malformed error value. These
 four categories replace error_shape without accepting any previously rejected body.
 No arbitrary field names or values are included in the diagnostic.
+
+For HTTP 400/422 only, private ephemeral rejection_json_type reports object, array,
+string, number, boolean or null. Oversized bodies and JSON parse failures provide
+no JSON type (None); booleans are classified before numbers. Private ephemeral
+rejection_media_type reports json, html, text, event_stream, missing or other.
+An absent Content-Type is missing. A header longer than 256 characters is other.
+Otherwise only the media type before the first semicolon is stripped and lowercased
+for diagnostic comparison: application/json, text/html, text/plain and text/event-stream
+map respectively to json, html, text and event_stream. Empty, duplicate-combined,
+suffix-only or unrecognized media types are other. Header values are never retained.
+These categories are not evidence of provider provenance.
+Neither category influences rejection, code/status allowlists, public errors, retry,
+fallback, request body, model, endpoint or acceptance. HTTP 404 does not inspect its
+body for these diagnostics. No public, audit, log, persistence or route field is added.
+Only separately approved operator probes may report the fixed categories; raw body,
+provider message, arbitrary field names, prompt, schema and credential remain excluded.
+Offline synthetic tests cover category boundaries, precedence, one-call cleanup and
+non-disclosure. No schema/migration change or live-provider success is implied.
 Without code, a missing status is code_missing, a non-string status is code_type,
 and an unknown string status is code_unsupported. With code, invalid type and
 unsupported code take precedence; a recognized code with any nonmatching status

@@ -163,6 +163,24 @@ class _RejectionParseReason(StrEnum):
     CODE_CONFLICT = "code_conflict"
 
 
+class _RejectionJsonType(StrEnum):
+    OBJECT = "object"
+    ARRAY = "array"
+    STRING = "string"
+    NUMBER = "number"
+    BOOLEAN = "boolean"
+    NULL = "null"
+
+
+class _RejectionMediaType(StrEnum):
+    JSON = "json"
+    HTML = "html"
+    TEXT = "text"
+    EVENT_STREAM = "event_stream"
+    MISSING = "missing"
+    OTHER = "other"
+
+
 class _GeminiInvalidResponseError(ModelGatewayError):
     def __init__(self, reason: _ResponseRejection, message: str) -> None:
         self.diagnostic_reason = reason.value
@@ -179,9 +197,13 @@ class _GeminiRequestRejectedError(ModelGatewayError):
         started: float,
         retry_count: int,
         parse_reason: _RejectionParseReason | None = None,
+        json_type: _RejectionJsonType | None = None,
+        media_type: _RejectionMediaType | None = None,
     ) -> None:
         self.diagnostic_reason = reason.value
         self.rejection_parse_reason = parse_reason.value if parse_reason is not None else None
+        self.rejection_json_type = json_type.value if json_type is not None else None
+        self.rejection_media_type = media_type.value if media_type is not None else None
         super().__init__(
             code,
             message,
@@ -738,12 +760,49 @@ def _classify_provider_error(
     return canonical, None
 
 
+def _rejection_response_shape(
+    response: httpx.Response,
+) -> tuple[_RejectionJsonType | None, _RejectionMediaType]:
+    header = response.headers.get("content-type")
+    if header is None:
+        media_type = _RejectionMediaType.MISSING
+    elif len(header) > 256 or len(response.headers.get_list("content-type")) != 1:
+        media_type = _RejectionMediaType.OTHER
+    else:
+        media_type = {
+            "application/json": _RejectionMediaType.JSON,
+            "text/html": _RejectionMediaType.HTML,
+            "text/plain": _RejectionMediaType.TEXT,
+            "text/event-stream": _RejectionMediaType.EVENT_STREAM,
+        }.get(header.split(";", 1)[0].strip().lower(), _RejectionMediaType.OTHER)
+    if len(response.content) > _MAX_RESPONSE_BYTES:
+        return None, media_type
+    try:
+        payload = response.json()
+    except ValueError:
+        return None, media_type
+    if payload is None:
+        return _RejectionJsonType.NULL, media_type
+    if isinstance(payload, bool):
+        return _RejectionJsonType.BOOLEAN, media_type
+    if isinstance(payload, dict):
+        return _RejectionJsonType.OBJECT, media_type
+    if isinstance(payload, list):
+        return _RejectionJsonType.ARRAY, media_type
+    if isinstance(payload, str):
+        return _RejectionJsonType.STRING, media_type
+    if isinstance(payload, (int, float)):
+        return _RejectionJsonType.NUMBER, media_type
+    return None, media_type
+
+
 def _request_rejection_error(
     response: httpx.Response,
     started: float,
     retry_count: int,
 ) -> ModelGatewayError:
     provider_code, parse_reason = _classify_provider_error(response)
+    json_type, media_type = _rejection_response_shape(response)
     if provider_code in {"SAFETY", "RECITATION", "SENSITIVE_INFORMATION"}:
         reason = "policy_blocked"
         code = ModelErrorCode.POLICY_BLOCKED
@@ -766,6 +825,8 @@ def _request_rejection_error(
         started=started,
         retry_count=retry_count,
         parse_reason=parse_reason,
+        json_type=json_type,
+        media_type=media_type,
     )
 
 

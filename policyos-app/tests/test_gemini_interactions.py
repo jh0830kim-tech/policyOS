@@ -671,6 +671,149 @@ async def test_recognized_rejection_has_no_parse_failure(fields: dict) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("status", [400, 422])
+@pytest.mark.parametrize(
+    ("body", "json_type"),
+    [
+        (b"{}", "object"),
+        (b"[]", "array"),
+        (b'"private-marker"', "string"),
+        (b"1", "number"),
+        (b"1.5", "number"),
+        (b"true", "boolean"),
+        (b"false", "boolean"),
+        (b"null", "null"),
+        (b"invalid", None),
+        (b"\xff", None),
+        (b"x" * 1_048_577, None),
+    ],
+    ids=[
+        "object",
+        "array",
+        "string",
+        "integer",
+        "float",
+        "true",
+        "false",
+        "null",
+        "invalid-json",
+        "invalid-encoding",
+        "oversized",
+    ],
+)
+@pytest.mark.parametrize(
+    ("header", "media_type"),
+    [
+        (None, "missing"),
+        ("application/json", "json"),
+        ("Application/JSON; charset=utf-8", "json"),
+        ("text/html", "html"),
+        ("text/plain", "text"),
+        ("text/event-stream", "event_stream"),
+        ("application/problem+json", "other"),
+        ("private-marker", "other"),
+        ("", "other"),
+        ("x" * 257, "other"),
+    ],
+    ids=[
+        "missing",
+        "json",
+        "parameters",
+        "html",
+        "text",
+        "event-stream",
+        "unknown-json",
+        "unknown",
+        "empty",
+        "oversized-header",
+    ],
+)
+async def test_rejection_response_shape_is_closed_and_ephemeral(
+    status: int,
+    body: bytes,
+    json_type: str | None,
+    header: str | None,
+    media_type: str,
+    caplog,
+) -> None:
+    class Sink:
+        def __init__(self):
+            self.records = []
+
+        async def record(self, metadata):
+            self.records.append(metadata)
+
+    sink = Sink()
+    headers = {} if header is None else {"content-type": header}
+    transport = CountingTransport(
+        lambda req: httpx.Response(status, content=body, headers=headers, request=req)
+    )
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway(
+            "synthetic-key", model=MODEL, transport=transport, audit_sink=sink, max_retries=2
+        ).generate(request())
+    error = caught.value
+    assert error.code is ModelErrorCode.INVALID_REQUEST
+    assert error.retryable is False
+    assert error.retry_count == 0
+    assert error.diagnostic_reason == f"request_http_{status}_unclassified"
+    assert error.rejection_json_type == json_type
+    assert error.rejection_media_type == media_type
+    assert "private-marker" not in repr(vars(error))
+    assert "synthetic-key" not in repr(vars(error))
+    assert "private-marker" not in caplog.text
+    for field in ("rejection_json_type", "rejection_media_type"):
+        assert field not in str(error)
+        assert field not in caplog.text
+        assert field not in sink.records[0].model_dump()
+    assert len(sink.records) == 1
+    assert len(transport.requests) == 1
+    assert transport.close_count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("headers", "expected"),
+    [
+        (
+            [("content-type", "application/json; charset=utf-8"), ("content-type", "text/plain")],
+            "other",
+        ),
+        ([("content-type", "application/json;" + "x" * 239)], "json"),
+        ([("content-type", "application/json;" + "x" * 240)], "other"),
+    ],
+    ids=["duplicate", "header-256", "header-257"],
+)
+async def test_rejection_media_bounds_and_duplicate_headers(headers, expected) -> None:
+    transport = CountingTransport(
+        lambda req: httpx.Response(
+            400, content=b'{"error":{"code":"invalid_request"}}', headers=headers, request=req
+        )
+    )
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway("synthetic-key", model=MODEL, transport=transport).generate(
+            request()
+        )
+    assert caught.value.code is ModelErrorCode.INVALID_REQUEST
+    assert caught.value.diagnostic_reason == "request_http_400_invalid_request"
+    assert caught.value.rejection_parse_reason is None
+    assert caught.value.rejection_json_type == "object"
+    assert caught.value.rejection_media_type == expected
+
+
+@pytest.mark.asyncio
+async def test_http_404_does_not_add_response_shape_diagnostics() -> None:
+    transport = transport_for([], status=404)
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway("synthetic-key", model=MODEL, transport=transport).generate(
+            request()
+        )
+    assert caught.value.code is ModelErrorCode.CONFIGURATION
+    assert caught.value.rejection_json_type is None
+    assert caught.value.rejection_media_type is None
+
+
+@pytest.mark.asyncio
 async def test_bounded_application_retry_reuses_one_managed_client() -> None:
     calls = 0
 
