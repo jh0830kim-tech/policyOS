@@ -577,9 +577,16 @@ async def test_interactions_code_compatibility_is_closed_and_conflict_safe(
         (b"x" * 1_048_577, "response_bounds"),
         (b"not-json", "invalid_json"),
         (b"\xff", "invalid_json"),
-        (b"[]", "error_shape"),
-        (b'{"error":null}', "error_shape"),
-        (b'{"error":{},"extra":true}', "error_shape"),
+        (b"[]", "envelope_not_object"),
+        (b'"synthetic"', "envelope_not_object"),
+        (b"null", "envelope_not_object"),
+        (b"{}", "error_missing"),
+        (b'{"synthetic_extra":true}', "error_missing"),
+        (b'{"error":null}', "error_not_object"),
+        (b'{"error":"synthetic"}', "error_not_object"),
+        (b'{"error":[]}', "error_not_object"),
+        (b'{"error":{},"synthetic_extra":true}', "envelope_extra_fields"),
+        (b'{"error":null,"synthetic_extra":true}', "envelope_extra_fields"),
         (b'{"error":{}}', "code_missing"),
         (b'{"error":{"code":400}}', "code_type"),
         (b'{"error":{"status":null}}', "code_type"),
@@ -593,8 +600,15 @@ async def test_interactions_code_compatibility_is_closed_and_conflict_safe(
         "invalid-json",
         "invalid-encoding",
         "array-envelope",
+        "string-envelope",
+        "null-envelope",
+        "missing-error",
+        "missing-error-before-extra",
         "null-error",
+        "string-error",
+        "array-error",
         "extra-envelope",
+        "extra-before-error-type",
         "missing-code",
         "numeric-code",
         "null-status",
@@ -629,6 +643,8 @@ async def test_unclassified_parse_reason_is_closed_and_ephemeral(
     assert category not in str(error)
     assert "unsupported" not in str(error)
     assert "synthetic-key" not in repr(vars(error))
+    assert "synthetic_extra" not in repr(vars(error))
+    assert "synthetic_extra" not in caplog.text
     assert len(sink.records) == 1
     assert "rejection_parse_reason" not in sink.records[0].model_dump()
     assert category not in caplog.text

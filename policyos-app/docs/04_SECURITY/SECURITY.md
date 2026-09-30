@@ -1868,11 +1868,18 @@ Official reference: https://ai.google.dev/gemini-api/docs/api-errors
 Unclassified HTTP 400/422 rejection retains its existing public error, private
 diagnostic_reason, non-retryable decision and fail-closed acceptance boundary.
 An additional private ephemeral rejection_parse_reason identifies only one closed value:
-response_bounds, invalid_json, error_shape, code_missing, code_type,
+response_bounds, invalid_json, envelope_not_object, error_missing,
+envelope_extra_fields, error_not_object, code_missing, code_type,
 code_unsupported or code_conflict. Recognized codes have no parse failure.
 HTTP 404 remains unchanged and does not inspect the response body for this classification.
 
 Precedence is response size, JSON parse, exact error envelope, then code fields.
+The envelope checks are ordered: non-object top level (envelope_not_object),
+absent error field (error_missing), extra top-level fields (envelope_extra_fields),
+then non-object error value (error_not_object). Missing error takes precedence over
+extra fields; extra fields take precedence over a malformed error value. These
+four categories replace error_shape without accepting any previously rejected body.
+No arbitrary field names or values are included in the diagnostic.
 Without code, a missing status is code_missing, a non-string status is code_type,
 and an unknown string status is code_unsupported. With code, invalid type and
 unsupported code take precedence; a recognized code with any nonmatching status
