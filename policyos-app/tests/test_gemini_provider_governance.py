@@ -335,6 +335,17 @@ def test_unclassified_parse_diagnostics_are_private_and_closed() -> None:
         assert "rejection_parse_reason" not in _read(path)
 
 
+def test_response_shape_diagnostics_remain_private_and_content_free() -> None:
+    adapter = _read("app/ai/providers/gemini_interactions.py")
+    assert "class _RejectionJsonType(StrEnum):" in adapter
+    assert "class _RejectionMediaType(StrEnum):" in adapter
+    for path in ("app/ai/model_gateway.py", "app/ai/privacy.py", "app/agents/base.py"):
+        content = _read(path)
+        assert "rejection_json_type" not in content
+        assert "rejection_media_type" not in content
+    assert "not evidence of provider provenance" in _read("docs/04_SECURITY/SECURITY.md")
+
+
 def test_adr141_path_and_http_404_correction_is_literal_and_network_free() -> None:
     adapter = _read("app/ai/providers/gemini_interactions.py")
     tests = _read("tests/test_gemini_interactions.py")
