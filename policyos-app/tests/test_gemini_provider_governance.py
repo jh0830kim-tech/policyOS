@@ -307,11 +307,24 @@ def test_interactions_error_code_compatibility_stays_private() -> None:
 def test_unclassified_parse_diagnostics_are_private_and_closed() -> None:
     adapter = _read("app/ai/providers/gemini_interactions.py")
     assert "class _RejectionParseReason(StrEnum):" in adapter
+    assert 'ERROR_SHAPE = "error_shape"' not in adapter
+    checks = (
+        "if not isinstance(payload, dict):",
+        'if "error" not in payload:',
+        'if set(payload) != {"error"}:',
+        "if not isinstance(error, dict):",
+    )
+    classifier = adapter.split("def _classify_provider_error(", 1)[1]
+    positions = [classifier.index(check) for check in checks]
+    assert positions == sorted(positions)
     assert "self.rejection_parse_reason = parse_reason.value" in adapter
     for category in (
         "response_bounds",
         "invalid_json",
-        "error_shape",
+        "envelope_not_object",
+        "error_missing",
+        "envelope_extra_fields",
+        "error_not_object",
         "code_missing",
         "code_type",
         "code_unsupported",

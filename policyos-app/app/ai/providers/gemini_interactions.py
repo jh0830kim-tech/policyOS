@@ -153,7 +153,10 @@ class _RequestRejection(StrEnum):
 class _RejectionParseReason(StrEnum):
     RESPONSE_BOUNDS = "response_bounds"
     INVALID_JSON = "invalid_json"
-    ERROR_SHAPE = "error_shape"
+    ENVELOPE_NOT_OBJECT = "envelope_not_object"
+    ERROR_MISSING = "error_missing"
+    ENVELOPE_EXTRA_FIELDS = "envelope_extra_fields"
+    ERROR_NOT_OBJECT = "error_not_object"
     CODE_MISSING = "code_missing"
     CODE_TYPE = "code_type"
     CODE_UNSUPPORTED = "code_unsupported"
@@ -703,11 +706,15 @@ def _classify_provider_error(
         payload = response.json()
     except ValueError:
         return None, _RejectionParseReason.INVALID_JSON
-    if not isinstance(payload, dict) or set(payload) != {"error"}:
-        return None, _RejectionParseReason.ERROR_SHAPE
+    if not isinstance(payload, dict):
+        return None, _RejectionParseReason.ENVELOPE_NOT_OBJECT
+    if "error" not in payload:
+        return None, _RejectionParseReason.ERROR_MISSING
+    if set(payload) != {"error"}:
+        return None, _RejectionParseReason.ENVELOPE_EXTRA_FIELDS
     error = payload.get("error")
     if not isinstance(error, dict):
-        return None, _RejectionParseReason.ERROR_SHAPE
+        return None, _RejectionParseReason.ERROR_NOT_OBJECT
     status = error.get("status")
     legacy = status if isinstance(status, str) and status in _ALLOWED_PROVIDER_ERROR_CODES else None
     if "code" not in error:
