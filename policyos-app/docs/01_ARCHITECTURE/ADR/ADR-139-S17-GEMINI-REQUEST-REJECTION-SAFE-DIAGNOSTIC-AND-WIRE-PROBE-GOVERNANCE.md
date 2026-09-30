@@ -223,3 +223,28 @@ unchanged. Synthetic offline tests cover every branch, existing recognized mappi
 single-call behavior, cleanup and absence from audit and error messages.
 No credential/provider access, database, schema or migration work is included.
 Alembic remains 20260808_0025. Live validation and publication need separate approval.
+
+## Gemini array error-envelope diagnostics
+
+Array diagnostics never unwrap an error for acceptance. HTTP 400/422 arrays retain
+envelope_not_object, the unclassified diagnostic, the same public rejection and
+non-retryable behavior. A separate private ephemeral rejection_array_shape reports
+only array_empty, array_multiple, array_single_non_object, array_single_error_missing,
+array_single_extra_fields, array_single_error_not_object or array_single_error_object.
+
+Precedence is the existing response-byte bound and JSON parse, then array type,
+empty array, multiple items, single non-object item, missing error, extra fields,
+non-object error and finally object error. Oversized, invalid JSON and non-array
+responses provide no array diagnostic. Multiple items are not inspected; a single
+item is checked structurally without reading error code, status or message values.
+HTTP 404 remains unchanged and does not inspect its body for this diagnostic.
+
+No raw content, arbitrary field name, header value or provider message is retained
+or reported. The category is absent from public contracts, logs, audits, persistence
+and route results. It cannot change allowlists, retry, fallback, model, endpoint or
+request body. Structure does not establish provider provenance or rejection cause.
+Previous live array contents were not retained and cannot be reconstructed from
+these categories. This is diagnostic support, not a fix for HTTP 400 or live acceptance.
+Offline synthetic validation covers ordering, bounds, non-disclosure and exactly
+one mocked request with cleanup. Further live probes require separate approval.
+No schema or migration change is required; Alembic remains 20260808_0025.

@@ -811,6 +811,111 @@ async def test_http_404_does_not_add_response_shape_diagnostics() -> None:
     assert caught.value.code is ModelErrorCode.CONFIGURATION
     assert caught.value.rejection_json_type is None
     assert caught.value.rejection_media_type is None
+    assert caught.value.rejection_array_shape is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [400, 422])
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        (b"[]", "array_empty"),
+        (b"[{}, null]", "array_multiple"),
+        (b"[null]", "array_single_non_object"),
+        (b"[[]]", "array_single_non_object"),
+        (b'["private-marker"]', "array_single_non_object"),
+        (b"[true]", "array_single_non_object"),
+        (b"[1]", "array_single_non_object"),
+        (b"[{}]", "array_single_error_missing"),
+        (b'[{"private-marker":0}]', "array_single_error_missing"),
+        (b'[{"error":null,"private-marker":0}]', "array_single_extra_fields"),
+        (b'[{"error":null}]', "array_single_error_not_object"),
+        (b'[{"error":[]}]', "array_single_error_not_object"),
+        (b'[{"error":"private-marker"}]', "array_single_error_not_object"),
+        (b'[{"error":{}}]', "array_single_error_object"),
+        (
+            b'[{"error":{"code":"invalid_request","message":"private-marker"}}]',
+            "array_single_error_object",
+        ),
+        (b'[{"error":{"status":"SAFETY"}}]', "array_single_error_object"),
+    ],
+    ids=[f"array-{i:02d}" for i in range(16)],
+)
+async def test_array_diagnostic_preserves_rejection_and_non_disclosure(
+    status: int, body: bytes, expected: str, caplog
+) -> None:
+    class Sink:
+        def __init__(self):
+            self.records = []
+
+        async def record(self, metadata):
+            self.records.append(metadata)
+
+    sink = Sink()
+    transport = CountingTransport(lambda req: httpx.Response(status, content=body, request=req))
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway(
+            "synthetic-key", model=MODEL, transport=transport, audit_sink=sink, max_retries=2
+        ).generate(request())
+    error = caught.value
+    assert error.code is ModelErrorCode.INVALID_REQUEST
+    assert error.retryable is False
+    assert error.retry_count == 0
+    assert error.diagnostic_reason == f"request_http_{status}_unclassified"
+    assert error.rejection_parse_reason == "envelope_not_object"
+    assert error.rejection_json_type == "array"
+    assert error.rejection_array_shape == expected
+    for marker in ("private-marker", "synthetic-key"):
+        assert marker not in repr(vars(error))
+        assert marker not in str(error)
+        assert marker not in caplog.text
+    for marker in (expected, "rejection_array_shape"):
+        assert marker not in str(error)
+        assert marker not in caplog.text
+        assert marker not in repr(sink.records[0].model_dump())
+    assert len(sink.records) == 1
+    assert len(transport.requests) == 1
+    assert transport.close_count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [400, 422, 404])
+@pytest.mark.parametrize(
+    "body",
+    [
+        b'{"error":{"code":"invalid_request"}}',
+        b"null",
+        b"false",
+        b"1",
+        b'"private-marker"',
+        b"invalid",
+        b"\\xff",
+        b"[" + b" " * 1_048_576,
+    ],
+    ids=["object", "null", "boolean", "number", "string", "invalid", "encoding", "oversized"],
+)
+async def test_array_diagnostic_is_absent_outside_bounded_arrays(status: int, body: bytes) -> None:
+    transport = CountingTransport(lambda req: httpx.Response(status, content=body, request=req))
+    with pytest.raises(ModelGatewayError) as caught:
+        await GeminiInteractionsGateway("synthetic-key", model=MODEL, transport=transport).generate(
+            request()
+        )
+    assert caught.value.rejection_array_shape is None
+
+
+def test_array_diagnostic_bounds_and_no_multiple_item_inspection() -> None:
+    from app.ai.providers.gemini_interactions import _rejection_array_shape
+
+    class Uninspectable(dict):
+        def __contains__(self, key):
+            raise AssertionError("multiple items must not be inspected")
+
+    response = httpx.Response(400, content=b"[]")
+    response.json = lambda: [Uninspectable(), Uninspectable()]
+    assert _rejection_array_shape(response).value == "array_multiple"
+    exact = httpx.Response(400, content=b"[" + b" " * (1_048_576 - 2) + b"]")
+    assert _rejection_array_shape(exact).value == "array_empty"
+    assert _rejection_array_shape(httpx.Response(400, content=exact.content + b" ")) is None
 
 
 @pytest.mark.asyncio

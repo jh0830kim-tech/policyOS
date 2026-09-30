@@ -172,6 +172,16 @@ class _RejectionJsonType(StrEnum):
     NULL = "null"
 
 
+class _RejectionArrayShape(StrEnum):
+    EMPTY = "array_empty"
+    MULTIPLE = "array_multiple"
+    SINGLE_NON_OBJECT = "array_single_non_object"
+    SINGLE_ERROR_MISSING = "array_single_error_missing"
+    SINGLE_EXTRA_FIELDS = "array_single_extra_fields"
+    SINGLE_ERROR_NOT_OBJECT = "array_single_error_not_object"
+    SINGLE_ERROR_OBJECT = "array_single_error_object"
+
+
 class _RejectionMediaType(StrEnum):
     JSON = "json"
     HTML = "html"
@@ -199,11 +209,13 @@ class _GeminiRequestRejectedError(ModelGatewayError):
         parse_reason: _RejectionParseReason | None = None,
         json_type: _RejectionJsonType | None = None,
         media_type: _RejectionMediaType | None = None,
+        array_shape: _RejectionArrayShape | None = None,
     ) -> None:
         self.diagnostic_reason = reason.value
         self.rejection_parse_reason = parse_reason.value if parse_reason is not None else None
         self.rejection_json_type = json_type.value if json_type is not None else None
         self.rejection_media_type = media_type.value if media_type is not None else None
+        self.rejection_array_shape = array_shape.value if array_shape is not None else None
         super().__init__(
             code,
             message,
@@ -796,6 +808,31 @@ def _rejection_response_shape(
     return None, media_type
 
 
+def _rejection_array_shape(response: httpx.Response) -> _RejectionArrayShape | None:
+    if len(response.content) > _MAX_RESPONSE_BYTES:
+        return None
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+    if not isinstance(payload, list):
+        return None
+    if not payload:
+        return _RejectionArrayShape.EMPTY
+    if len(payload) != 1:
+        return _RejectionArrayShape.MULTIPLE
+    item = payload[0]
+    if not isinstance(item, dict):
+        return _RejectionArrayShape.SINGLE_NON_OBJECT
+    if "error" not in item:
+        return _RejectionArrayShape.SINGLE_ERROR_MISSING
+    if set(item) != {"error"}:
+        return _RejectionArrayShape.SINGLE_EXTRA_FIELDS
+    if not isinstance(item["error"], dict):
+        return _RejectionArrayShape.SINGLE_ERROR_NOT_OBJECT
+    return _RejectionArrayShape.SINGLE_ERROR_OBJECT
+
+
 def _request_rejection_error(
     response: httpx.Response,
     started: float,
@@ -827,6 +864,7 @@ def _request_rejection_error(
         parse_reason=parse_reason,
         json_type=json_type,
         media_type=media_type,
+        array_shape=_rejection_array_shape(response),
     )
 
 

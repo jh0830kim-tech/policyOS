@@ -335,6 +335,31 @@ def test_unclassified_parse_diagnostics_are_private_and_closed() -> None:
         assert "rejection_parse_reason" not in _read(path)
 
 
+def test_array_diagnostics_remain_private_and_do_not_unwrap_errors() -> None:
+    adapter = _read("app/ai/providers/gemini_interactions.py")
+    assert "class _RejectionArrayShape(StrEnum):" in adapter
+    for category in (
+        "array_empty",
+        "array_multiple",
+        "array_single_non_object",
+        "array_single_error_missing",
+        "array_single_extra_fields",
+        "array_single_error_not_object",
+        "array_single_error_object",
+    ):
+        assert category in adapter
+    classifier = adapter.split("def _classify_provider_error(", 1)[1].split(
+        "def _rejection_response_shape(", 1
+    )[0]
+    assert "_RejectionParseReason.ENVELOPE_NOT_OBJECT" in classifier
+    assert "payload[0]" not in classifier
+    for path in ("app/ai/model_gateway.py", "app/ai/privacy.py", "app/agents/base.py"):
+        assert "rejection_array_shape" not in _read(path)
+    assert "Array diagnostics never unwrap an error for acceptance" in _read(
+        "docs/04_SECURITY/SECURITY.md"
+    )
+
+
 def test_response_shape_diagnostics_remain_private_and_content_free() -> None:
     adapter = _read("app/ai/providers/gemini_interactions.py")
     assert "class _RejectionJsonType(StrEnum):" in adapter
